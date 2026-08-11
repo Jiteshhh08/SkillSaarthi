@@ -17,7 +17,7 @@
 
 Working product name:
 
-**CareerCompass**
+**Skill_Guide**
 
 > The product name can be changed later.
 
