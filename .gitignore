@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Appwrite setup env
+scripts/.env.setup
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
