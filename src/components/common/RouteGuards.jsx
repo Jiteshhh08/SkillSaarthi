@@ -36,3 +36,25 @@ export function PublicOnlyRoute({ children }) {
 
   return children
 }
+
+export function ProfileCompleteRoute({ children }) {
+  const { user, profile, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-canvas text-ink-muted">
+        Loading…
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (!profile?.education_level) {
+    return <Navigate to="/onboarding/education-level" replace />
+  }
+
+  return children
+}

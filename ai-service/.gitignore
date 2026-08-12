@@ -1,0 +1,5 @@
+# Local FFI directories for the Python AI service (pandas/numpy models, datasets).
+__pycache__/
+*.pyc
+.ai-service-env/
+venv/

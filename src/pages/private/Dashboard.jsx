@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { educationLevelLabel } from '../../services/profile'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
 
@@ -22,7 +23,8 @@ const SUGGESTED_SKILLS = [
 ]
 
 export default function Dashboard() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const educationLabel = educationLevelLabel(profile?.education_level)
 
   return (
     <div className="min-h-screen">
@@ -34,6 +36,23 @@ export default function Dashboard() {
         <p className="mt-2 text-lg text-ink-muted">
           Build your career readiness, one skill at a time.
         </p>
+
+        <section className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-brand-soft px-6 py-5">
+          <div className="flex items-center gap-4">
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-accent-purple text-xl font-black text-white">
+              {(user?.name || 'U').charAt(0).toUpperCase()}
+            </span>
+            <div>
+              <p className="text-sm font-bold text-ink-muted">Education level</p>
+              <p className="text-xl font-black text-ink">
+                {educationLabel || 'Not set yet'}
+              </p>
+            </div>
+          </div>
+          <Link to="/onboarding/education-level" className="btn-secondary !h-10 !px-4 !text-sm">
+            Change education level
+          </Link>
+        </section>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
           <div className="card flex flex-col items-start">
