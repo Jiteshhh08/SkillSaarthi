@@ -532,11 +532,18 @@ cd skill-guide
 
 # 2. Setup Appwrite
 
-1. Create an Appwrite project in the console.
-2. Enable the **Email/Password** authentication provider.
-3. Create a database and the required collections (see `docs/main_architecture.md` section 17).
-4. Create a storage bucket for resumes.
-5. Copy `.env.sample` to `.env` and fill in `VITE_APPWRITE_ENDPOINT`, `VITE_APPWRITE_PROJECT_ID`, and `VITE_APPWRITE_DATABASE_ID`.
+1. Create an Appwrite project in the console and enable the **Email/Password** authentication provider.
+2. Create an **API key** in Settings → API Keys with `databases.*` and `storage.*` scopes.
+3. Run the setup script to create the database, collections, attributes, indexes, and resume bucket:
+
+```bash
+cp scripts/.env.setup.example scripts/.env.setup
+# fill in APPWRITE_PROJECT_ID and APPWRITE_API_KEY in scripts/.env.setup
+
+npm run setup:appwrite
+```
+
+4. Copy `.env.sample` to `.env` and fill in `VITE_APPWRITE_ENDPOINT`, `VITE_APPWRITE_PROJECT_ID`, and `VITE_APPWRITE_DATABASE_ID`.
 
 ---
 
