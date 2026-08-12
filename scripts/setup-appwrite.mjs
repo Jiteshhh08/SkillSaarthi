@@ -2,10 +2,12 @@
  * Skill_Guide — one-time Appwrite setup script.
  *
  * Creates:
- *   - the application database
  *   - all collections from docs/main_architecture.md §17
  *   - collection attributes + indexes
  *   - the resume storage bucket
+ *
+ * If your plan is at its database limit, the script reuses an existing
+ * database instead of creating a new one.
  *
  * Usage:
  *   1. Create an Appwrite project + API key (Settings → API Keys, scope: databases.*, storage.*)
@@ -52,13 +54,6 @@ const DATABASE_ID = process.env.APPWRITE_DATABASE_ID || 'skill_guide'
 const DATABASE_NAME = process.env.APPWRITE_DATABASE_NAME || 'Skill_Guide'
 const BUCKET_ID = process.env.APPWRITE_BUCKET_ID || 'resumes'
 const BUCKET_NAME = process.env.APPWRITE_BUCKET_NAME || 'Resumes'
-
-if (!PROJECT_ID || !API_KEY) {
-  console.error(
-    'Missing credentials. Create scripts/.env.setup from .env.setup.example with APPWRITE_PROJECT_ID and APPWRITE_API_KEY.',
-  )
-  process.exit(1)
-}
 
 const client = new Client().setEndpoint(ENDPOINT).setProject(PROJECT_ID).setKey(API_KEY)
 const databases = new Databases(client)
@@ -172,7 +167,7 @@ const COLLECTIONS = [
       { key: 'user_id', type: 'string', size: 100, required: true },
       { key: 'type', type: 'string', size: 100, required: true },
       { key: 'score', type: 'float', default: 0 },
-      { key: 'responses', type: 'string', size: 10000 },
+      { key: 'responses', type: 'string', size: 8000 },
       createdAt,
     ],
     indexes: [{ key: 'user_idx', type: 'key', attributes: ['user_id'] }],
@@ -185,7 +180,7 @@ const COLLECTIONS = [
       { key: 'user_id', type: 'string', size: 100, required: true },
       { key: 'career_id', type: 'string', size: 100, required: true },
       { key: 'match_score', type: 'float', default: 0 },
-      { key: 'explanation', type: 'string', size: 10000 },
+      { key: 'explanation', type: 'string', size: 8000 },
       createdAt,
     ],
     indexes: [{ key: 'user_idx', type: 'key', attributes: ['user_id'] }],
@@ -212,7 +207,7 @@ const COLLECTIONS = [
     attributes: [
       { key: 'roadmap_id', type: 'string', size: 100, required: true },
       { key: 'title', type: 'string', size: 300, required: true },
-      { key: 'description', type: 'string', size: 5000 },
+      { key: 'description', type: 'string', size: 4000 },
       { key: 'order_index', type: 'integer', default: 0 },
       { key: 'estimated_hours', type: 'integer', default: 0 },
       {
@@ -221,11 +216,7 @@ const COLLECTIONS = [
         elements: ['pending', 'in_progress', 'paused', 'completed'],
         default: 'pending',
       },
-      {
-        key: 'completed_at',
-        type: 'datetime',
-        required: false,
-      },
+      { key: 'completed_at', type: 'datetime' },
     ],
     indexes: [{ key: 'roadmap_idx', type: 'key', attributes: ['roadmap_id'] }],
   },
@@ -267,7 +258,7 @@ const COLLECTIONS = [
       { key: 'title', type: 'string', size: 300, required: true },
       { key: 'company', type: 'string', size: 200 },
       { key: 'location', type: 'string', size: 200 },
-      { key: 'description', type: 'string', size: 10000 },
+      { key: 'description', type: 'string', size: 6000 },
       { key: 'url', type: 'string', size: 1000 },
     ],
     indexes: [],
@@ -292,8 +283,8 @@ const COLLECTIONS = [
       { key: 'user_id', type: 'string', size: 100, required: true },
       { key: 'appwrite_file_id', type: 'string', size: 100 },
       { key: 'file_name', type: 'string', size: 500 },
-      { key: 'extracted_data', type: 'string', size: 10000 },
-      { key: 'analysis_result', type: 'string', size: 10000 },
+      { key: 'extracted_data', type: 'string', size: 2000 },
+      { key: 'analysis_result', type: 'string', size: 6000 },
       createdAt,
     ],
     indexes: [{ key: 'user_idx', type: 'key', attributes: ['user_id'] }],
@@ -305,7 +296,7 @@ const COLLECTIONS = [
     attributes: [
       { key: 'user_id', type: 'string', size: 100, required: true },
       { key: 'github_username', type: 'string', size: 100 },
-      { key: 'analysis_result', type: 'string', size: 10000 },
+      { key: 'analysis_result', type: 'string', size: 8000 },
       createdAt,
     ],
     indexes: [{ key: 'user_idx', type: 'key', attributes: ['user_id'] }],
@@ -341,74 +332,157 @@ function isAlreadyExists(error) {
   )
 }
 
-async function ensureAttribute(collectionId, attr) {
+async function createAttribute(dbId, collectionId, attr) {
   const { type, key, size = 255, required = false, default: def, min, max, elements } = attr
-  try {
-    switch (type) {
-      case 'string':
-        await databases.createStringAttribute(DATABASE_ID, collectionId, key, size, required, def)
-        break
-      case 'integer':
-        await databases.createIntegerAttribute(DATABASE_ID, collectionId, key, required, min, max, def)
-        break
-      case 'float':
-        await databases.createFloatAttribute(DATABASE_ID, collectionId, key, required, min, max, def)
-        break
-      case 'boolean':
-        await databases.createBooleanAttribute(DATABASE_ID, collectionId, key, required, def)
-        break
-      case 'datetime':
-        await databases.createDatetimeAttribute(DATABASE_ID, collectionId, key, required, def)
-        break
-      case 'enum':
-        await databases.createEnumAttribute(DATABASE_ID, collectionId, key, elements, required, def)
-        break
-      default:
-        console.warn(`    unknown attribute type: ${type} ('${key}')`)
-        return
-    }
-    console.log(`    + attribute ${key} (${type})`)
-  } catch (error) {
-    if (!isAlreadyExists(error)) throw error
-    console.log(`    = attribute ${key} already exists`)
+  switch (type) {
+    case 'string':
+      await databases.createStringAttribute(dbId, collectionId, key, size, required, def)
+      break
+    case 'integer':
+      await databases.createIntegerAttribute(dbId, collectionId, key, required, min, max, def)
+      break
+    case 'float':
+      await databases.createFloatAttribute(dbId, collectionId, key, required, min, max, def)
+      break
+    case 'boolean':
+      await databases.createBooleanAttribute(dbId, collectionId, key, required, def)
+      break
+    case 'datetime':
+      await databases.createDatetimeAttribute(dbId, collectionId, key, required, def)
+      break
+    case 'enum':
+      await databases.createEnumAttribute(dbId, collectionId, key, elements, required, def)
+      break
+    default:
+      console.warn(`    unknown attribute type: ${type} ('${key}')`)
+      return
   }
+  console.log(`    + attribute ${key} (${type})`)
 }
 
-async function ensureIndex(collectionId, index) {
-  try {
-    await databases.createIndex(
-      DATABASE_ID,
-      collectionId,
-      index.key,
-      INDEX_TYPES[index.type],
-      index.attributes,
-    )
-    console.log(`    + index ${index.key} (${index.type})`)
-  } catch (error) {
-    if (!isAlreadyExists(error)) throw error
-    console.log(`    = index ${index.key} already exists`)
-  }
+async function createIndex(dbId, collectionId, index) {
+  await databases.createIndex(
+    dbId,
+    collectionId,
+    index.key,
+    INDEX_TYPES[index.type],
+    index.attributes,
+  )
+  console.log(`    + index ${index.key} (${index.type})`)
 }
 
-async function ensureCollection(collection) {
+async function ensureCollection(dbId, collection) {
+  const existingAttributes = new Set()
+  const existingIndexes = new Set()
+  const createdKeys = []
+
   try {
-    await databases.createCollection(
-      DATABASE_ID,
-      collection.id,
-      collection.name,
-      collection.permissions,
-    )
-    console.log(`  + collection ${collection.id}`)
-  } catch (error) {
-    if (!isAlreadyExists(error)) throw error
+    const info = await databases.getCollection(dbId, collection.id)
+    ;(info.attributes || []).forEach((a) => existingAttributes.add(a.key))
+    ;(info.indexes || []).forEach((i) => existingIndexes.add(i.key))
     console.log(`  = collection ${collection.id} already exists`)
+  } catch {
+    await databases.createCollection(dbId, collection.id, collection.name, collection.permissions)
+    console.log(`  + collection ${collection.id}`)
   }
 
   for (const attribute of collection.attributes) {
-    await ensureAttribute(collection.id, attribute)
+    if (existingAttributes.has(attribute.key)) {
+      console.log(`    = attribute ${attribute.key} already exists`)
+      continue
+    }
+    await createAttribute(dbId, collection.id, attribute)
+    createdKeys.push(attribute.key)
   }
+
+  if (createdKeys.length > 0) {
+    await waitForAttributes(dbId, collection.id, createdKeys)
+  }
+
   for (const index of collection.indexes || []) {
-    await ensureIndex(collection.id, index)
+    if (existingIndexes.has(index.key)) {
+      console.log(`    = index ${index.key} already exists`)
+      continue
+    }
+    await createIndex(dbId, collection.id, index)
+  }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function waitForAttributes(dbId, collectionId, keys, timeoutMs = 90000) {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    const info = await databases.getCollection(dbId, collectionId)
+    const attributes = info.attributes || []
+    const allAvailable = keys.every((key) => {
+      const attribute = attributes.find((a) => a.key === key)
+      return attribute && attribute.status === 'available'
+    })
+    if (allAvailable) return
+    await sleep(800)
+  }
+  throw new Error(
+    `Timed out waiting for attributes to become available in collection ${collectionId}: ${keys.join(', ')}`,
+  )
+}
+
+async function resolveDatabase(rl) {
+  console.log('\n1) Database')
+
+  try {
+    await databases.get(DATABASE_ID)
+    console.log(`  = using existing database ${DATABASE_ID}`)
+    return DATABASE_ID
+  } catch {
+    // not found — try to find an existing database to reuse
+  }
+
+  const { databases: existing } = await databases.list()
+  const FLAG_YES = process.argv.includes('--yes')
+  const DB_INDEX = process.env.APPWRITE_SETUP_DB_INDEX
+
+  if (existing.length > 0) {
+    let index
+
+    if (FLAG_YES) {
+      index = DB_INDEX !== undefined ? Number.parseInt(DB_INDEX, 10) : 0
+    } else {
+      console.log(
+        `  The requested database ${DATABASE_ID} was not found, and the plan is at its database limit.`,
+      )
+      console.log('  Available databases:')
+      existing.forEach((db, i) => console.log(`    [${i}] ${db.$id} — ${db.name}`))
+
+      const choice = await rl.question(
+        `  Which database should hold the Skill_Guide collections? [0-${existing.length - 1}] `,
+      )
+      index = Number.parseInt(choice, 10)
+    }
+
+    if (Number.isNaN(index) || index < 0 || index >= existing.length) {
+      throw new Error(
+        'Invalid database choice. Re-run the script and choose a valid database, or change APPWRITE_DATABASE_ID in scripts/.env.setup.',
+      )
+    }
+    console.log(`  = reusing database ${existing[index].$id}`)
+    return existing[index].$id
+  }
+
+  try {
+    await databases.create(DATABASE_ID, DATABASE_NAME)
+    console.log(`  + created database ${DATABASE_ID}`)
+    return DATABASE_ID
+  } catch (error) {
+    if (isAlreadyExists(error)) {
+      console.log(`  = using existing database ${DATABASE_ID}`)
+      return DATABASE_ID
+    }
+    throw new Error(
+      `Could not create a database (${error.message}). Create one manually in the Appwrite console and set APPWRITE_DATABASE_ID in scripts/.env.setup.`,
+    )
   }
 }
 
@@ -416,62 +490,87 @@ async function main() {
   console.log('Skill_Guide — Appwrite setup\n')
   console.log(`Endpoint:  ${ENDPOINT}`)
   console.log(`Project:   ${PROJECT_ID}`)
-  console.log(`Database:  ${DATABASE_ID} (${DATABASE_NAME})\n`)
 
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-  const answer = await rl.question(
-    'This will create real resources in your Appwrite project. Continue? [y/N] ',
-  )
-  rl.close()
+  const FLAG_YES = process.argv.includes('--yes')
 
-  if (!/^y(es)?$/i.test(answer.trim())) {
+  let confirmed = FLAG_YES
+  let rl = null
+
+  if (!FLAG_YES) {
+    rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+    const answer = await rl.question(
+      'This will create real resources in your Appwrite project. Continue? [y/N] ',
+    )
+    confirmed = /^y(es)?$/i.test(answer.trim())
+    if (!confirmed) {
+      rl.close()
+    }
+  }
+
+  if (!confirmed) {
     console.log('Aborted.')
-    process.exit(0)
+    return
   }
 
-  console.log('\n1) Database')
-  try {
-    await databases.create(DATABASE_ID, DATABASE_NAME)
-    console.log(`  + database ${DATABASE_ID}`)
-  } catch (error) {
-    if (!isAlreadyExists(error)) throw error
-    console.log(`  = database ${DATABASE_ID} already exists`)
-  }
+  const dbId = await resolveDatabase(rl)
 
   console.log('\n2) Collections')
   for (const collection of COLLECTIONS) {
-    await ensureCollection(collection)
+    await ensureCollection(dbId, collection)
   }
 
   console.log('\n3) Storage bucket')
+  let resolvedBucketId = BUCKET_ID
   try {
-    await storage.createBucket(
-      BUCKET_ID,
-      BUCKET_NAME,
-      [Permission.read(Role.users()), Permission.update(Role.users()), Permission.delete(Role.users())],
-      false,
-      true,
-      5 * 1024 * 1024,
-      ['pdf', 'docx', 'doc'],
-      'gzip',
-      false,
-      false,
-      false,
-    )
-    console.log(`  + bucket ${BUCKET_ID}`)
+    const { buckets } = await storage.listBuckets()
+    if (buckets.length > 0) {
+      console.log(`  = reusing existing bucket ${buckets[0].$id} — ${buckets[0].name}`)
+      resolvedBucketId = buckets[0].$id
+    } else {
+      await storage.createBucket(
+        BUCKET_ID,
+        BUCKET_NAME,
+        [
+          Permission.read(Role.users()),
+          Permission.update(Role.users()),
+          Permission.delete(Role.users()),
+        ],
+        false,
+        true,
+        5 * 1024 * 1024,
+        ['pdf', 'docx', 'doc'],
+        'gzip',
+        false,
+        false,
+        false,
+      )
+      console.log(`  + bucket ${BUCKET_ID}`)
+    }
   } catch (error) {
-    if (!isAlreadyExists(error)) throw error
-    console.log(`  = bucket ${BUCKET_ID} already exists`)
+    if (isAlreadyExists(error)) {
+      console.log(`  = bucket ${BUCKET_ID} already exists`)
+    } else {
+      throw error
+    }
   }
 
   console.log('\nDone. Copy these into your .env:\n')
   console.log(`VITE_APPWRITE_ENDPOINT=${ENDPOINT}`)
   console.log(`VITE_APPWRITE_PROJECT_ID=${PROJECT_ID}`)
-  console.log(`VITE_APPWRITE_DATABASE_ID=${DATABASE_ID}`)
-  console.log(`VITE_APPWRITE_RESUME_BUCKET_ID=${BUCKET_ID}`)
+  console.log(`VITE_APPWRITE_DATABASE_ID=${dbId}`)
+  console.log(`VITE_APPWRITE_RESUME_BUCKET_ID=${resolvedBucketId}`)
+
+  rl?.close()
 }
 
-main().catch((error) => {
-  console.error('\nSetup failed:', error?.message || error)
-  process.exit(1)
-})
+if (!PROJECT_ID || !API_KEY) {
+  console.error(
+    'Missing credentials. Create scripts/.env.setup from .env.setup.example with APPWRITE_PROJECT_ID and APPWRITE_API_KEY.',
+  )
+  process.exitCode = 1
+} else {
+  main().catch((error) => {
+    console.error('\nSetup failed:', error?.message || error)
+    process.exitCode = 1
+  })
+}
