@@ -31,7 +31,6 @@ The project is being developed as a Smart India Hackathon solution based on the 
 * [Development Workflow](#-development-workflow)
 * [Documentation](#-documentation)
 * [Roadmap](#-roadmap)
-* [Team](#-team)
 * [Contributing](#-contributing)
 
 ---
@@ -298,6 +297,33 @@ Their progress is reflected on the dashboard.
 | 📈 Progress Tracking          | Track roadmap completion             |
 | 🧭 Career Explorer            | Explore different career paths       |
 
+
+## Notifications
+
+Roadmap task due
+       ↓
+Node Backend
+       ↓
+Appwrite Messaging
+       ↓
+User notification
+
+## Resume Analysis
+
+User
+ ↓
+React
+ ↓
+Appwrite Storage
+ ↓
+Resume PDF
+ ↓
+Node Backend
+ ↓
+Python AI Service
+ ↓
+Resume Analysis
+
 ---
 
 # 👥 Target Users
@@ -359,13 +385,32 @@ This approach allows the MVP to work reliably even without a large machine-learn
 
 ## Backend
 
-* Node.js
-* Express.js
-* REST API
+* Main backend
+* REST APIs
+* Business logic
+* Appwrite server integration
+* MySQL integration
+* External APIs
 
 ## Database
 
 * MySQL
+* Users' career data
+* Skills
+* Careers
+* Career-skill mappings
+* Recommendations
+* Roadmaps
+* Courses
+* Internships
+* Assessments
+
+## AppWrite
+
+* Authentication
+* Storage
+* Messaging
+* Realtime
 
 ## AI / ML
 
@@ -386,33 +431,32 @@ This approach allows the MVP to work reliably even without a large machine-learn
 # 🏗️ System Architecture
 
 ```text
-                         USER
-                           │
-                           ↓
-                ┌────────────────────┐
-                │   React Frontend   │
-                │   Tailwind CSS     │
-                └─────────┬──────────┘
-                          │
-                         HTTPS
-                          │
-                          ↓
-                ┌────────────────────┐
-                │   Node.js Backend  │
-                │      Express       │
-                └───────┬───────┬────┘
-                        │       │
-                 ┌──────┘       └───────┐
-                 ↓                      ↓
-          ┌──────────────┐       ┌──────────────┐
-          │    MySQL     │       │ Python AI    │
-          │   Database   │       │   FastAPI    │
-          └──────────────┘       └──────┬───────┘
-                                        │
-                              ┌─────────┼─────────┐
-                              ↓         ↓         ↓
-                           Rules    Matching     ML
-                           Engine    Engine     Model
+                    USER
+                      │
+                      ▼
+              ┌───────────────┐
+              │ React +       │
+              │ Tailwind      │
+              └───────┬───────┘
+                      │
+          ┌───────────┴────────────┐
+          │                        │
+          ▼                        ▼
+   ┌──────────────┐        ┌──────────────┐
+   │   Appwrite   │        │ Node/Express  │
+   │              │        │   Backend     │
+   │ Auth         │        │               │
+   │ Storage      │        │ Business      │
+   │ Messaging    │        │ Logic         │
+   │ Realtime     │        │ APIs          │
+   └──────────────┘        └───────┬───────┘
+                                   │
+                         ┌─────────┴─────────┐
+                         ▼                   ▼
+                  ┌─────────────┐    ┌──────────────┐
+                  │    MySQL    │    │ Python AI    │
+                  │             │    │ FastAPI      │
+                  └─────────────┘    └──────────────┘
 ```
 
 For the complete architecture, database design, ER diagram, API architecture, AI architecture, and data flows:
@@ -452,7 +496,6 @@ career-advisor/
 │
 ├── .gitignore
 ├── README.md
-└── docker-compose.yml
 ```
 
 ---
@@ -768,27 +811,6 @@ here is why,
 here are your skill gaps,
 and here is exactly what you can work on next."
 ```
-
----
-
-# 👨‍💻 Team
-
-**Institution:**
-Thakur College of Engineering and Technology, Kandivali, Mumbai
-
-**Team:**
-Smart India Hackathon Team
-
-| Member      | Responsibility                   |
-| ----------- | -------------------------------- |
-| Team Leader | Product + Frontend + Integration |
-| Member 2    | Frontend + Backend               |
-| Member 3    | Backend                          |
-| Member 4    | AI/ML + Data                     |
-| Member 5    | Backend + Database               |
-| Member 6    | Testing + Research + Integration |
-
-> Team member names and exact responsibilities should be updated once finalized.
 
 ---
 
