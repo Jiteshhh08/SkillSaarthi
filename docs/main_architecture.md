@@ -1,1050 +1,1885 @@
-# Product Requirements Document (PRD)
+# Main Architecture — Skill_Guide
 
-# One-Stop Personalized Career & Education Advisor
-
-**Project Type:** Smart India Hackathon
-**Problem Statement:** PS-09 — One-Stop Personalized Career & Education Advisor
-**PS ID:** SIH25094
-**Source listed in provided problem-statement document:** Smart India Hackathon 2025 — Government of Jammu & Kashmir.
-
----
-
-# 1. Product Overview
-
-## 1.1 Product Name
-
-**One-Stop Personalized Career & Education Advisor**
-
-Working product name:
-
-**Skill_Guide**
-
-> The product name can be changed later.
+> Technical architecture and implementation blueprint for Skill_Guide.
+>
+> **Product:** One-Stop Personalized Career & Education Advisor
+>
+> **Architecture:** React + Appwrite + Node.js/Express + MySQL + Python/FastAPI
 
 ---
 
-## 1.2 Product Vision
+# 1. Architecture Overview
 
-To build an intelligent, personalized career and education guidance platform that helps students, learners, and job seekers understand:
+Skill_Guide follows a modular architecture consisting of four major application layers:
 
-* Which career paths suit them
-* Why those careers suit them
-* What skills they currently possess
-* Which skills they are missing
-* What they should learn next
-* Which courses and certifications can help them
-* Which projects they should build
-* Which internships/jobs may suit them
-* How their career options change when they acquire new skills
+1. **Frontend Layer** — React + Tailwind CSS
+2. **Backend/Application Layer** — Node.js + Express
+3. **Infrastructure Layer** — Appwrite
+4. **Data & AI Layer** — MySQL + Python/FastAPI
 
-The platform should not simply tell users:
+The core architectural principle is:
 
-> "You should become a Software Engineer."
-
-Instead, it should answer:
-
-> "Based on your profile, this career is a strong match because of X, Y, and Z. These are your current skill gaps, and this is the personalized roadmap you can follow to become career-ready."
+> **Appwrite handles infrastructure-heavy functionality, Node.js handles application/business logic, MySQL handles structured application data, and Python handles AI/ML processing.**
 
 ---
 
-# 2. Problem Statement
-
-Students and learners often struggle with:
-
-* Choosing an appropriate career
-* Understanding available career paths
-* Knowing which skills are required for a career
-* Understanding their current skill gaps
-* Finding relevant courses
-* Finding suitable projects
-* Finding relevant internships
-* Understanding how different skills affect career opportunities
-* Receiving personalized guidance instead of generic career advice
-
-Existing platforms frequently provide isolated services such as:
-
-* Course discovery
-* Job search
-* Resume creation
-* Career quizzes
-* Skill learning
-
-The proposed platform combines these capabilities into a **single personalized career guidance ecosystem**.
-
----
-
-# 3. Target Users
-
-The platform targets three primary categories.
-
-## 3.1 High School Students
-
-Students who are beginning to explore possible career paths.
-
-Possible information:
-
-* Grade/class
-* Academic performance
-* Favorite subjects
-* Interests
-* Strengths
-* Career interests
-* Preferred fields
-
----
-
-## 3.2 College Students
-
-Students who are actively developing skills and preparing for internships/jobs.
-
-Possible information:
-
-* Degree
-* Branch
-* Year
-* CGPA
-* Subjects
-* Technical skills
-* Soft skills
-* Projects
-* Certifications
-* Interests
-* Career preferences
-* Internship goals
-
----
-
-## 3.3 Job Seekers
-
-Users who have completed their education and are looking for employment or career transitions.
-
-Possible information:
-
-* Education
-* Experience
-* Current skills
-* Previous roles
-* Projects
-* Certifications
-* Resume
-* Target role
-* Preferred industry
-* Location preferences
-
----
-
-# 4. Product Goals
-
-## Primary Goals
-
-1. Provide personalized career recommendations.
-2. Identify user skill gaps.
-3. Generate personalized learning roadmaps.
-4. Help users understand career requirements.
-5. Recommend relevant learning resources.
-6. Recommend projects and certifications.
-7. Recommend relevant internships/jobs.
-8. Allow users to compare career paths.
-9. Allow users to simulate "what-if" career scenarios.
-10. Track roadmap progress.
-11. Continuously improve recommendations based on user progress.
-12. Provide explainable recommendations.
-
----
-
-# 5. Product Philosophy
-
-The platform should follow one central principle:
-
-> **"We don't just tell students what career to choose — we show them what they need to do next to reach it."**
-
-The entire system should revolve around:
+# 2. High-Level Architecture
 
 ```text
-User Profile
-      ↓
-Career Recommendation
-      ↓
-Skill Gap Analysis
-      ↓
-Personalized Roadmap
-      ↓
-Learning / Projects / Certifications
-      ↓
-Internships / Jobs
-      ↓
-Progress Tracking
-      ↓
-Updated Career Readiness
+                                      ┌──────────────────────┐
+                                      │        USER          │
+                                      └──────────┬───────────┘
+                                                 │
+                                                 ▼
+                                  ┌──────────────────────────┐
+                                  │      React Frontend      │
+                                  │      Tailwind CSS        │
+                                  └────────────┬─────────────┘
+                                               │
+                            ┌──────────────────┴──────────────────┐
+                            │                                     │
+                            ▼                                     ▼
+                 ┌──────────────────────┐              ┌──────────────────────┐
+                 │       Appwrite       │              │    Node.js/Express   │
+                 │                      │              │       Backend        │
+                 │ • Authentication    │              │                      │
+                 │ • File Storage      │              │ • Business Logic     │
+                 │ • Messaging         │              │ • REST APIs          │
+                 │ • Realtime          │              │ • MySQL Access       │
+                 └──────────────────────┘              │ • AI Orchestration   │
+                                                       │ • External APIs      │
+                                                       └───────────┬──────────┘
+                                                                   │
+                                               ┌───────────────────┴──────────────────┐
+                                               │                                      │
+                                               ▼                                      ▼
+                                    ┌─────────────────────┐                ┌─────────────────────┐
+                                    │        MySQL        │                │   Python/FastAPI    │
+                                    │      Database       │                │      AI Service     │
+                                    │                     │                │                     │
+                                    │ • Users/Profile     │                │ • Skill Matching    │
+                                    │ • Careers           │                │ • Recommendations  │
+                                    │ • Skills            │                │ • Resume Analysis  │
+                                    │ • Roadmaps          │                │ • GitHub Analysis  │
+                                    │ • Courses           │                │ • AI Assistant     │
+                                    │ • Internships       │                │ • ML Models        │
+                                    └─────────────────────┘                └─────────────────────┘
 ```
 
 ---
 
-# 6. High-Level User Workflow
+# 3. Responsibility Matrix
+
+| Technology | Responsibility |
+|---|---|
+| React | User interface |
+| Tailwind CSS | UI styling |
+| Appwrite Auth | Authentication |
+| Appwrite Storage | Resume/file storage |
+| Appwrite Messaging | Notifications |
+| Appwrite Realtime | Real-time events |
+| Node.js | Application backend |
+| Express | REST API framework |
+| MySQL | Structured persistent data |
+| Python | AI/ML processing |
+| FastAPI | AI service API |
+| GitHub API | Public GitHub data |
+| External course/internship APIs | External opportunities |
+| LLM API | Natural-language AI functionality |
+
+---
+
+# 4. Core Architectural Principle
+
+The system must maintain strict separation between:
+
+```text
+Infrastructure
+        ↓
+Appwrite
+
+Application Logic
+        ↓
+Node.js + Express
+
+Persistent Relational Data
+        ↓
+MySQL
+
+Artificial Intelligence
+        ↓
+Python + FastAPI
+```
+
+The frontend must never directly access MySQL.
+
+The frontend should not contain business-critical logic.
+
+The Python service should not directly handle authentication.
+
+The AI service should not directly modify application data unless explicitly required through a controlled backend flow.
+
+---
+
+# 5. Frontend Architecture
+
+## 5.1 Technology
+
+```text
+React
+Tailwind CSS
+React Router
+Fetch / Axios
+```
+
+## 5.2 Responsibilities
+
+The frontend is responsible for:
+
+- Rendering UI
+- Navigation
+- Forms
+- Client-side validation
+- Dashboard
+- User interaction
+- API communication
+- Appwrite client integration
+- Displaying AI recommendations
+- Roadmap visualization
+- Progress tracking
+
+---
+
+# 6. Frontend Structure
+
+```text
+client/
+│
+├── public/
+│
+├── src/
+│   │
+│   ├── assets/
+│   │
+│   ├── components/
+│   │   ├── common/
+│   │   ├── auth/
+│   │   ├── profile/
+│   │   ├── career/
+│   │   ├── roadmap/
+│   │   ├── resume/
+│   │   ├── github/
+│   │   ├── courses/
+│   │   ├── internships/
+│   │   └── assistant/
+│   │
+│   ├── pages/
+│   │   ├── public/
+│   │   ├── auth/
+│   │   └── private/
+│   │
+│   ├── services/
+│   │   ├── api.js
+│   │   └── appwrite.js
+│   │
+│   ├── hooks/
+│   ├── context/
+│   ├── utils/
+│   ├── routes/
+│   └── App.jsx
+│
+└── package.json
+```
+
+---
+
+# 7. Appwrite Architecture
+
+Appwrite is used as the application's infrastructure layer.
+
+Appwrite is **not** responsible for the core Skill_Guide business logic.
+
+## 7.1 Appwrite Services Used
+
+```text
+Appwrite
+│
+├── Authentication
+├── Storage
+├── Messaging
+└── Realtime
+```
+
+---
+
+# 8. Appwrite Authentication
+
+Appwrite handles:
+
+- User registration
+- Login
+- Logout
+- Session management
+- Password recovery
+- Email verification
+- OAuth if implemented
+
+## Authentication Flow
 
 ```text
 User
- ↓
-Home Page
- ↓
-Login / Signup
- ↓
-Select Education Level
- ↓
-Career Onboarding
- ↓
-Personal Career Profile
- ↓
-Assessment
- ↓
-AI / Recommendation Engine
- ↓
-Career Recommendations
- ↓
-Skill Gap Analysis
- ↓
-Personalized Roadmap
- ↓
-Dashboard
- ↓
-Track / Modify / Complete Roadmap
- ↓
-Additional Career Tools
+ │
+ ▼
+React
+ │
+ │ Appwrite Auth SDK
+ ▼
+Appwrite Authentication
+ │
+ ├── Validate credentials
+ ├── Create session
+ └── Return authenticated session
+ │
+ ▼
+React
+ │
+ │ Authenticated API Request
+ ▼
+Node.js Backend
 ```
 
 ---
 
-# 7. Public Pages
+# 9. Authentication Architecture
 
-The following pages are accessible without authentication.
+```mermaid
+sequenceDiagram
 
-## 7.1 Home
+    participant U as User
+    participant FE as React
+    participant AW as Appwrite
+    participant API as Node Backend
+    participant DB as MySQL
 
-The homepage should explain:
-
-* What the platform does
-* Who it is for
-* How it works
-* Key features
-* Benefits
-* Call-to-action
-
-Primary CTAs:
-
-* Get Started
-* Login
-* Sign Up
-
----
-
-## 7.2 About
-
-Explain:
-
-* Product vision
-* Problem being solved
-* Target audience
-* Core capabilities
-* How personalization works
+    U->>FE: Enter credentials
+    FE->>AW: Login / Create Session
+    AW-->>FE: Authenticated Session
+    FE->>API: API Request + Auth Context
+    API->>AW: Validate User
+    AW-->>API: User Identity
+    API->>DB: Fetch User Data
+    DB-->>API: User Data
+    API-->>FE: Response
+    FE-->>U: Display Data
+```
 
 ---
 
-## 7.3 How It Works
+# 10. User Identity Mapping
 
-Recommended flow:
+Appwrite owns the authentication identity.
+
+MySQL owns the application's profile and career data.
 
 ```text
-Create Profile
-      ↓
-Complete Assessment
-      ↓
-Get Career Recommendations
-      ↓
-Discover Skill Gaps
-      ↓
-Get Personalized Roadmap
-      ↓
-Track Progress
+Appwrite User
+      │
+      │ appwrite_user_id
+      ▼
+MySQL users table
+      │
+      ├── profile
+      ├── skills
+      ├── interests
+      ├── assessments
+      ├── roadmaps
+      └── recommendations
 ```
 
----
-
-## 7.4 Explore Careers
-
-Public career exploration page.
-
-Users can browse career categories.
+The MySQL `users` table should contain the Appwrite user ID.
 
 Example:
 
 ```text
-Software & Technology
- ├── Full Stack Developer
- ├── Backend Developer
- ├── Frontend Developer
- ├── Mobile Developer
- └── Software Engineer
-
-AI & Data
- ├── Data Analyst
- ├── Data Scientist
- ├── ML Engineer
- └── AI Engineer
-
-Cloud
- ├── Cloud Engineer
- └── DevOps Engineer
-
-Cybersecurity
- ├── Security Analyst
- └── Security Engineer
+users
+---------------------------
+id
+appwrite_user_id
+email
+created_at
+updated_at
 ```
 
-Each career should contain:
-
-* Career description
-* Required skills
-* Recommended skills
-* Education requirements
-* Typical roadmap
-* Related careers
-* Recommended projects
-* Recommended certifications
-* Relevant courses
-
-Authenticated users should additionally see:
-
-> **Your current match: XX%**
+The `appwrite_user_id` should be unique.
 
 ---
 
-# 8. Authentication
+# 11. Appwrite Storage
 
-## Public Authentication Pages
+Appwrite Storage is responsible for files.
 
-* Login
-* Signup
-* Forgot Password
-* Reset Password
-
-Authentication should protect all private user data.
-
----
-
-# 9. Education-Level Selection
-
-After signup, the user must select their current stage.
-
-Options:
+Primary use case:
 
 ```text
-High School Student
-College Student
-Job Seeker
+Resume Upload
 ```
 
-The platform should dynamically configure the onboarding experience based on the selected category.
+Possible future use cases:
 
-Users must be able to modify their education level later from their profile.
+- Profile pictures
+- Certificates
+- Project files
+- Other user documents
 
----
+## Resume Upload Flow
 
-# 10. Career Onboarding
+```text
+User
+ │
+ ▼
+React
+ │
+ │ Upload File
+ ▼
+Appwrite Storage
+ │
+ │ File ID
+ ▼
+React
+ │
+ │ File ID
+ ▼
+Node Backend
+ │
+ ▼
+Python AI Service
+ │
+ ▼
+Resume Analysis
+```
 
-The onboarding process should be divided into multiple steps rather than presenting one large form.
-
-## Step 1 — Education
-
-Fields vary according to education level.
-
-## Step 2 — Academic Information
-
-* Subjects
-* Grades/CGPA
-* Academic strengths
-
-## Step 3 — Skills
-
-* Technical skills
-* Soft skills
-* Skill proficiency
-
-## Step 4 — Interests
-
-Examples:
-
-* Web Development
-* AI/ML
-* Cybersecurity
-* Cloud
-* Data
-* Design
-* Finance
-* Research
-* Entrepreneurship
-
-## Step 5 — Career Preferences
-
-* Preferred industry
-* Preferred role
-* Work preference
-* Location preference
-* Internship/job goals
-
-## Step 6 — Projects & Experience
-
-* Projects
-* Experience
-* Certifications
-* Achievements
-
-## Step 7 — Career Assessment
-
-A personalized questionnaire evaluates:
-
-* Interests
-* Aptitude
-* Work preferences
-* Problem-solving orientation
-* Technical inclination
-* Creativity
-* Communication
-* Career preferences
-
----
-
-# 11. Personal Career Profile
-
-The system converts user input into a structured profile.
+The database should store metadata rather than the actual resume binary.
 
 Example:
+
+```text
+resume_analyses
+-----------------------------
+id
+user_id
+appwrite_file_id
+file_name
+analysis_result
+created_at
+```
+
+---
+
+# 12. Appwrite Messaging
+
+Appwrite Messaging can be used for:
+
+- Roadmap reminders
+- Personalized notifications
+- Course notifications
+- Internship alerts
+- Progress reminders
+
+Flow:
+
+```text
+Roadmap Task
+     │
+     ▼
+Node Backend
+     │
+     ▼
+Appwrite Messaging
+     │
+     ▼
+User
+```
+
+---
+
+# 13. Appwrite Realtime
+
+Realtime is optional for the MVP.
+
+It can be used for:
+
+- Live roadmap progress updates
+- Notification updates
+- Dashboard updates
+- AI processing status
+
+Example:
+
+```text
+User completes task
+        ↓
+Node Backend
+        ↓
+MySQL updated
+        ↓
+Realtime Event
+        ↓
+React Dashboard
+        ↓
+UI updates
+```
+
+---
+
+# 14. Node.js Backend Architecture
+
+Node.js is the central application server.
+
+Responsibilities:
+
+- REST API
+- Business logic
+- Authorization
+- Validation
+- MySQL operations
+- Appwrite server-side integration
+- AI service communication
+- External API integration
+- Recommendation orchestration
+- Roadmap management
+- Course/internship processing
+
+---
+
+# 15. Backend Structure
+
+```text
+server/
+│
+├── src/
+│   │
+│   ├── config/
+│   │   ├── database.js
+│   │   ├── appwrite.js
+│   │   └── environment.js
+│   │
+│   ├── routes/
+│   │   ├── profile.routes.js
+│   │   ├── career.routes.js
+│   │   ├── recommendation.routes.js
+│   │   ├── roadmap.routes.js
+│   │   ├── resume.routes.js
+│   │   ├── github.routes.js
+│   │   ├── course.routes.js
+│   │   ├── internship.routes.js
+│   │   └── assistant.routes.js
+│   │
+│   ├── controllers/
+│   │
+│   ├── services/
+│   │   ├── career.service.js
+│   │   ├── recommendation.service.js
+│   │   ├── roadmap.service.js
+│   │   ├── appwrite.service.js
+│   │   ├── github.service.js
+│   │   └── ai.service.js
+│   │
+│   ├── middleware/
+│   │   ├── auth.middleware.js
+│   │   ├── validation.middleware.js
+│   │   └── error.middleware.js
+│   │
+│   ├── models/
+│   │
+│   ├── validators/
+│   │
+│   ├── utils/
+│   │
+│   └── app.js
+│
+└── package.json
+```
+
+---
+
+# 16. Backend Request Lifecycle
+
+```text
+HTTP Request
+      ↓
+Express Router
+      ↓
+Authentication Middleware
+      ↓
+Validation Middleware
+      ↓
+Controller
+      ↓
+Service Layer
+      ↓
+ ┌────┼──────────────┐
+ ▼    ▼              ▼
+MySQL Appwrite    AI Service
+      │
+      ▼
+Response
+```
+
+---
+
+# 17. MySQL Architecture
+
+MySQL is the primary relational database.
+
+It stores application-specific structured data.
+
+## Database Responsibilities
+
+MySQL stores:
+
+- User application profile
+- Education
+- Skills
+- Interests
+- Careers
+- Career requirements
+- Assessments
+- Recommendations
+- Skill gaps
+- Roadmaps
+- Roadmap tasks
+- Courses
+- Internships
+- Resume analysis metadata
+- GitHub analysis metadata
+- Notifications metadata
+- User progress
+
+---
+
+# 18. Database ER Diagram
+
+```mermaid
+erDiagram
+
+    USERS {
+        BIGINT id PK
+        VARCHAR appwrite_user_id UK
+        VARCHAR email
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    PROFILES {
+        BIGINT id PK
+        BIGINT user_id FK
+        VARCHAR education_level
+        VARCHAR degree
+        VARCHAR branch
+        INT study_year
+        DECIMAL cgpa
+        TEXT career_goal
+        VARCHAR preferred_industry
+        VARCHAR preferred_location
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    SKILLS {
+        BIGINT id PK
+        VARCHAR name UK
+        VARCHAR category
+    }
+
+    USER_SKILLS {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT skill_id FK
+        INT proficiency
+    }
+
+    INTERESTS {
+        BIGINT id PK
+        VARCHAR name UK
+    }
+
+    USER_INTERESTS {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT interest_id FK
+    }
+
+    CAREERS {
+        BIGINT id PK
+        VARCHAR name
+        VARCHAR category
+        TEXT description
+    }
+
+    CAREER_SKILLS {
+        BIGINT id PK
+        BIGINT career_id FK
+        BIGINT skill_id FK
+        INT required_level
+        INT importance
+    }
+
+    ASSESSMENTS {
+        BIGINT id PK
+        BIGINT user_id FK
+        VARCHAR type
+        DECIMAL score
+        JSON responses
+        DATETIME completed_at
+    }
+
+    CAREER_RECOMMENDATIONS {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT career_id FK
+        DECIMAL match_score
+        JSON explanation
+        DATETIME created_at
+    }
+
+    ROADMAPS {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT career_id FK
+        VARCHAR title
+        VARCHAR status
+        INT progress_percent
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    ROADMAP_TASKS {
+        BIGINT id PK
+        BIGINT roadmap_id FK
+        VARCHAR title
+        TEXT description
+        INT order_index
+        INT estimated_hours
+        VARCHAR status
+        DATETIME completed_at
+    }
+
+    COURSES {
+        BIGINT id PK
+        VARCHAR name
+        VARCHAR provider
+        BIGINT skill_id FK
+        VARCHAR level
+        VARCHAR url
+    }
+
+    USER_COURSES {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT course_id FK
+        VARCHAR status
+        INT progress
+    }
+
+    INTERNSHIPS {
+        BIGINT id PK
+        VARCHAR title
+        VARCHAR company
+        VARCHAR location
+        TEXT description
+        VARCHAR url
+    }
+
+    INTERNSHIP_RECOMMENDATIONS {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT internship_id FK
+        DECIMAL match_score
+        DATETIME created_at
+    }
+
+    RESUME_ANALYSES {
+        BIGINT id PK
+        BIGINT user_id FK
+        VARCHAR appwrite_file_id
+        VARCHAR file_name
+        JSON extracted_data
+        JSON analysis_result
+        DATETIME created_at
+    }
+
+    GITHUB_ANALYSES {
+        BIGINT id PK
+        BIGINT user_id FK
+        VARCHAR github_username
+        JSON analysis_result
+        DATETIME created_at
+    }
+
+    NOTIFICATIONS {
+        BIGINT id PK
+        BIGINT user_id FK
+        VARCHAR title
+        TEXT message
+        BOOLEAN is_read
+        DATETIME created_at
+    }
+
+    USERS ||--|| PROFILES : owns
+
+    USERS ||--o{ USER_SKILLS : has
+    SKILLS ||--o{ USER_SKILLS : contains
+
+    USERS ||--o{ USER_INTERESTS : has
+    INTERESTS ||--o{ USER_INTERESTS : contains
+
+    CAREERS ||--o{ CAREER_SKILLS : requires
+    SKILLS ||--o{ CAREER_SKILLS : required_by
+
+    USERS ||--o{ ASSESSMENTS : completes
+
+    USERS ||--o{ CAREER_RECOMMENDATIONS : receives
+    CAREERS ||--o{ CAREER_RECOMMENDATIONS : recommended
+
+    USERS ||--o{ ROADMAPS : owns
+    CAREERS ||--o{ ROADMAPS : targets
+
+    ROADMAPS ||--o{ ROADMAP_TASKS : contains
+
+    SKILLS ||--o{ COURSES : teaches
+
+    USERS ||--o{ USER_COURSES : tracks
+    COURSES ||--o{ USER_COURSES : selected
+
+    USERS ||--o{ INTERNSHIP_RECOMMENDATIONS : receives
+    INTERNSHIPS ||--o{ INTERNSHIP_RECOMMENDATIONS : recommended
+
+    USERS ||--o{ RESUME_ANALYSES : creates
+    USERS ||--o{ GITHUB_ANALYSES : creates
+
+    USERS ||--o{ NOTIFICATIONS : receives
+```
+
+---
+
+# 19. Python AI Service
+
+The AI service is an independent Python application.
+
+Technology:
+
+```text
+Python
+FastAPI
+scikit-learn
+pandas
+numpy
+```
+
+Additional libraries may be introduced when required.
+
+## AI Service Responsibilities
+
+The Python service handles:
+
+- Skill normalization
+- Skill matching
+- Career recommendation
+- Skill-gap calculation
+- Resume analysis
+- GitHub technical profile analysis
+- Career ranking
+- What-if simulation
+- LLM-based processing where required
+
+---
+
+# 20. AI Service Architecture
+
+```text
+Python/FastAPI
+│
+├── API
+│
+├── preprocessing/
+│
+├── recommendation/
+│   ├── skill_matcher
+│   ├── career_ranker
+│   └── scoring
+│
+├── resume/
+│   ├── parser
+│   └── analyzer
+│
+├── github/
+│   └── analyzer
+│
+├── assistant/
+│   └── llm_service
+│
+├── models/
+│
+└── utils/
+```
+
+---
+
+# 21. AI Communication
+
+Node.js communicates with Python through HTTP.
+
+```text
+Node.js
+   │
+   │ HTTP POST
+   ▼
+FastAPI
+   │
+   ▼
+AI Processing
+   │
+   ▼
+JSON Response
+   │
+   ▼
+Node.js
+```
+
+Example endpoint:
+
+```http
+POST /ai/recommend-careers
+```
+
+Example request:
 
 ```json
 {
-  "education": "B.Tech",
-  "branch": "Computer Science",
-  "year": 2,
-  "cgpa": 8.1,
-  "skills": {
-    "javascript": 4,
-    "react": 4,
-    "python": 2,
-    "sql": 1
-  },
-  "interests": [
-    "web development",
-    "software engineering"
+  "education_level": "college",
+  "skills": [
+    {
+      "name": "JavaScript",
+      "proficiency": 4
+    },
+    {
+      "name": "React",
+      "proficiency": 4
+    }
   ],
-  "goals": [
-    "internship",
-    "software engineering job"
+  "interests": [
+    "Web Development",
+    "Software Engineering"
   ]
 }
 ```
 
-The profile becomes the primary input to the recommendation system.
+Example response:
 
----
-
-# 12. AI / Recommendation Engine
-
-The platform will use a **hybrid intelligent recommendation architecture**.
-
-It should not depend entirely on machine learning.
-
-## Layer 1 — Rule-Based Engine
-
-Used for deterministic relationships.
-
-Example:
-
-```text
-IF
-JavaScript = Advanced
-React = Advanced
-Web Development Interest = High
-
-THEN
-
-increase Full Stack Developer compatibility
+```json
+{
+  "recommendations": [
+    {
+      "career_id": 12,
+      "career": "Frontend Developer",
+      "score": 91,
+      "reasons": [
+        "Strong React skills",
+        "Strong JavaScript skills"
+      ],
+      "skill_gaps": [
+        "Testing",
+        "Accessibility"
+      ]
+    }
+  ]
+}
 ```
 
 ---
 
-## Layer 2 — Skill Matching
-
-Compare:
+# 22. Career Recommendation Pipeline
 
 ```text
+User Profile
+     ↓
+Node Backend
+     ↓
+FastAPI
+     ↓
+Input Validation
+     ↓
+Feature Extraction
+     ↓
+Skill Normalization
+     ↓
+Career Matching
+     ↓
+Career Scoring
+     ↓
+Skill Gap Calculation
+     ↓
+Recommendation Ranking
+     ↓
+JSON Response
+     ↓
+Node Backend
+     ↓
+MySQL
+     ↓
+React Dashboard
+```
+
+---
+
+# 23. Recommendation Engine
+
+The first implementation should **not** depend entirely on a complex ML model.
+
+The recommended approach is a hybrid system:
+
+```text
+               Career Recommendation
+                       │
+          ┌────────────┼────────────┐
+          ▼            ▼            ▼
+      Skill Match   Interest     Education
+                      Match        Match
+          │            │            │
+          └────────────┼────────────┘
+                       ▼
+                  Score Engine
+                       │
+                       ▼
+                Career Ranking
+```
+
+An initial scoring model can use weighted factors:
+
+```text
+Career Score =
+    Skill Match × 0.45
+  + Interest Match × 0.20
+  + Education Match × 0.15
+  + Assessment Match × 0.10
+  + Experience Match × 0.10
+```
+
+Weights can be changed during testing.
+
+Machine learning can be introduced later when enough suitable training/evaluation data exists.
+
+---
+
+# 24. Skill Gap Engine
+
+The skill-gap engine compares:
+
+```text
+Required Career Skills
+        VS
+User Skills
+```
+
+Example:
+
+```text
+Career: Full Stack Developer
+
+Required:
+
+JavaScript → 4
+React      → 4
+Node.js    → 3
+SQL        → 3
+Git        → 2
+
+User:
+
+JavaScript → 4
+React      → 4
+Node.js    → 1
+SQL        → 1
+Git        → 3
+```
+
+Output:
+
+```text
+Strong:
+JavaScript
+React
+Git
+
+Needs Improvement:
+Node.js
+SQL
+```
+
+---
+
+# 25. Roadmap Generation
+
+The roadmap engine uses the output of the skill-gap engine.
+
+```text
+Target Career
+      ↓
+Required Skills
+      ↓
 User Skills
       ↓
-Career Required Skills
-      ↓
-Skill Similarity
-      ↓
-Career Match Score
-```
-
----
-
-## Layer 3 — Optional ML
-
-The Python service may use lightweight machine-learning algorithms such as:
-
-* Logistic Regression
-* Decision Trees
-* Random Forest
-* Similarity-based recommendation
-
-The exact model should be selected after dataset evaluation.
-
-Deep learning is not required for the MVP.
-
----
-
-## Layer 4 — LLM
-
-An LLM may optionally be used for:
-
-* Explaining recommendations
-* Conversational career guidance
-* Roadmap explanations
-* Answering career-related questions
-* Transforming structured recommendations into natural-language guidance
-
-The LLM must not be treated as the source of truth for structured career data.
-
----
-
-# 13. Career Recommendation
-
-The system should generate multiple recommendations rather than only one.
-
-Example:
-
-```text
-1. Full Stack Developer — 87%
-2. Software Engineer — 82%
-3. Backend Developer — 76%
-4. Data Analyst — 64%
-```
-
-Each recommendation should include:
-
-* Match score
-* Why it matches
-* Strong existing skills
-* Missing skills
-* Recommended next steps
-
----
-
-# 14. Explainable Recommendations
-
-For every recommendation, the system should explain:
-
-### Why?
-
-Example:
-
-> Your recommendation is based on your JavaScript and React proficiency, interest in web development, problem-solving preference, and stated software-industry goal.
-
-### What is missing?
-
-Example:
-
-> Your primary gaps are backend development, SQL, and API development.
-
-### What should you do?
-
-Example:
-
-> Learn Node.js → Learn SQL → Build a REST API → Build a full-stack project.
-
----
-
-# 15. Skill Gap Analysis
-
-The system compares:
-
-```text
-Current User Skill
-        VS
-Career Required Skill
-```
-
-Example:
-
-```text
-JavaScript       █████████░ 90%
-React            ████████░░ 80%
-SQL              ████░░░░░░ 40%
-Backend          ███░░░░░░░ 30%
-```
-
-Skill status:
-
-* 🟢 Strong
-* 🟡 Moderate
-* 🟠 Developing
-* 🔴 Missing
-
----
-
-# 16. Personalized Roadmap
-
-The roadmap should be generated based on:
-
-* Current skill level
-* Target career
-* Available time
-* Career goals
-* Learning preferences
-* Existing projects
-* Skill gaps
-
-Example:
-
-```text
-Month 1
-Node.js
-
-Month 2
-Express + REST APIs
-
-Month 3
-PostgreSQL
-
-Month 4
-Authentication
-
-Month 5
-Full-Stack Project
-
-Month 6
-Resume + Interview Preparation
-```
-
-Users should be able to:
-
-* Start tasks
-* Pause tasks
-* Complete tasks
-* Modify tasks
-* Reorder tasks
-* Add custom tasks
-* Track progress
-
----
-
-# 17. Career What-If Simulator
-
-One of the major differentiating features.
-
-Users can simulate:
-
-> "What happens if I learn Python?"
-
-or:
-
-> "What happens if I learn AWS?"
-
-The system recalculates career compatibility.
-
-Example:
-
-```text
-Before:
-
-Full Stack Developer   86%
-Data Analyst           64%
-Data Scientist         51%
-
-After learning Python:
-
-Full Stack Developer   87%
-Data Analyst           76%
-Data Scientist         68%
-```
-
-The simulator should clearly indicate that these are **estimated recommendation scores**, not guaranteed career outcomes.
-
----
-
-# 18. Career Comparison
-
-Users can compare multiple careers.
-
-Example:
-
-| Attribute            | Full Stack | Data Scientist |
-| -------------------- | ---------- | -------------- |
-| Current Match        | 87%        | 51%            |
-| Skills Missing       | 3          | 6              |
-| Learning Effort      | Medium     | High           |
-| Recommended Projects | 3          | 4              |
-| Current Strength     | High       | Low            |
-
----
-
-# 19. Resume Analysis
-
-Users can upload their resume.
-
-The system can extract:
-
-* Skills
-* Education
-* Experience
-* Projects
-* Certifications
-* Keywords
-
-The system should identify:
-
-* Missing skills
-* Career alignment
-* Skill inconsistencies
-* Potential improvements
-* Recommended roles
-
-The resume analysis should feed relevant structured information back into the user's career profile where appropriate.
-
----
-
-# 20. GitHub Profile Analysis
-
-Users can provide a GitHub profile.
-
-The system can analyze:
-
-* Public repositories
-* Languages
-* Project activity
-* Repository topics
-* Contribution activity where available
-* Project diversity
-
-Potential output:
-
-```text
-Frontend Development     Strong
-JavaScript               Strong
-Backend Development      Developing
-Python                   Basic
-Open Source Activity     Moderate
-```
-
-GitHub analysis should never claim private information that is not publicly accessible.
-
----
-
-# 21. Course Recommendations
-
-Courses should be recommended based on:
-
-```text
-Career
-   +
 Skill Gap
-   +
-Current Skill Level
-   +
-Learning Goal
+      ↓
+Priority Calculation
+      ↓
+Learning Resources
+      ↓
+Projects
+      ↓
+Roadmap Tasks
+      ↓
+MySQL
 ```
 
-Each course record should ideally contain:
+Example:
 
-* Name
-* Provider
-* Skill
-* Level
-* Duration
-* Link
-* Optional cost
-* Rating/source metadata where available
+```text
+Career:
+Full Stack Developer
 
----
+Roadmap:
 
-# 22. Internship Recommendations
-
-Internship recommendations should consider:
-
-* Skills
-* Career target
-* Education level
-* Location
-* Experience
-* Project portfolio
-
-The system should prioritize relevance rather than simply displaying a generic internship list.
+1. Learn Node.js
+2. Build REST API
+3. Learn SQL
+4. Build MySQL project
+5. Learn authentication
+6. Build full-stack project
+7. Deploy project
+```
 
 ---
 
-# 23. Personalized Notifications
+# 26. What-If Simulator
 
-Examples:
+The simulator must not modify the real user profile unless the user explicitly chooses to apply the changes.
 
-> You have completed 60% of your roadmap.
+```text
+Current Profile
+      ↓
+Temporary Copy
+      ↓
+Modify Skills / Goals / Interests
+      ↓
+Recommendation Engine
+      ↓
+Simulated Results
+      ↓
+Compare Results
+```
 
-> You have not completed your Node.js task.
+Example:
 
-> A recommended skill has been added to your roadmap.
+```text
+Current:
 
-> Your career profile has changed significantly.
+React = 3
+Python = 1
 
-Notifications should be useful and non-spammy.
+What If:
 
----
+Python = 4
 
-# 24. AI Career Assistant
+↓
 
-The chatbot should answer questions such as:
-
-> Why was Full Stack recommended for me?
-
-> What should I learn after React?
-
-> I only have 5 hours per week. Can you modify my roadmap?
-
-> What skills are required for DevOps?
-
-The assistant should use the user's structured profile and roadmap context where appropriate.
-
----
-
-# 25. Dashboard
-
-The dashboard acts as the user's career command center.
-
-It should show:
-
-* Career readiness
-* Top career match
-* Career recommendations
-* Skill gaps
-* Current roadmap
-* Today's recommended action
-* Progress
-* Recommended courses
-* Recommended internships
-* Quick access to career tools
+New Career Recommendations
+```
 
 ---
 
-# 26. Career Readiness Score
+# 27. Resume Analysis
 
-The system may calculate a high-level readiness score based on:
+Resume files are stored in Appwrite Storage.
 
-* Required skill coverage
-* Projects
-* Certifications
-* Experience
-* Assessment performance
-* Roadmap completion
+The analysis metadata is stored in MySQL.
 
-This score must be clearly presented as an **internal platform metric**, not an industry-certified score.
+```text
+Resume
+   ↓
+Appwrite Storage
+   ↓
+File ID
+   ↓
+Node Backend
+   ↓
+Python/FastAPI
+   ↓
+Text Extraction
+   ↓
+Skill Extraction
+   ↓
+Experience Extraction
+   ↓
+Career Alignment
+   ↓
+MySQL
+   ↓
+React
+```
 
 ---
 
-# 27. Data Requirements
+# 28. GitHub Analysis
 
-Core datasets:
+The GitHub analysis service uses the GitHub API to retrieve publicly accessible information.
 
-## Career
+```text
+GitHub Username
+       ↓
+Node Backend
+       ↓
+GitHub API
+       ↓
+Public Repository Data
+       ↓
+Python Analyzer
+       ↓
+Languages
+Repositories
+Activity
+Project Signals
+       ↓
+Technical Profile
+       ↓
+MySQL
+```
 
-* Career ID
-* Career name
-* Description
-* Category
-* Industry
+The system should only process publicly available GitHub information.
 
-## Skills
+---
 
-* Skill ID
-* Skill name
-* Category
+# 29. AI Career Assistant
 
-## Career Skills
+The AI assistant uses the user's Skill_Guide context.
 
-* Career ID
-* Skill ID
-* Importance
-* Required proficiency
+Context can include:
+
+```text
+User Profile
+Skills
+Interests
+Target Career
+Skill Gaps
+Roadmap
+Progress
+```
+
+Architecture:
+
+```text
+User Question
+      ↓
+React
+      ↓
+Node Backend
+      ↓
+Context Builder
+      ↓
+Python AI Service
+      ↓
+LLM
+      ↓
+Response
+      ↓
+Node Backend
+      ↓
+React
+```
+
+The assistant should not invent structured career information when reliable application data exists.
+
+---
+
+# 30. Course Recommendation Architecture
+
+Courses are stored or indexed in MySQL.
+
+```text
+User Skill Gap
+      ↓
+Required Skills
+      ↓
+Course Matching
+      ↓
+Filtering
+      ↓
+Ranking
+      ↓
+Recommended Courses
+```
+
+Filtering parameters can include:
+
+- Skill
+- Difficulty
+- Duration
+- Provider
+- Free/Paid
+- Rating
+- User preference
+
+---
+
+# 31. Internship Recommendation Architecture
+
+```text
+User Profile
+      ↓
+Skills
+      ↓
+Career Interest
+      ↓
+Education Level
+      ↓
+Location Preference
+      ↓
+Internship Data
+      ↓
+Matching
+      ↓
+Ranking
+      ↓
+Recommended Internships
+```
+
+External internship data must pass through the Node backend before reaching the frontend.
+
+---
+
+# 32. API Architecture
+
+## Profile
+
+```text
+GET    /api/profile
+PUT    /api/profile
+POST   /api/profile/skills
+DELETE /api/profile/skills/:skillId
+POST   /api/profile/interests
+```
+
+## Careers
+
+```text
+GET  /api/careers
+GET  /api/careers/:careerId
+POST /api/careers/compare
+```
+
+## Recommendations
+
+```text
+POST /api/recommendations/generate
+GET  /api/recommendations
+GET  /api/recommendations/:id
+```
+
+## Roadmaps
+
+```text
+POST   /api/roadmaps
+GET    /api/roadmaps
+GET    /api/roadmaps/:id
+PUT    /api/roadmaps/:id
+DELETE /api/roadmaps/:id
+```
+
+## Roadmap Tasks
+
+```text
+POST   /api/roadmaps/:id/tasks
+PUT    /api/roadmaps/:id/tasks/:taskId
+DELETE /api/roadmaps/:id/tasks/:taskId
+```
+
+## Resume
+
+```text
+POST /api/resume/analyze
+GET  /api/resume/analysis/:id
+```
+
+## GitHub
+
+```text
+POST /api/github/analyze
+GET  /api/github/analysis/:id
+```
+
+## What-If
+
+```text
+POST /api/what-if/simulate
+```
 
 ## Courses
 
-* Course ID
-* Name
-* Provider
-* Skill
-* Level
-* Duration
-* URL
-
-## Projects
-
-* Project ID
-* Name
-* Career
-* Skills
-* Difficulty
+```text
+GET /api/courses
+GET /api/courses/recommended
+```
 
 ## Internships
 
-* Internship ID
-* Role
-* Skills
-* Company/source
-* Location
-* Eligibility
-* URL
-
----
-
-# 28. Non-Functional Requirements
-
-## Performance
-
-* Dashboard should load quickly.
-* API responses should be optimized.
-* Large datasets should use pagination/filtering.
-
-## Security
-
-* Passwords must never be stored in plain text.
-* User data must be protected.
-* Resume files must be handled securely.
-* Authentication must be enforced on private APIs.
-
-## Scalability
-
-The architecture should allow additional:
-
-* Careers
-* Skills
-* Courses
-* Internships
-* Users
-
-without major architectural changes.
-
-## Maintainability
-
-* Modular frontend
-* Modular backend
-* Clear API contracts
-* Centralized configuration
-* Git-based development workflow
-
----
-
-# 29. MVP Scope
-
-The MVP must contain:
-
-### Authentication
-
-* Signup
-* Login
-* Logout
-
-### Profile
-
-* Education
-* Skills
-* Interests
-* Career preferences
-
-### Assessment
-
-* Career assessment
-
-### Core Intelligence
-
-* Career recommendation
-* Skill-gap analysis
-* Personalized roadmap
-
-### Dashboard
-
-* Recommendations
-* Skill gaps
-* Roadmap
-* Progress tracking
-
-### Differentiator
-
-* Career What-If Simulator
-
----
-
-# 30. Phase 2
-
-After the MVP:
-
-* Resume analysis
-* Course recommendations
-* Career comparison
-* Career explorer
-* AI career assistant
-
----
-
-# 31. Phase 3
-
-If time permits:
-
-* GitHub analysis
-* Internship recommendations
-* Personalized notifications
-* Advanced ML
-* Advanced analytics
-* More sophisticated personalization
-
----
-
-# 32. Success Criteria
-
-The prototype should demonstrate:
-
-1. A new user can create an account.
-2. The user can complete career onboarding.
-3. The system creates a structured career profile.
-4. The system recommends multiple careers.
-5. The system explains its recommendations.
-6. The system identifies skill gaps.
-7. The system generates a roadmap.
-8. The user can track roadmap progress.
-9. The user can modify roadmap tasks.
-10. The user can run a career What-If simulation.
-11. Recommendations change when user data changes.
-12. The complete flow works through a real deployed prototype.
-
----
-
-# 33. Core Product Loop
-
 ```text
-PROFILE
-   ↓
-ASSESS
-   ↓
-RECOMMEND
-   ↓
-IDENTIFY GAPS
-   ↓
-GENERATE ROADMAP
-   ↓
-LEARN
-   ↓
-BUILD
-   ↓
-TRACK
-   ↓
-REASSESS
-   ↓
-UPDATE RECOMMENDATIONS
+GET /api/internships
+GET /api/internships/recommended
 ```
 
-This loop is the heart of the product.
+## Assistant
+
+```text
+POST /api/assistant/chat
+```
+
+## Notifications
+
+```text
+GET /api/notifications
+PUT /api/notifications/:id/read
+```
+
+---
+
+# 33. Complete Request Flow
+
+A typical recommendation request:
+
+```text
+                         USER
+                           │
+                           ▼
+                    React Frontend
+                           │
+                           ▼
+                    Node REST API
+                           │
+                    Authentication
+                           │
+                           ▼
+                    Fetch Profile
+                           │
+                           ▼
+                         MySQL
+                           │
+                           ▼
+                  Recommendation Service
+                           │
+                           ▼
+                     Python/FastAPI
+                           │
+                           ▼
+                   AI Recommendation
+                           │
+                           ▼
+                    JSON Response
+                           │
+                           ▼
+                     Node Backend
+                           │
+                           ├── Store Result
+                           ▼
+                         MySQL
+                           │
+                           ▼
+                    React Dashboard
+```
+
+---
+
+# 34. Complete System Interaction
+
+```mermaid
+flowchart LR
+
+    USER[User]
+    FE[React Frontend]
+
+    AW_AUTH[Appwrite Auth]
+    AW_STORAGE[Appwrite Storage]
+    AW_MSG[Appwrite Messaging]
+    AW_RT[Appwrite Realtime]
+
+    API[Node.js + Express]
+    DB[(MySQL)]
+    AI[Python + FastAPI]
+
+    GITHUB[GitHub API]
+    EXT[External Course / Internship APIs]
+    LLM[LLM Provider]
+
+    USER --> FE
+
+    FE --> AW_AUTH
+    FE --> API
+    FE --> AW_STORAGE
+
+    API --> DB
+    API --> AW_AUTH
+    API --> AW_MSG
+    API --> AW_RT
+
+    API --> AI
+    API --> GITHUB
+    API --> EXT
+
+    AI --> LLM
+    AI --> API
+
+    DB --> API
+    API --> FE
+
+    AW_RT --> FE
+```
+
+---
+
+# 35. Data Ownership
+
+A strict data ownership model must be followed.
+
+| Data | Owner |
+|---|---|
+| Authentication identity | Appwrite |
+| Sessions | Appwrite |
+| Password | Appwrite |
+| Resume binary | Appwrite Storage |
+| Profile | MySQL |
+| Skills | MySQL |
+| Careers | MySQL |
+| Recommendations | MySQL |
+| Roadmaps | MySQL |
+| Courses | MySQL |
+| Internships | MySQL |
+| AI calculations | Python |
+| AI analysis results | MySQL |
+| Notifications | Appwrite Messaging + MySQL metadata |
+
+---
+
+# 36. Environment Configuration
+
+No secrets should be committed to Git.
+
+## Frontend
+
+```env
+VITE_APPWRITE_ENDPOINT=
+VITE_APPWRITE_PROJECT_ID=
+VITE_API_BASE_URL=
+```
+
+Only values safe for client-side exposure should use the `VITE_` prefix.
+
+## Node Backend
+
+```env
+PORT=5000
+
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=career_advisor
+
+APPWRITE_ENDPOINT=
+APPWRITE_PROJECT_ID=
+APPWRITE_API_KEY=
+
+AI_SERVICE_URL=http://localhost:8000
+
+GITHUB_TOKEN=
+LLM_API_KEY=
+```
+
+## Python AI Service
+
+```env
+PORT=8000
+
+LLM_API_KEY=
+```
+
+---
+
+# 37. Local Development Architecture
+
+Docker is not required.
+
+The development environment consists of:
+
+```text
+React
+localhost:3000
+
+Node.js / Express
+localhost:5000
+
+Python / FastAPI
+localhost:8000
+
+MySQL
+localhost:3306
+
+Appwrite
+Cloud / configured Appwrite instance
+```
+
+---
+
+# 38. Local Development Flow
+
+Start:
+
+```text
+1. MySQL
+      ↓
+2. Node.js Backend
+      ↓
+3. Python AI Service
+      ↓
+4. React Frontend
+```
+
+Appwrite services remain accessible through the configured Appwrite endpoint.
+
+---
+
+# 39. Security Architecture
+
+Security responsibilities are divided between Appwrite and the application backend.
+
+## Appwrite
+
+Handles:
+
+- Authentication
+- Sessions
+- User identity
+- File permissions
+
+## Node Backend
+
+Handles:
+
+- Authorization
+- Business-level permissions
+- Input validation
+- API security
+- Rate limiting
+- User-resource ownership
+
+## MySQL
+
+Handles:
+
+- Data integrity
+- Foreign keys
+- Constraints
+- Access through backend only
+
+## Python
+
+Handles:
+
+- AI processing
+- Input validation
+- AI-specific security controls
+
+---
+
+# 40. Important Security Rule
+
+The frontend must never contain:
+
+```text
+MySQL credentials
+Appwrite server API key
+GitHub private token
+LLM secret key
+```
+
+Only public Appwrite client configuration may be exposed to the frontend.
+
+---
+
+# 41. Error Handling
+
+All backend APIs should return consistent responses.
+
+Success:
+
+```json
+{
+  "success": true,
+  "data": {}
+}
+```
+
+Error:
+
+```json
+{
+  "success": false,
+  "message": "Unable to generate recommendations",
+  "code": "RECOMMENDATION_SERVICE_ERROR"
+}
+```
+
+Internal implementation details must not be exposed to users.
+
+---
+
+# 42. AI Failure Handling
+
+The application must remain usable if the AI service is unavailable.
+
+```text
+User requests recommendation
+          ↓
+Node Backend
+          ↓
+Python AI Service
+          ↓
+Service unavailable
+          ↓
+Node detects failure
+          ↓
+Return controlled error
+          ↓
+Frontend displays:
+"Recommendations are temporarily unavailable."
+```
+
+The application must not crash because the AI service is temporarily unavailable.
+
+---
+
+# 43. Repository Architecture
+
+```text
+career-advisor/
+│
+├── client/
+│   ├── public/
+│   ├── src/
+│   └── package.json
+│
+├── server/
+│   ├── src/
+│   └── package.json
+│
+├── ai-service/
+│   ├── app/
+│   ├── models/
+│   ├── data/
+│   └── requirements.txt
+│
+├── database/
+│   ├── schema.sql
+│   └── seed.sql
+│
+├── docs/
+│   ├── PRD.md
+│   ├── main_architecture.md
+│   └── rules.md
+│
+├── .env.example
+├── .gitignore
+└── README.md
+```
+
+---
+
+# 44. Development Strategy
+
+## Phase 1 — Foundation
+
+```text
+React
++
+Appwrite Authentication
++
+Node.js
++
+MySQL
+```
+
+## Phase 2 — Profile
+
+Implement:
+
+```text
+User Profile
+Education
+Skills
+Interests
+Career Goals
+```
+
+## Phase 3 — Career Engine
+
+Implement:
+
+```text
+Career Database
+Skill Database
+Career-Skill Mapping
+Basic Recommendation Engine
+```
+
+## Phase 4 — AI
+
+Introduce:
+
+```text
+Python
+FastAPI
+Skill Matching
+Recommendation Ranking
+Skill Gap
+```
+
+## Phase 5 — Roadmap
+
+Implement:
+
+```text
+Skill Gap
+↓
+Learning Resources
+↓
+Projects
+↓
+Roadmap
+↓
+Progress Tracking
+```
+
+## Phase 6 — Advanced Features
+
+Implement:
+
+```text
+Resume Analysis
+GitHub Analysis
+What-If Simulator
+Career Comparison
+AI Assistant
+```
+
+## Phase 7 — External Integrations
+
+Implement:
+
+```text
+Courses
+Internships
+Notifications
+```
+
+---
+
+# 45. Recommended Architecture Boundary
+
+```text
+┌───────────────────────────────────────────────────────┐
+│                    React Frontend                    │
+│                    Presentation                       │
+└───────────────────────┬───────────────────────────────┘
+                        │
+                        ▼
+┌───────────────────────────────────────────────────────┐
+│                  Appwrite Services                    │
+│                                                       │
+│        Auth │ Storage │ Messaging │ Realtime         │
+└───────────────────────────────────────────────────────┘
+                        │
+                        │
+                        ▼
+┌───────────────────────────────────────────────────────┐
+│                Node.js + Express                     │
+│                                                       │
+│       APIs │ Business Logic │ Integrations           │
+└───────────────┬───────────────────────┬───────────────┘
+                │                       │
+                ▼                       ▼
+       ┌─────────────────┐      ┌─────────────────────┐
+       │      MySQL      │      │   Python/FastAPI    │
+       │                 │      │                     │
+       │ Application     │      │ AI / ML             │
+       │ Data            │      │                     │
+       └─────────────────┘      └─────────────────────┘
+```
+
+---
+
+# 46. Architecture Decision Summary
+
+Skill_Guide intentionally uses Appwrite as a supporting backend infrastructure platform instead of making Appwrite the application's complete backend.
+
+### Appwrite
+
+Used for:
+
+```text
+Authentication
+Storage
+Messaging
+Realtime
+```
+
+### Node.js
+
+Used for:
+
+```text
+REST APIs
+Business Logic
+Authorization
+Database Access
+External Integrations
+AI Orchestration
+```
+
+### MySQL
+
+Used for:
+
+```text
+Profiles
+Skills
+Careers
+Recommendations
+Roadmaps
+Courses
+Internships
+Analysis Results
+```
+
+### Python/FastAPI
+
+Used for:
+
+```text
+AI
+ML
+Recommendation
+Skill Matching
+Resume Analysis
+GitHub Analysis
+LLM Integration
+```
+
+This separation keeps the system understandable, maintainable, and scalable while allowing the team to develop each part independently.

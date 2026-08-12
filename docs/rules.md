@@ -11,31 +11,35 @@ The system follows a modular, service-oriented architecture while remaining simp
 The primary architecture is:
 
 ```text
-                    ┌─────────────────────────┐
-                    │       CLIENT            │
-                    │ React + Tailwind CSS    │
-                    └────────────┬────────────┘
-                                 │
-                              HTTPS
-                                 │
-                                 ↓
-                    ┌─────────────────────────┐
-                    │      BACKEND API        │
-                    │ Node.js + Express       │
-                    └────────────┬────────────┘
-                                 │
-             ┌───────────────────┼───────────────────┐
-             │                   │                   │
-             ↓                   ↓                   ↓
-      ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-      │   MySQL     │    │ AI Service  │    │ External    │
-      │  Database   │    │ Python      │    │ Services    │
-      └─────────────┘    │ FastAPI     │    └─────────────┘
-                         └─────────────┘
+                    USER
+                      │
+                      ▼
+              ┌───────────────┐
+              │ React +       │
+              │ Tailwind      │
+              └───────┬───────┘
+                      │
+          ┌───────────┴────────────┐
+          │                        │
+          ▼                        ▼
+   ┌──────────────┐        ┌──────────────┐
+   │   Appwrite   │        │ Node/Express  │
+   │              │        │   Backend     │
+   │ Auth         │        │               │
+   │ Storage      │        │ Business      │
+   │ Messaging    │        │ Logic         │
+   │ Realtime     │        │ APIs          │
+   └──────────────┘        └───────┬───────┘
+                                   │
+                         ┌─────────┴─────────┐
+                         ▼                   ▼
+                  ┌─────────────┐    ┌──────────────┐
+                  │    MySQL    │    │ Python AI    │
+                  │             │    │ FastAPI      │
+                  └─────────────┘    └──────────────┘
 ```
 
 ---
-
 # 2. Technology Stack
 
 ## Frontend
@@ -44,19 +48,36 @@ The primary architecture is:
 * JavaScript
 * Tailwind CSS
 * React Router
-* Axios/fetch
-* Charting library where required
+* Axios / Fetch
 
 ## Backend
 
-* Node.js
-* Express.js
+* Main backend
 * REST APIs
-* JWT/session-based authentication
+* Business logic
+* Appwrite server integration
+* MySQL integration
+* External APIs
 
 ## Database
 
 * MySQL
+* Users' career data
+* Skills
+* Careers
+* Career-skill mappings
+* Recommendations
+* Roadmaps
+* Courses
+* Internships
+* Assessments
+
+## AppWrite
+
+* Authentication
+* Storage
+* Messaging
+* Realtime
 
 ## AI / ML
 
@@ -65,9 +86,9 @@ The primary architecture is:
 * Pandas
 * NumPy
 * Scikit-learn
-* Optional LLM API
+* Optional LLM integration
 
-## Version Control
+## Development
 
 * Git
 * GitHub
