@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { ProtectedRoute, PublicOnlyRoute } from '../components/common/RouteGuards'
+import { ProfileCompleteRoute, ProtectedRoute, PublicOnlyRoute } from '../components/common/RouteGuards'
 import Dashboard from '../pages/private/Dashboard'
+import EducationLevel from '../pages/private/EducationLevel'
 import Login from '../pages/auth/Login'
 import Signup from '../pages/auth/Signup'
 import Home from '../pages/public/Home'
@@ -28,11 +29,20 @@ export default function AppRoutes() {
       />
 
       <Route
-        path="/dashboard"
+        path="/onboarding/education-level"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <EducationLevel />
           </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/dashboard"
+        element={
+          <ProfileCompleteRoute>
+            <Dashboard />
+          </ProfileCompleteRoute>
         }
       />
 
