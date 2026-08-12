@@ -1,5 +1,5 @@
 /**
- * Skill_Guide — one-time Appwrite setup script.
+ * Skill Guide— one-time Appwrite setup script.
  *
  * Creates:
  *   - all collections from docs/main_architecture.md §17
@@ -50,8 +50,8 @@ loadEnv('.env.setup')
 const ENDPOINT = process.env.APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1'
 const PROJECT_ID = process.env.APPWRITE_PROJECT_ID
 const API_KEY = process.env.APPWRITE_API_KEY
-const DATABASE_ID = process.env.APPWRITE_DATABASE_ID || 'skill_guide'
-const DATABASE_NAME = process.env.APPWRITE_DATABASE_NAME || 'Skill_Guide'
+const DATABASE_ID = process.env.APPWRITE_DATABASE_ID || 'Skill Guide'
+const DATABASE_NAME = process.env.APPWRITE_DATABASE_NAME || 'Skill Guide'
 const BUCKET_ID = process.env.APPWRITE_BUCKET_ID || 'resumes'
 const BUCKET_NAME = process.env.APPWRITE_BUCKET_NAME || 'Resumes'
 
@@ -457,7 +457,7 @@ async function resolveDatabase(rl) {
       existing.forEach((db, i) => console.log(`    [${i}] ${db.$id} — ${db.name}`))
 
       const choice = await rl.question(
-        `  Which database should hold the Skill_Guide collections? [0-${existing.length - 1}] `,
+        `  Which database should hold the Skill Guidecollections? [0-${existing.length - 1}] `,
       )
       index = Number.parseInt(choice, 10)
     }
@@ -487,7 +487,7 @@ async function resolveDatabase(rl) {
 }
 
 async function main() {
-  console.log('Skill_Guide — Appwrite setup\n')
+  console.log('Skill Guide— Appwrite setup\n')
   console.log(`Endpoint:  ${ENDPOINT}`)
   console.log(`Project:   ${PROJECT_ID}`)
 

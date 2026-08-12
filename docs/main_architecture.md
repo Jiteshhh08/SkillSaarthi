@@ -1,6 +1,6 @@
-# Main Architecture — Skill_Guide
+# Main Architecture — Skill Guide
 
-> Technical architecture and implementation blueprint for Skill_Guide.
+> Technical architecture and implementation blueprint for Skill Guide.
 >
 > **Product:** One-Stop Personalized Career & Education Advisor
 >
@@ -10,7 +10,7 @@
 
 # 1. Architecture Overview
 
-Skill_Guide follows a modular architecture consisting of four major application layers:
+Skill Guidefollows a modular architecture consisting of four major application layers:
 
 1. **Frontend Layer** — React + Tailwind CSS (repo root)
 2. **Infrastructure & Data Layer** — Appwrite (Auth, Databases, Storage, Messaging, Realtime, Functions)
@@ -1162,7 +1162,7 @@ The system should only process publicly available GitHub information.
 
 # 29. AI Career Assistant
 
-The AI assistant uses the user's Skill_Guide context.
+The AI assistant uses the user's Skill Guidecontext.
 
 Context can include:
 
@@ -1818,7 +1818,7 @@ Notifications
 
 # 46. Architecture Decision Summary
 
-Skill_Guide uses Appwrite as its infrastructure and primary data layer instead of running a separate database.
+Skill Guideuses Appwrite as its infrastructure and primary data layer instead of running a separate database.
 
 ### Appwrite
 

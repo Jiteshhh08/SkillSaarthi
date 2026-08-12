@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import TopBar from '../../components/layout/TopBar'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -25,59 +26,55 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-white">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900 p-8"
-      >
-        <h1 className="text-2xl font-bold">Login</h1>
-        <p className="mt-1 text-sm text-slate-400">Welcome back to Skill_Guide.</p>
+    <div className="min-h-screen">
+      <TopBar />
+      <div className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-warm px-4 py-12">
+        <form onSubmit={handleSubmit} className="w-full max-w-sm rounded-xl bg-white p-8 shadow-card-rest">
+          <h1 className="text-2xl font-black tracking-tight">Login</h1>
+          <p className="mt-1 text-sm text-ink-muted">Welcome back to Skill Guide.</p>
 
-        {error && (
-          <p className="mt-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">
-            {error}
+          {error && (
+            <p className="mt-4 rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
+              {error}
+            </p>
+          )}
+
+          <label className="mt-6 block text-sm font-bold text-ink" htmlFor="email">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="input-base mt-1"
+          />
+
+          <label className="mt-4 block text-sm font-bold text-ink" htmlFor="password">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="input-base mt-1"
+          />
+
+          <button type="submit" disabled={submitting} className="btn-primary mt-6 w-full disabled:opacity-50">
+            {submitting ? 'Logging in…' : 'Login'}
+          </button>
+
+          <p className="mt-4 text-center text-sm text-ink-muted">
+            Don&apos;t have an account?{' '}
+            <Link to="/signup" className="font-bold text-brand-deep hover:underline">
+              Sign up
+            </Link>
           </p>
-        )}
-
-        <label className="mt-6 block text-sm font-medium text-slate-300" htmlFor="email">
-          Email
-        </label>
-        <input
-          id="email"
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 focus:border-indigo-500 focus:outline-none"
-        />
-
-        <label className="mt-4 block text-sm font-medium text-slate-300" htmlFor="password">
-          Password
-        </label>
-        <input
-          id="password"
-          type="password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 focus:border-indigo-500 focus:outline-none"
-        />
-
-        <button
-          type="submit"
-          disabled={submitting}
-          className="mt-6 w-full rounded-lg bg-indigo-500 px-4 py-3 font-medium hover:bg-indigo-400 disabled:opacity-50"
-        >
-          {submitting ? 'Logging in…' : 'Login'}
-        </button>
-
-        <p className="mt-4 text-center text-sm text-slate-400">
-          Don&apos;t have an account?{' '}
-          <Link to="/signup" className="text-indigo-400 hover:underline">
-            Sign up
-          </Link>
-        </p>
-      </form>
+        </form>
+      </div>
     </div>
   )
 }

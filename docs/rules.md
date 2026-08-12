@@ -1,6 +1,6 @@
-# Development Rules — Skill_Guide
+# Development Rules — Skill Guide
 
-> Rules and conventions for the Skill_Guide team.
+> Rules and conventions for the Skill Guideteam.
 >
 > **Product:** One-Stop Personalized Career & Education Advisor
 >
@@ -10,7 +10,7 @@
 
 # 1. Project Overview
 
-Skill_Guide is a personalized career and education guidance platform.
+Skill Guideis a personalized career and education guidance platform.
 
 It helps students, learners, and job seekers:
 

@@ -1,5 +1,5 @@
 /**
- * Skill_Guide — catalog seed script.
+ * Skill Guide— catalog seed script.
  *
  * Populates the global (read-only) catalogs with starter data so the app
  * has something to recommend from:
@@ -437,7 +437,7 @@ async function resolveDatabase() {
     }
   }
   throw new Error(
-    'Could not find the Skill_Guide database. Run npm run setup:appwrite first, or set APPWRITE_DATABASE_ID in scripts/.env.setup.',
+    'Could not find the Skill Guidedatabase. Run npm run setup:appwrite first, or set APPWRITE_DATABASE_ID in scripts/.env.setup.',
   )
 }
 
@@ -581,7 +581,7 @@ async function ensureInternship(dbId, internship) {
 }
 
 async function main() {
-  console.log('Skill_Guide — catalog seed\n')
+  console.log('Skill Guide— catalog seed\n')
   console.log(`Endpoint: ${ENDPOINT}`)
   console.log(`Project:  ${PROJECT_ID}`)
 

@@ -5,7 +5,11 @@ export function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center">Loading…</div>
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-canvas text-ink-muted">
+        Loading…
+      </div>
+    )
   }
 
   if (!user) {
@@ -19,7 +23,11 @@ export function PublicOnlyRoute({ children }) {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center">Loading…</div>
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-canvas text-ink-muted">
+        Loading…
+      </div>
+    )
   }
 
   if (user) {

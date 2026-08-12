@@ -17,7 +17,7 @@
 
 Working product name:
 
-**Skill_Guide**
+**Skill Guide**
 
 > The product name can be changed later.
 
