@@ -578,33 +578,46 @@ Open another terminal:
 
 ```bash
 cd ai-service
-
 python -m venv venv
 ```
 
-### Windows
+Install dependencies using the venv's own Python. The Windows PowerShell execution policy often blocks the `.ps1` activation script, so preferring to call the venv directly avoids an activation step entirely.
 
-```bash
-venv\Scripts\activate
+### Windows (PowerShell)
+
+```powershell
+cd ai-service
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 ### macOS / Linux
 
 ```bash
+cd ai-service
 source venv/bin/activate
-```
-
-Install dependencies:
-
-```bash
 pip install -r requirements.txt
 ```
 
 Run the service:
 
+### Windows (PowerShell)
+
+```powershell
+cd ai-service
+.\venv\Scripts\python.exe -m uvicorn app.main:app --reload
+```
+
+### macOS / Linux
+
 ```bash
+cd ai-service
+source venv/bin/activate
 uvicorn app.main:app --reload
 ```
+
+The service runs at `http://127.0.0.1:8000` — health check: `http://127.0.0.1:8000/health`.
+
+> **Windows note:** PowerShell 5.1 does not support `&&` (use `;` to chain commands). If you prefer to activate the venv explicitly, run `Set-ExecutionPolicy -Scope Process RemoteSigned` once, then activate with `.\venv\Scripts\Activate.ps1`.
 
 ---
 
@@ -689,18 +702,18 @@ For complete development rules:
 
 ## Phase 1 — Foundation
 
-* [ ] Repository setup
-* [ ] Frontend setup
-* [ ] Backend setup
-* [ ] Appwrite setup (project, database, collections)
-* [ ] Authentication
-* [ ] Basic UI system
+* [x] Repository setup
+* [x] Frontend setup
+* [x] Backend setup
+* [x] Appwrite setup (project, database, collections)
+* [x] Authentication
+* [x] Basic UI system
 
 ---
 
 ## Phase 2 — User Profile
 
-* [ ] Education-level selection
+* [x] Education-level selection
 * [ ] Profile onboarding
 * [ ] Skills
 * [ ] Interests
