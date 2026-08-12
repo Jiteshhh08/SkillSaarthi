@@ -1,9 +1,15 @@
+import { BrowserRouter } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext.jsx'
+import AppRoutes from './routes/AppRoutes'
+
 function App() {
   return (
-    <>
-      <h1>Jitesh</h1>
-    </>
-  );
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
+  )
 }
 
 export default App
