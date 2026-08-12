@@ -1,4 +1,4 @@
-import { Account, Client, Databases, Storage, ID, Query } from 'appwrite'
+import { Account, Client, Databases, Storage, ID, Permission, Query, Role } from 'appwrite'
 
 const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1'
 const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID
@@ -42,4 +42,4 @@ export const COLLECTIONS = {
   notifications: 'notifications',
 }
 
-export { ID, Query }
+export { ID, Query, Permission, Role }
