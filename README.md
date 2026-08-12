@@ -381,20 +381,29 @@ This approach allows the MVP to work reliably even without a large machine-learn
 * JavaScript
 * Tailwind CSS
 * React Router
-* Axios / Fetch
+* Axios (Node backend calls)
+* Appwrite Web SDK
 
-## Backend
+## Infrastructure & Data
 
-* Main backend
+* Appwrite Authentication
+* Appwrite Databases (primary data store — NoSQL)
+* Appwrite Storage
+* Appwrite Messaging
+* Appwrite Realtime
+
+## Backend (server/)
+
+* Node.js + Express
 * REST APIs
 * Business logic
 * Appwrite server integration
-* MySQL integration
 * External APIs
+* AI service orchestration
 
-## Database
+## Data Model
 
-* MySQL
+* Appwrite Databases collections
 * Users' career data
 * Skills
 * Careers
@@ -404,13 +413,6 @@ This approach allows the MVP to work reliably even without a large machine-learn
 * Courses
 * Internships
 * Assessments
-
-## AppWrite
-
-* Authentication
-* Storage
-* Messaging
-* Realtime
 
 ## AI / ML
 
@@ -446,17 +448,16 @@ This approach allows the MVP to work reliably even without a large machine-learn
    │   Appwrite   │        │ Node/Express  │
    │              │        │   Backend     │
    │ Auth         │        │               │
-   │ Storage      │        │ Business      │
-   │ Messaging    │        │ Logic         │
-   │ Realtime     │        │ APIs          │
-   └──────────────┘        └───────┬───────┘
-                                   │
-                         ┌─────────┴─────────┐
-                         ▼                   ▼
-                  ┌─────────────┐    ┌──────────────┐
-                  │    MySQL    │    │ Python AI    │
-                  │             │    │ FastAPI      │
-                  └─────────────┘    └──────────────┘
+   │ Databases    │        │ Business      │
+   │ Storage      │        │ Logic         │
+   │ Messaging    │        │ APIs          │
+   │ Realtime     │        └───────┬───────┘
+   └──────────────┘                │
+                                   ▼
+                          ┌──────────────┐
+                          │ Python AI    │
+                          │ FastAPI      │
+                          └──────────────┘
 ```
 
 For the complete architecture, database design, ER diagram, API architecture, AI architecture, and data flows:
@@ -468,34 +469,40 @@ For the complete architecture, database design, ER diagram, API architecture, AI
 # 📂 Project Structure
 
 ```text
-career-advisor/
+skill-guide/
 │
-├── client/                     # React frontend
+├── src/                      # React frontend (repo root)
+│   ├── assets/
+│   ├── components/
+│   ├── pages/
+│   ├── services/             # appwrite.js, api.js, auth.js
+│   ├── hooks/
+│   ├── context/
+│   ├── routes/
+│   └── App.jsx
+│
+├── public/
+│
+├── server/                   # Node.js + Express backend
 │   ├── src/
-│   ├── public/
 │   └── package.json
 │
-├── server/                     # Node.js + Express backend
-│   ├── src/
-│   └── package.json
-│
-├── ai-service/                 # Python AI/ML service
+├── ai-service/               # Python AI/ML service
 │   ├── app/
 │   ├── models/
 │   ├── data/
 │   └── requirements.txt
-│
-├── database/                   # MySQL schema and seed data
-│   ├── schema.sql
-│   └── seed.sql
 │
 ├── docs/
 │   ├── PRD.md
 │   ├── main_architecture.md
 │   └── rules.md
 │
+├── .env
+├── .env.sample
 ├── .gitignore
-├── README.md
+├── vite.config.js
+└── package.json
 ```
 
 ---
@@ -509,8 +516,8 @@ Make sure the following are installed:
 * Node.js
 * npm
 * Python 3.x
-* MySQL
 * Git
+* An Appwrite project (cloud at https://cloud.appwrite.io or a self-hosted instance)
 
 ---
 
@@ -518,22 +525,33 @@ Make sure the following are installed:
 
 ```bash
 git clone <REPOSITORY_URL>
-cd career-advisor
+cd skill-guide
 ```
 
 ---
 
-# 2. Setup Frontend
+# 2. Setup Appwrite
+
+1. Create an Appwrite project in the console.
+2. Enable the **Email/Password** authentication provider.
+3. Create a database and the required collections (see `docs/main_architecture.md` section 17).
+4. Create a storage bucket for resumes.
+5. Copy `.env.sample` to `.env` and fill in `VITE_APPWRITE_ENDPOINT`, `VITE_APPWRITE_PROJECT_ID`, and `VITE_APPWRITE_DATABASE_ID`.
+
+---
+
+# 3. Setup Frontend (repo root)
 
 ```bash
-cd client
 npm install
 npm run dev
 ```
 
+The frontend runs at `http://localhost:5173`.
+
 ---
 
-# 3. Setup Backend
+# 4. Setup Backend
 
 Open another terminal:
 
@@ -543,9 +561,11 @@ npm install
 npm run dev
 ```
 
+Create `server/.env` with the backend variables from the Environment Variables section below (Appwrite API key, database ID, AI service URL).
+
 ---
 
-# 4. Setup AI Service
+# 5. Setup AI Service
 
 Open another terminal:
 
@@ -581,49 +601,36 @@ uvicorn app.main:app --reload
 
 ---
 
-# 5. Setup MySQL
-
-Create the database:
-
-```sql
-CREATE DATABASE career_advisor;
-```
-
-Then execute:
-
-```bash
-database/schema.sql
-```
-
-and:
-
-```bash
-database/seed.sql
-```
-
----
-
 # 🔐 Environment Variables
 
-Create `.env` files based on `.env.example`.
+Create `.env` files based on `.env.sample`.
 
-## Backend
+## Frontend (repo root)
+
+```env
+VITE_APPWRITE_ENDPOINT=
+VITE_APPWRITE_PROJECT_ID=
+VITE_APPWRITE_DATABASE_ID=
+VITE_API_BASE_URL=http://localhost:5000
+```
+
+## Backend (`server/.env`)
 
 ```env
 PORT=5000
 
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=career_advisor
-
-JWT_SECRET=
+APPWRITE_ENDPOINT=
+APPWRITE_PROJECT_ID=
+APPWRITE_API_KEY=
+APPWRITE_DATABASE_ID=
 
 AI_SERVICE_URL=http://localhost:8000
+
+GITHUB_TOKEN=
+LLM_API_KEY=
 ```
 
-## AI Service
+## AI Service (`ai-service/.env`)
 
 ```env
 PORT=8000
@@ -678,7 +685,7 @@ For complete development rules:
 * [ ] Repository setup
 * [ ] Frontend setup
 * [ ] Backend setup
-* [ ] MySQL setup
+* [ ] Appwrite setup (project, database, collections)
 * [ ] Authentication
 * [ ] Basic UI system
 

@@ -1,85 +1,71 @@
-# Main Architecture
+# Development Rules — Skill_Guide
 
-# One-Stop Personalized Career & Education Advisor
+> Rules and conventions for the Skill_Guide team.
+>
+> **Product:** One-Stop Personalized Career & Education Advisor
+>
+> Related documents: [`PRD.md`](PRD.md) (product requirements) · [`main_architecture.md`](main_architecture.md) (architecture)
 
 ---
 
-# 1. Architecture Overview
+# 1. Project Overview
 
-The system follows a modular, service-oriented architecture while remaining simple enough for a six-member student development team.
+Skill_Guide is a personalized career and education guidance platform.
 
-The primary architecture is:
+It helps students, learners, and job seekers:
+
+- Understand which careers suit them
+- See their skill gaps
+- Follow a personalized learning roadmap
+- Track their progress
+- Get course, project, and internship recommendations
+
+The product is built around one central loop:
 
 ```text
-                    USER
-                      │
-                      ▼
-              ┌───────────────┐
-              │ React +       │
-              │ Tailwind      │
-              └───────┬───────┘
-                      │
-          ┌───────────┴────────────┐
-          │                        │
-          ▼                        ▼
-   ┌──────────────┐        ┌──────────────┐
-   │   Appwrite   │        │ Node/Express  │
-   │              │        │   Backend     │
-   │ Auth         │        │               │
-   │ Storage      │        │ Business      │
-   │ Messaging    │        │ Logic         │
-   │ Realtime     │        │ APIs          │
-   └──────────────┘        └───────┬───────┘
-                                   │
-                         ┌─────────┴─────────┐
-                         ▼                   ▼
-                  ┌─────────────┐    ┌──────────────┐
-                  │    MySQL    │    │ Python AI    │
-                  │             │    │ FastAPI      │
-                  └─────────────┘    └──────────────┘
+UNDERSTAND USER
+      ↓
+RECOMMEND CAREER
+      ↓
+IDENTIFY GAPS
+      ↓
+CREATE ROADMAP
+      ↓
+LEARN & BUILD
+      ↓
+TRACK PROGRESS
+      ↓
+UPDATE RECOMMENDATIONS
 ```
 
 ---
+
 # 2. Technology Stack
 
-## Frontend
+## Frontend (repo root)
 
 * React
 * JavaScript
 * Tailwind CSS
 * React Router
-* Axios / Fetch
+* Axios (Node backend calls)
+* Appwrite Web SDK (client-safe)
 
-## Backend
+## Infrastructure & Data
 
-* Main backend
-* REST APIs
-* Business logic
-* Appwrite server integration
-* MySQL integration
-* External APIs
+* Appwrite Authentication
+* Appwrite Databases (primary data store — NoSQL)
+* Appwrite Storage
+* Appwrite Messaging
+* Appwrite Realtime
 
-## Database
+## Backend (server/)
 
-* MySQL
-* Users' career data
-* Skills
-* Careers
-* Career-skill mappings
-* Recommendations
-* Roadmaps
-* Courses
-* Internships
-* Assessments
+* Node.js
+* Express
+* Appwrite server SDK (Admin API)
 
-## AppWrite
-
-* Authentication
-* Storage
-* Messaging
-* Realtime
-
-## AI / ML
+## AI / ML (ai-service/)
 
 * Python
 * FastAPI
@@ -95,1073 +81,302 @@ The primary architecture is:
 
 ---
 
-# 3. System Architecture
+# 3. Architecture Rules
 
-```mermaid
-flowchart TD
+Read [`main_architecture.md`](main_architecture.md) for the full architecture.
 
-    USER[User]
+Core rules:
 
-    subgraph FRONTEND[Frontend]
-        HOME[Home]
-        AUTH[Login / Signup]
-        ONBOARD[Career Onboarding]
-        DASH[Dashboard]
-        CAREER[Career Explorer]
-        RESUME[Resume Analysis]
-        GITHUB[GitHub Analysis]
-        WHATIF[What-If Simulator]
-        COMPARE[Career Comparison]
-        COURSES[Courses]
-        INTERNSHIPS[Internships]
-        CHAT[AI Career Assistant]
-        ROADMAP[Roadmap]
-    end
-
-    subgraph BACKEND[Node.js Backend]
-        API[REST API]
-        AUTHAPI[Authentication Service]
-        PROFILE[Profile Service]
-        CAREERAPI[Career Service]
-        ROADMAPAPI[Roadmap Service]
-        RECOMMEND[Recommendation Service]
-        RESUMEAPI[Resume Service]
-        GITHUBAPI[GitHub Service]
-        NOTIFY[Notification Service]
-    end
-
-    subgraph AI[A I Service]
-        PREPROCESS[Data Preprocessing]
-        RULES[Rule-Based Engine]
-        SKILLMATCH[Skill Matching]
-        ML[ML Recommendation Model]
-        LLM[LLM / AI Assistant]
-    end
-
-    DB[(MySQL)]
-
-    EXT[External APIs / Data Sources]
-
-    USER --> FRONTEND
-    FRONTEND --> API
-
-    API --> AUTHAPI
-    API --> PROFILE
-    API --> CAREERAPI
-    API --> ROADMAPAPI
-    API --> RECOMMEND
-    API --> RESUMEAPI
-    API --> GITHUBAPI
-    API --> NOTIFY
-
-    AUTHAPI --> DB
-    PROFILE --> DB
-    CAREERAPI --> DB
-    ROADMAPAPI --> DB
-    RECOMMEND --> DB
-    RESUMEAPI --> DB
-    GITHUBAPI --> DB
-    NOTIFY --> DB
-
-    RECOMMEND --> PREPROCESS
-    PREPROCESS --> RULES
-    PREPROCESS --> SKILLMATCH
-    SKILLMATCH --> ML
-
-    CHAT --> LLM
-    RECOMMEND --> LLM
-
-    RESUMEAPI --> AI
-    GITHUBAPI --> AI
-
-    CAREERAPI --> EXT
-    COURSES --> EXT
-    INTERNSHIPS --> EXT
+```text
+React handles presentation.
+Appwrite handles auth + primary data + infrastructure.
+Node.js handles business logic and orchestration.
+Python handles AI/ML processing.
 ```
+
+- **There is no MySQL.** Appwrite Databases is the primary data store.
+- The frontend calls Appwrite directly for auth, database reads/writes, storage, and realtime.
+- The frontend calls the Node backend only for business logic and AI orchestration.
+- Authentication is handled by Appwrite Auth. **Do not store passwords or hash passwords in application code.**
+- The Python service must not handle authentication.
+- Business-critical logic must not live in the frontend.
 
 ---
 
-# 4. Frontend Architecture
-
-Recommended frontend structure:
+# 4. Repository Structure
 
 ```text
-src/
+skill-guide/
 │
-├── assets/
-│
-├── components/
-│   ├── common/
-│   ├── forms/
-│   ├── dashboard/
-│   ├── career/
-│   ├── roadmap/
-│   ├── resume/
-│   └── github/
-│
-├── pages/
-│   ├── public/
-│   │   ├── Home.jsx
-│   │   ├── About.jsx
-│   │   ├── HowItWorks.jsx
-│   │   └── ExploreCareers.jsx
-│   │
-│   ├── auth/
-│   │   ├── Login.jsx
-│   │   ├── Signup.jsx
-│   │   └── ForgotPassword.jsx
-│   │
-│   └── private/
-│       ├── Dashboard.jsx
-│       ├── Profile.jsx
-│       ├── Assessment.jsx
-│       ├── Recommendations.jsx
-│       ├── SkillGap.jsx
-│       ├── Roadmap.jsx
-│       ├── ResumeAnalysis.jsx
-│       ├── GitHubAnalysis.jsx
-│       ├── CareerComparison.jsx
-│       ├── WhatIf.jsx
-│       ├── Courses.jsx
-│       ├── Internships.jsx
-│       ├── CareerAssistant.jsx
-│       └── Settings.jsx
-│
-├── hooks/
-├── services/
-├── context/
-├── utils/
-├── routes/
-└── App.jsx
-```
-
----
-
-# 5. Backend Architecture
-
-Recommended structure:
-
-```text
-server/
-│
-├── src/
-│   │
-│   ├── config/
-│   │
-│   ├── controllers/
-│   │   ├── authController.js
-│   │   ├── profileController.js
-│   │   ├── careerController.js
-│   │   ├── roadmapController.js
-│   │   ├── recommendationController.js
-│   │   ├── resumeController.js
-│   │   ├── githubController.js
-│   │   └── notificationController.js
-│   │
-│   ├── routes/
-│   │   ├── authRoutes.js
-│   │   ├── profileRoutes.js
-│   │   ├── careerRoutes.js
-│   │   ├── roadmapRoutes.js
-│   │   ├── recommendationRoutes.js
-│   │   ├── resumeRoutes.js
-│   │   └── githubRoutes.js
-│   │
+├── src/                      # React frontend (repo root)
+│   ├── assets/
+│   ├── components/
+│   ├── pages/
+│   │   ├── public/
+│   │   ├── auth/
+│   │   └── private/
 │   ├── services/
-│   │   ├── authService.js
-│   │   ├── profileService.js
-│   │   ├── careerService.js
-│   │   ├── recommendationService.js
-│   │   ├── roadmapService.js
-│   │   └── notificationService.js
-│   │
-│   ├── middleware/
-│   │   ├── authMiddleware.js
-│   │   ├── errorMiddleware.js
-│   │   └── validationMiddleware.js
-│   │
-│   ├── models/
+│   ├── hooks/
+│   ├── context/
 │   ├── utils/
-│   └── app.js
+│   ├── routes/
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css
 │
-└── package.json
+├── public/
+│
+├── server/                   # Node.js + Express backend
+│   ├── src/
+│   │   ├── config/
+│   │   ├── routes/
+│   │   ├── controllers/
+│   │   ├── services/
+│   │   ├── middleware/
+│   │   ├── utils/
+│   │   └── app.js
+│   └── package.json
+│
+├── ai-service/               # Python AI/ML service
+│   ├── app/
+│   ├── models/
+│   ├── data/
+│   └── requirements.txt
+│
+├── docs/
+│   ├── PRD.md
+│   ├── main_architecture.md
+│   └── rules.md
+│
+├── .env
+├── .env.sample
+├── .gitignore
+├── vite.config.js
+├── package.json
+└── README.md
+```
+
+The frontend lives at the repo root. `server/` and `ai-service/` are separate applications.
+
+---
+
+# 5. Environment Variables
+
+Copy `.env.sample` to `.env` and fill values. Never commit real secrets.
+
+## Frontend (repo root `.env`)
+
+```env
+VITE_APPWRITE_ENDPOINT=
+VITE_APPWRITE_PROJECT_ID=
+VITE_APPWRITE_DATABASE_ID=
+VITE_API_BASE_URL=
+```
+
+Only client-safe values use the `VITE_` prefix.
+
+## Node Backend (`server/.env`)
+
+```env
+PORT=5000
+APPWRITE_ENDPOINT=
+APPWRITE_PROJECT_ID=
+APPWRITE_API_KEY=
+APPWRITE_DATABASE_ID=
+AI_SERVICE_URL=http://localhost:8000
+GITHUB_TOKEN=
+LLM_API_KEY=
+```
+
+## Python AI Service (`ai-service/.env`)
+
+```env
+PORT=8000
+LLM_API_KEY=
 ```
 
 ---
 
-# 6. AI Architecture
+# 6. Appwrite Conventions
 
-The AI system should be a separate Python service.
+## Collections
+
+Appwrite Databases collections are the app's tables. See `main_architecture.md` section 17 for the full list.
+
+Naming conventions:
+
+- Collection names: `snake_case`, plural (`user_skills`, `career_recommendations`, `roadmap_tasks`).
+- Attribute names: `snake_case`.
+- Foreign references: `_id` suffix, e.g. `user_id`, `career_id`, `skill_id`, `roadmap_id`.
+- The `profiles` document ID equals the Appwrite user `$id`.
+
+## Permissions
+
+- User-scoped collections (`profiles`, `user_skills`, `roadmaps`, etc.): user can read/write only their own documents.
+- Global catalogs (`skills`, `careers`, `courses`, `internships`): read-only for authenticated users.
+
+---
+
+# 7. API Conventions (Node Backend)
+
+Base URL: `http://localhost:5000/api`
+
+- Use REST conventions.
+- All routes except health checks require an Appwrite session token (`Authorization: Bearer <jwt>`).
+- Response format:
+
+```json
+{ "success": true, "data": {} }
+```
+
+```json
+{ "success": false, "message": "...", "code": "ERROR_CODE" }
+```
+
+- Validate all inputs.
+- Never expose internal error details.
+- Handle AI service failures gracefully (see `main_architecture.md` section 42).
+
+Key routes (full list in `main_architecture.md` section 32):
 
 ```text
-                 Node.js Backend
-                        │
-                        │ HTTP
-                        ↓
-              ┌───────────────────┐
-              │   Python FastAPI  │
-              └─────────┬─────────┘
-                        │
-             ┌──────────┼──────────┐
-             ↓          ↓          ↓
-          Rules      Matching      ML
-          Engine     Engine       Model
-             │          │          │
-             └──────────┼──────────┘
-                        ↓
-               Recommendation
-                        │
-                        ↓
-                 Node.js Backend
-```
-
----
-
-# 7. AI Recommendation Pipeline
-
-```mermaid
-flowchart TD
-
-    PROFILE[User Profile]
-    SKILLS[User Skills]
-    INTERESTS[Interests]
-    EDUCATION[Education]
-    GOALS[Career Goals]
-    ASSESSMENT[Assessment Results]
-
-    PROFILE --> PREPROCESS
-    SKILLS --> PREPROCESS
-    INTERESTS --> PREPROCESS
-    EDUCATION --> PREPROCESS
-    GOALS --> PREPROCESS
-    ASSESSMENT --> PREPROCESS
-
-    PREPROCESS[Data Preprocessing]
-
-    PREPROCESS --> RULES[Rule-Based Matching]
-    PREPROCESS --> SIMILARITY[Skill Similarity]
-
-    RULES --> SCORE[Career Scoring]
-    SIMILARITY --> SCORE
-
-    SCORE --> ML[Optional ML Ranking]
-
-    ML --> CAREERS[Ranked Career Recommendations]
-
-    CAREERS --> GAP[Skill Gap Analysis]
-    GAP --> ROADMAP[Personalized Roadmap]
-```
-
----
-
-# 8. Career Recommendation Formula
-
-The initial system can use a weighted scoring model.
-
-Example:
-
-```text
-Career Score =
-
-Skill Match          × 40%
-Interest Match       × 20%
-Assessment Match     × 15%
-Education Match      × 10%
-Goal Match            × 10%
-Experience Match      × 5%
-```
-
-The weights must be configurable.
-
-The system should not claim that these percentages represent scientifically validated career probabilities.
-
-They are internal recommendation scores.
-
----
-
-# 9. Skill Matching
-
-Every career should have a skill profile.
-
-Example:
-
-```text
-Full Stack Developer
-
-JavaScript      → Required: Advanced
-React           → Required: Advanced
-Node.js         → Required: Intermediate
-SQL             → Required: Intermediate
-Git             → Required: Intermediate
-Docker          → Required: Beginner
-```
-
-User:
-
-```text
-JavaScript → Advanced
-React      → Advanced
-Node.js    → Beginner
-SQL        → Beginner
-Git        → Intermediate
-```
-
-The system compares the two profiles.
-
----
-
-# 10. Skill Gap Architecture
-
-```mermaid
-flowchart LR
-
-    USER[User Skill Profile]
-    CAREER[Target Career]
-
-    USER --> COMPARE[Skill Comparison]
-    CAREER --> COMPARE
-
-    COMPARE --> STRONG[Strong Skills]
-    COMPARE --> MODERATE[Moderate Skills]
-    COMPARE --> GAP[Missing Skills]
-
-    GAP --> PRIORITY[Priority Ranking]
-
-    PRIORITY --> ROADMAP[Roadmap Generator]
-```
-
----
-
-# 11. Personalized Roadmap Architecture
-
-```text
-Career Goal
-     +
-Current Skills
-     +
-Skill Gaps
-     +
-Available Time
-     +
-Learning Preferences
-     ↓
-Roadmap Generator
-     ↓
-Ordered Tasks
-     ↓
-Courses
-Projects
-Certifications
-Assessments
-     ↓
-Progress Tracking
-```
-
----
-
-# 12. What-If Architecture
-
-The What-If simulator must not permanently change the user's profile.
-
-```mermaid
-flowchart TD
-
-    PROFILE[Current Profile]
-
-    PROFILE --> SNAPSHOT[Create Temporary Snapshot]
-
-    SNAPSHOT --> MODIFY[Add / Remove / Change Skill]
-
-    MODIFY --> RECOMMEND[Run Recommendation Engine]
-
-    RECOMMEND --> RESULT[Simulated Career Results]
-
-    RESULT --> COMPARE[Compare Before vs After]
-
-    COMPARE --> USER[Display Results]
-
-    USER --> SAVE[Optional: Apply Changes]
-```
-
-Example:
-
-```text
-Current:
-Python = Beginner
-
-Simulation:
-Python = Advanced
-
-↓
-
-Recalculate
-
-↓
-
-Data Scientist
-51% → 79%
-```
-
----
-
-# 13. Resume Analysis Architecture
-
-```mermaid
-flowchart TD
-
-    USER[User]
-    UPLOAD[Resume Upload]
-    PARSER[Resume Parser]
-    EXTRACT[Information Extraction]
-
-    USER --> UPLOAD
-    UPLOAD --> PARSER
-    PARSER --> EXTRACT
-
-    EXTRACT --> SKILLS[Extract Skills]
-    EXTRACT --> EDUCATION[Extract Education]
-    EXTRACT --> EXPERIENCE[Extract Experience]
-    EXTRACT --> PROJECTS[Extract Projects]
-
-    SKILLS --> PROFILE[Profile Update Suggestion]
-    EDUCATION --> PROFILE
-    EXPERIENCE --> PROFILE
-    PROJECTS --> PROFILE
-
-    PROFILE --> RECOMMEND[Career Recommendation]
-```
-
----
-
-# 14. GitHub Analysis Architecture
-
-```text
-GitHub Username
-      ↓
-GitHub API
-      ↓
-Public Repository Data
-      ↓
-Language Analysis
-      ↓
-Project Analysis
-      ↓
-Activity Analysis
-      ↓
-Skill Inference
-      ↓
-Profile Enhancement
-```
-
-The system should only analyze information legitimately accessible through the GitHub API/public profile.
-
----
-
-# 15. AI Career Assistant Architecture
-
-```mermaid
-flowchart TD
-
-    USER[User Question]
-
-    USER --> CHAT[Chat Interface]
-
-    CHAT --> BACKEND[Node.js Backend]
-
-    BACKEND --> CONTEXT[User Context Builder]
-
-    CONTEXT --> PROFILE[User Profile]
-    CONTEXT --> ROADMAP[User Roadmap]
-    CONTEXT --> SKILLS[User Skills]
-    CONTEXT --> CAREER[Career Recommendations]
-
-    PROFILE --> PROMPT[Prompt Context]
-    ROADMAP --> PROMPT
-    SKILLS --> PROMPT
-    CAREER --> PROMPT
-
-    PROMPT --> LLM[LLM]
-
-    LLM --> RESPONSE[AI Response]
-
-    RESPONSE --> CHAT
-```
-
-The AI assistant should be grounded in structured user data wherever possible.
-
----
-
-# 16. MySQL Database Architecture
-
-The database is relational.
-
-Core relationships:
-
-```text
-User
- │
- ├── Profile
- │
- ├── Education
- │
- ├── Skills
- │
- ├── Interests
- │
- ├── Assessments
- │
- ├── Career Recommendations
- │
- ├── Roadmaps
- │      └── Roadmap Tasks
- │
- ├── Resume Analyses
- │
- └── GitHub Analyses
-```
-
-Career-side:
-
-```text
-Career
- │
- ├── Career Skills
- │
- ├── Courses
- │
- ├── Projects
- │
- ├── Certifications
- │
- └── Internships
-```
-
----
-
-# 17. Entity Relationship Diagram
-
-```mermaid
-erDiagram
-
-    USERS {
-        bigint id PK
-        varchar email UK
-        varchar password_hash
-        varchar role
-        datetime created_at
-        datetime updated_at
-    }
-
-    PROFILES {
-        bigint id PK
-        bigint user_id FK
-        varchar education_level
-        varchar degree
-        varchar branch
-        int year
-        decimal cgpa
-        text career_goal
-        varchar preferred_industry
-        varchar preferred_location
-        datetime created_at
-        datetime updated_at
-    }
-
-    SKILLS {
-        bigint id PK
-        varchar name UK
-        varchar category
-    }
-
-    USER_SKILLS {
-        bigint id PK
-        bigint user_id FK
-        bigint skill_id FK
-        int proficiency
-        datetime updated_at
-    }
-
-    INTERESTS {
-        bigint id PK
-        varchar name UK
-    }
-
-    USER_INTERESTS {
-        bigint id PK
-        bigint user_id FK
-        bigint interest_id FK
-    }
-
-    CAREERS {
-        bigint id PK
-        varchar name
-        varchar category
-        text description
-    }
-
-    CAREER_SKILLS {
-        bigint id PK
-        bigint career_id FK
-        bigint skill_id FK
-        int required_level
-        int importance
-    }
-
-    CAREER_RECOMMENDATIONS {
-        bigint id PK
-        bigint user_id FK
-        bigint career_id FK
-        decimal match_score
-        text explanation
-        datetime created_at
-    }
-
-    ROADMAPS {
-        bigint id PK
-        bigint user_id FK
-        bigint career_id FK
-        varchar title
-        int progress
-        varchar status
-        datetime created_at
-        datetime updated_at
-    }
-
-    ROADMAP_TASKS {
-        bigint id PK
-        bigint roadmap_id FK
-        varchar title
-        text description
-        int order_index
-        varchar status
-        int estimated_hours
-        datetime completed_at
-    }
-
-    COURSES {
-        bigint id PK
-        varchar name
-        varchar provider
-        bigint skill_id FK
-        varchar level
-        int duration_hours
-        varchar url
-    }
-
-    PROJECTS {
-        bigint id PK
-        varchar name
-        bigint career_id FK
-        text description
-        varchar difficulty
-    }
-
-    USER_COURSES {
-        bigint id PK
-        bigint user_id FK
-        bigint course_id FK
-        varchar status
-        int progress
-    }
-
-    ASSESSMENTS {
-        bigint id PK
-        bigint user_id FK
-        varchar assessment_type
-        decimal score
-        datetime completed_at
-    }
-
-    RESUME_ANALYSES {
-        bigint id PK
-        bigint user_id FK
-        varchar file_name
-        text extracted_data
-        text analysis_result
-        datetime created_at
-    }
-
-    GITHUB_ANALYSES {
-        bigint id PK
-        bigint user_id FK
-        varchar github_username
-        text analysis_result
-        datetime created_at
-    }
-
-    INTERNSHIPS {
-        bigint id PK
-        varchar title
-        varchar company
-        varchar location
-        varchar url
-        text description
-    }
-
-    USER_INTERNSHIP_RECOMMENDATIONS {
-        bigint id PK
-        bigint user_id FK
-        bigint internship_id FK
-        decimal match_score
-        datetime created_at
-    }
-
-    NOTIFICATIONS {
-        bigint id PK
-        bigint user_id FK
-        varchar title
-        text message
-        boolean is_read
-        datetime created_at
-    }
-
-    USERS ||--|| PROFILES : has
-    USERS ||--o{ USER_SKILLS : has
-    SKILLS ||--o{ USER_SKILLS : assigned
-
-    USERS ||--o{ USER_INTERESTS : has
-    INTERESTS ||--o{ USER_INTERESTS : selected
-
-    CAREERS ||--o{ CAREER_SKILLS : requires
-    SKILLS ||--o{ CAREER_SKILLS : required_for
-
-    USERS ||--o{ CAREER_RECOMMENDATIONS : receives
-    CAREERS ||--o{ CAREER_RECOMMENDATIONS : recommended
-
-    USERS ||--o{ ROADMAPS : owns
-    CAREERS ||--o{ ROADMAPS : targets
-
-    ROADMAPS ||--o{ ROADMAP_TASKS : contains
-
-    SKILLS ||--o{ COURSES : teaches
-    USERS ||--o{ USER_COURSES : enrolls
-    COURSES ||--o{ USER_COURSES : selected
-
-    CAREERS ||--o{ PROJECTS : related_to
-
-    USERS ||--o{ ASSESSMENTS : completes
-    USERS ||--o{ RESUME_ANALYSES : uploads
-    USERS ||--o{ GITHUB_ANALYSES : analyzes
-
-    USERS ||--o{ USER_INTERNSHIP_RECOMMENDATIONS : receives
-    INTERNSHIPS ||--o{ USER_INTERNSHIP_RECOMMENDATIONS : recommended
-
-    USERS ||--o{ NOTIFICATIONS : receives
-```
-
----
-
-# 18. Simplified ER Relationship
-
-```text
-                    ┌──────────────┐
-                    │     USER     │
-                    └──────┬───────┘
-                           │
-          ┌────────────────┼────────────────┐
-          │                │                │
-          ↓                ↓                ↓
-      PROFILE           SKILLS         INTERESTS
-          │
-          ↓
-     ASSESSMENTS
-          │
-          ↓
-   RECOMMENDATIONS
-          │
-          ↓
-       CAREER
-          │
-          ├────────── CAREER SKILLS
-          │
-          ├────────── COURSES
-          │
-          ├────────── PROJECTS
-          │
-          └────────── INTERNSHIPS
-          │
-          ↓
-       ROADMAP
-          │
-          ↓
-     ROADMAP TASKS
-          │
-          ↓
-       PROGRESS
-```
-
----
-
-# 19. Authentication Flow
-
-```mermaid
-sequenceDiagram
-
-    participant U as User
-    participant F as React
-    participant B as Node Backend
-    participant DB as MySQL
-
-    U->>F: Enter credentials
-    F->>B: POST /api/auth/login
-    B->>DB: Verify user
-    DB-->>B: User record
-    B-->>F: Authentication token
-    F->>F: Store secure auth state
-    F-->>U: Redirect to Dashboard
-```
-
----
-
-# 20. Recommendation Flow
-
-```mermaid
-sequenceDiagram
-
-    participant U as User
-    participant F as React
-    participant B as Node Backend
-    participant DB as MySQL
-    participant AI as Python AI Service
-
-    U->>F: Complete profile
-    F->>B: Submit profile
-    B->>DB: Save profile
-    B->>AI: Send structured profile
-
-    AI->>AI: Preprocess data
-    AI->>AI: Skill matching
-    AI->>AI: Rule-based scoring
-    AI->>AI: Optional ML ranking
-
-    AI-->>B: Career recommendations
-    B->>DB: Store recommendations
-    B-->>F: Recommendations
-    F-->>U: Display career matches
-```
-
----
-
-# 21. Roadmap Generation Flow
-
-```text
-User Profile
-     ↓
-Target Career
-     ↓
-Required Skills
-     ↓
-Current Skills
-     ↓
-Skill Gap
-     ↓
-Priority Calculation
-     ↓
-Learning Resources
-     ↓
-Project Recommendations
-     ↓
-Ordered Roadmap
-     ↓
-Roadmap Tasks
-     ↓
-Dashboard
-```
-
----
-
-# 22. What-If Flow
-
-```text
-Current Profile
-       ↓
-Temporary Copy
-       ↓
-User changes skill
-       ↓
-Recommendation Engine
-       ↓
-New Career Scores
-       ↓
-Compare with Original
-       ↓
-Display Difference
-```
-
----
-
-# 23. API Architecture
-
-Example endpoint structure:
-
-```text
-/api/auth
-    POST /signup
-    POST /login
-    POST /logout
-
 /api/profile
-    GET /
-    PUT /
-    POST /skills
-    DELETE /skills/:id
-
 /api/careers
-    GET /
-    GET /:id
-    GET /:id/skills
-    POST /compare
-
 /api/recommendations
-    POST /generate
-    GET /
-    GET /:id
-
 /api/roadmaps
-    GET /
-    POST /
-    GET /:id
-    PUT /:id
-    DELETE /:id
-
-/api/roadmaps/:id/tasks
-    POST /
-    PUT /:taskId
-    DELETE /:taskId
-
-/api/what-if
-    POST /simulate
-
 /api/resume
-    POST /upload
-    GET /analysis/:id
-
 /api/github
-    POST /analyze
-    GET /:id
-
+/api/what-if
 /api/courses
-    GET /
-    GET /recommended
-
 /api/internships
-    GET /
-    GET /recommended
-
 /api/assistant
-    POST /chat
-
 /api/notifications
-    GET /
-    PUT /:id/read
 ```
 
 ---
 
-# 24. Deployment Architecture
+# 8. Git Workflow
 
-For the hackathon prototype:
+Use feature branches.
 
 ```text
-                       INTERNET
-                           │
-                           ↓
-                    ┌─────────────┐
-                    │   Frontend  │
-                    │ React Build │
-                    └──────┬──────┘
-                           │
-                           ↓
-                    ┌─────────────┐
-                    │ Backend API │
-                    │ Node/Express│
-                    └──────┬──────┘
-                           │
-             ┌─────────────┼─────────────┐
-             ↓             ↓             ↓
-         ┌───────┐     ┌───────┐    ┌─────────┐
-         │ MySQL │     │ Python│    │External │
-         │       │     │ FastAPI│   │ APIs    │
-         └───────┘     └───────┘    └─────────┘
+main
+ │
+ ├── feature/authentication
+ ├── feature/dashboard
+ ├── feature/career-recommendation
+ ├── feature/roadmap
+ └── feature/resume-analysis
 ```
+
+Basic workflow:
+
+```bash
+git checkout -b feature/<feature-name>
+
+git add .
+
+git commit -m "feat: add <feature>"
+
+git push origin feature/<feature-name>
+```
+
+Then create a Pull Request.
+
+Rules:
+
+- The `main` branch must remain stable.
+- Do not push directly to `main`.
+- Do not commit secrets or `.env` files (`.env` is gitignored).
+- Rebase or merge with `main` before creating a PR if behind.
 
 ---
 
-# 25. Security Architecture
+# 9. Commit Conventions
+
+Use Conventional Commits:
 
 ```text
-User
- ↓
-HTTPS
- ↓
-Authentication
- ↓
-Authorization Middleware
- ↓
-Input Validation
- ↓
-Controller
- ↓
-Service Layer
- ↓
-Database
+feat: add skill gap analysis
+fix: correct roadmap progress calculation
+docs: update API documentation
+refactor: extract recommendation service
+chore: update dependencies
+test: add recommendation engine tests
 ```
-
-Security requirements:
-
-* HTTPS
-* Password hashing
-* Authentication middleware
-* Authorization checks
-* Input validation
-* SQL injection prevention
-* File upload validation
-* API rate limiting where appropriate
-* Secure environment variables
-* No secrets in GitHub
 
 ---
 
-# 26. Data Flow Summary
+# 10. Code Standards
+
+## General
+
+- Follow existing code style in the repo.
+- Do not add unnecessary comments.
+- Run the linter before committing: `npm run lint` (oxlint).
+- Keep components and files small and focused.
+
+## Frontend
+
+- Put reusable UI in `src/components/common/`.
+- Put feature pages in `src/pages/`.
+- Keep Appwrite and API logic in `src/services/` (`appwrite.js`, `api.js`, `auth.js`).
+- Use React Router for navigation; protected routes for private pages.
+- Never store server secrets in the frontend.
+
+## Backend
+
+- Follow the structure in `main_architecture.md` section 15.
+- Controllers handle HTTP concerns; services contain business logic.
+- Middleware handles auth, validation, and errors.
+- Use the Appwrite server SDK with the API key for server-side operations.
+
+---
+
+# 11. Development Workflow
+
+Start locally:
 
 ```text
-USER INPUT
-   ↓
-FRONTEND
-   ↓
-BACKEND API
-   ↓
-VALIDATION
-   ↓
-MYSQL
-   ↓
-AI SERVICE
-   ↓
-RECOMMENDATION
-   ↓
-BACKEND
-   ↓
-MYSQL
-   ↓
-FRONTEND
-   ↓
-DASHBOARD
+1. Appwrite (cloud console or local instance) — create project, database, collections
+2. Node backend: cd server && npm install && npm run dev
+3. Python AI service: cd ai-service && pip install -r requirements.txt && uvicorn app.main:app --reload
+4. Frontend: npm install && npm run dev
 ```
+
+Frontend runs at `http://localhost:5173` (Vite default).
 
 ---
 
-# 27. Architecture Principle
+# 12. Development Phases
 
-The system should follow:
+| Phase | Focus |
+|---|---|
+| 1 — Foundation | Repo setup, React, Appwrite Auth, Appwrite Databases, Node backend |
+| 2 — Profile | Education selection, onboarding, skills, interests, preferences, assessment |
+| 3 — Career Engine | Career/skill datasets, career-skill mapping, recommendation engine |
+| 4 — AI | Python/FastAPI skill matching, ranking, skill-gap |
+| 5 — Roadmap | Roadmap generator, tasks, progress tracking, dashboard |
+| 6 — Advanced | Resume analysis, GitHub analysis, what-if, comparison, AI assistant |
+| 7 — Integrations | Courses, internships, notifications |
 
-> **Frontend handles presentation.**
+---
 
-> **Backend handles business logic and orchestration.**
+# 13. Security Rules
 
-> **MySQL handles persistent structured data.**
+- Passwords are handled by Appwrite Auth only.
+- All private APIs require authentication.
+- Users can only access their own private data.
+- Validate and sanitize all inputs.
+- Secrets live in environment variables, never in code or Git.
+- The frontend must never contain the Appwrite API key, GitHub token, or LLM key.
+- Resume files are handled through Appwrite Storage with restricted permissions.
+- Only publicly accessible GitHub data is analyzed.
 
-> **Python handles AI/ML-specific processing.**
+---
 
-> **External APIs provide external information.**
+# 14. Build One Coherent Product
 
-No layer should unnecessarily contain another layer's responsibilities.
+> **Build one coherent product, not six separate mini-projects.**
+
+Every feature must strengthen the central product loop. Do not build isolated features that do not feed back into the user's profile, recommendations, or roadmap.

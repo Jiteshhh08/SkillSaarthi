@@ -4,7 +4,7 @@
 >
 > **Product:** One-Stop Personalized Career & Education Advisor
 >
-> **Architecture:** React + Appwrite + Node.js/Express + MySQL + Python/FastAPI
+> **Architecture:** React + Appwrite (Auth / Databases / Storage / Messaging / Realtime / Functions) + Node.js/Express + Python/FastAPI
 
 ---
 
@@ -12,14 +12,14 @@
 
 Skill_Guide follows a modular architecture consisting of four major application layers:
 
-1. **Frontend Layer** — React + Tailwind CSS
-2. **Backend/Application Layer** — Node.js + Express
-3. **Infrastructure Layer** — Appwrite
-4. **Data & AI Layer** — MySQL + Python/FastAPI
+1. **Frontend Layer** — React + Tailwind CSS (repo root)
+2. **Infrastructure & Data Layer** — Appwrite (Auth, Databases, Storage, Messaging, Realtime, Functions)
+3. **Backend/Application Layer** — Node.js + Express (thin backend for business logic and orchestration)
+4. **AI Layer** — Python + FastAPI
 
 The core architectural principle is:
 
-> **Appwrite handles infrastructure-heavy functionality, Node.js handles application/business logic, MySQL handles structured application data, and Python handles AI/ML processing.**
+> **Appwrite handles infrastructure and primary data storage, Node.js handles business logic and orchestration, and Python handles AI/ML processing. There is no MySQL — Appwrite Databases is the primary data store.**
 
 ---
 
@@ -34,36 +34,38 @@ The core architectural principle is:
                                   ┌──────────────────────────┐
                                   │      React Frontend      │
                                   │      Tailwind CSS        │
+                                  │      (repo root)         │
                                   └────────────┬─────────────┘
                                                │
                             ┌──────────────────┴──────────────────┐
                             │                                     │
                             ▼                                     ▼
-                 ┌──────────────────────┐              ┌──────────────────────┐
-                 │       Appwrite       │              │    Node.js/Express   │
-                 │                      │              │       Backend        │
-                 │ • Authentication    │              │                      │
-                 │ • File Storage      │              │ • Business Logic     │
-                 │ • Messaging         │              │ • REST APIs          │
-                 │ • Realtime          │              │ • MySQL Access       │
-                 └──────────────────────┘              │ • AI Orchestration   │
-                                                       │ • External APIs      │
-                                                       └───────────┬──────────┘
-                                                                   │
-                                               ┌───────────────────┴──────────────────┐
-                                               │                                      │
-                                               ▼                                      ▼
-                                    ┌─────────────────────┐                ┌─────────────────────┐
-                                    │        MySQL        │                │   Python/FastAPI    │
-                                    │      Database       │                │      AI Service     │
-                                    │                     │                │                     │
-                                    │ • Users/Profile     │                │ • Skill Matching    │
-                                    │ • Careers           │                │ • Recommendations  │
-                                    │ • Skills            │                │ • Resume Analysis  │
-                                    │ • Roadmaps          │                │ • GitHub Analysis  │
-                                    │ • Courses           │                │ • AI Assistant     │
-                                    │ • Internships       │                │ • ML Models        │
-                                    └─────────────────────┘                └─────────────────────┘
+                 ┌────────────────────────────┐         ┌──────────────────────┐
+                 │          Appwrite          │         │    Node.js/Express   │
+                 │                            │         │       Backend        │
+                 │ • Authentication           │         │   (server/)          │
+                 │ • Databases (NoSQL)        │         │                      │
+                 │ • File Storage             │         │ • Business Logic     │
+                 │ • Messaging                │         │ • REST APIs          │
+                 │ • Realtime                 │         │ • Appwrite Access    │
+                 │ • Functions                │         │ • AI Orchestration   │
+                 └────────────────────────────┘         │ • External APIs      │
+                            │                            └───────────┬──────────┘
+                            │                                        │
+                            └───────────────┬────────────────────────┘
+                                            ▼
+                                   ┌─────────────────────┐
+                                   │   Python/FastAPI    │
+                                   │      AI Service     │
+                                   │    (ai-service/)    │
+                                   │                     │
+                                   │ • Skill Matching    │
+                                   │ • Recommendations  │
+                                   │ • Resume Analysis  │
+                                   │ • GitHub Analysis  │
+                                   │ • AI Assistant     │
+                                   │ • ML Models        │
+                                   └─────────────────────┘
 ```
 
 ---
@@ -75,12 +77,13 @@ The core architectural principle is:
 | React | User interface |
 | Tailwind CSS | UI styling |
 | Appwrite Auth | Authentication |
+| Appwrite Databases | Primary structured data storage (NoSQL) |
 | Appwrite Storage | Resume/file storage |
 | Appwrite Messaging | Notifications |
 | Appwrite Realtime | Real-time events |
-| Node.js | Application backend |
+| Appwrite Functions | Lightweight server-side tasks (optional) |
+| Node.js | Application backend (business logic, orchestration) |
 | Express | REST API framework |
-| MySQL | Structured persistent data |
 | Python | AI/ML processing |
 | FastAPI | AI service API |
 | GitHub API | Public GitHub data |
@@ -94,30 +97,27 @@ The core architectural principle is:
 The system must maintain strict separation between:
 
 ```text
-Infrastructure
+Presentation & Client State
         ↓
-Appwrite
+React (repo root)
 
-Application Logic
+Infrastructure + Primary Data
         ↓
-Node.js + Express
+Appwrite (Auth / Databases / Storage / Messaging / Realtime)
 
-Persistent Relational Data
+Application Logic & Orchestration
         ↓
-MySQL
+Node.js + Express (server/)
 
 Artificial Intelligence
         ↓
-Python + FastAPI
+Python + FastAPI (ai-service/)
 ```
 
-The frontend must never directly access MySQL.
-
-The frontend should not contain business-critical logic.
-
-The Python service should not directly handle authentication.
-
-The AI service should not directly modify application data unless explicitly required through a controlled backend flow.
+- The frontend reads/writes data through Appwrite and calls the Node backend only for business logic.
+- Business-critical logic must not live in the frontend.
+- The Python service must not handle authentication.
+- The AI service must not directly modify application data unless it goes through a controlled backend flow.
 
 ---
 
@@ -129,7 +129,8 @@ The AI service should not directly modify application data unless explicitly req
 React
 Tailwind CSS
 React Router
-Fetch / Axios
+Axios (Node backend calls)
+Appwrite Web SDK (client-safe)
 ```
 
 ## 5.2 Responsibilities
@@ -142,8 +143,8 @@ The frontend is responsible for:
 - Client-side validation
 - Dashboard
 - User interaction
-- API communication
-- Appwrite client integration
+- Appwrite client integration (auth, DB reads/writes, file upload, realtime)
+- API communication with the Node backend (Axios)
 - Displaying AI recommendations
 - Roadmap visualization
 - Progress tracking
@@ -153,7 +154,7 @@ The frontend is responsible for:
 # 6. Frontend Structure
 
 ```text
-client/
+skill-guide/                      # repo root = React frontend
 │
 ├── public/
 │
@@ -179,15 +180,23 @@ client/
 │   │   └── private/
 │   │
 │   ├── services/
-│   │   ├── api.js
-│   │   └── appwrite.js
+│   │   ├── api.js            # Axios instance → Node backend
+│   │   ├── appwrite.js       # Appwrite client + database helpers
+│   │   └── auth.js           # Auth helpers (login/signup/session)
 │   │
 │   ├── hooks/
 │   ├── context/
 │   ├── utils/
 │   ├── routes/
-│   └── App.jsx
+│   │   └── AppRoutes.jsx
+│   │
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css
 │
+├── .env
+├── .env.sample
+├── vite.config.js
 └── package.json
 ```
 
@@ -195,9 +204,7 @@ client/
 
 # 7. Appwrite Architecture
 
-Appwrite is used as the application's infrastructure layer.
-
-Appwrite is **not** responsible for the core Skill_Guide business logic.
+Appwrite is the application's **infrastructure and primary data layer**.
 
 ## 7.1 Appwrite Services Used
 
@@ -205,10 +212,13 @@ Appwrite is **not** responsible for the core Skill_Guide business logic.
 Appwrite
 │
 ├── Authentication
+├── Databases          ← primary data store (NoSQL)
 ├── Storage
 ├── Messaging
 └── Realtime
 ```
+
+Appwrite Functions are optional and may be used later for small server-side tasks. Heavy business logic stays in the Node backend.
 
 ---
 
@@ -243,7 +253,7 @@ Appwrite Authentication
  ▼
 React
  │
- │ Authenticated API Request
+ │ Authenticated API Request (Appwrite session token)
  ▼
 Node.js Backend
 ```
@@ -257,18 +267,16 @@ sequenceDiagram
 
     participant U as User
     participant FE as React
-    participant AW as Appwrite
+    participant AW as Appwrite Auth
     participant API as Node Backend
-    participant DB as MySQL
 
     U->>FE: Enter credentials
-    FE->>AW: Login / Create Session
-    AW-->>FE: Authenticated Session
-    FE->>API: API Request + Auth Context
-    API->>AW: Validate User
+    FE->>AW: Sign Up / Create Session
+    AW-->>FE: Authenticated Session (JWT)
+    FE->>FE: Store session (localStorage / cookies)
+    FE->>API: API Request + Bearer session token
+    API->>AW: Verify JWT (server SDK)
     AW-->>API: User Identity
-    API->>DB: Fetch User Data
-    DB-->>API: User Data
     API-->>FE: Response
     FE-->>U: Display Data
 ```
@@ -279,38 +287,40 @@ sequenceDiagram
 
 Appwrite owns the authentication identity.
 
-MySQL owns the application's profile and career data.
+Appwrite Databases owns the application profile and career data.
 
 ```text
-Appwrite User
+Appwrite User (Auth)
       │
-      │ appwrite_user_id
+      │ user $id
       ▼
-MySQL users table
+profiles collection (Appwrite Databases)
       │
-      ├── profile
-      ├── skills
-      ├── interests
-      ├── assessments
-      ├── roadmaps
-      └── recommendations
+      ├── skills        (user_skills collection)
+      ├── interests     (user_interests collection)
+      ├── assessments   (assessments collection)
+      ├── roadmaps      (roadmaps collection)
+      └── recommendations (career_recommendations collection)
 ```
 
-The MySQL `users` table should contain the Appwrite user ID.
+The `profiles` document should use the Appwrite user ID as its document ID.
 
 Example:
 
 ```text
-users
----------------------------
-id
-appwrite_user_id
-email
+profiles
+--------------------
+$id             = <Appwrite user $id>
+user_id         = <Appwrite user $id>
+education_level
+degree
+branch
+study_year
+cgpa
+career_goal
 created_at
 updated_at
 ```
-
-The `appwrite_user_id` should be unique.
 
 ---
 
@@ -345,10 +355,6 @@ Appwrite Storage
  │
  │ File ID
  ▼
-React
- │
- │ File ID
- ▼
 Node Backend
  │
  ▼
@@ -358,14 +364,14 @@ Python AI Service
 Resume Analysis
 ```
 
-The database should store metadata rather than the actual resume binary.
+The database stores metadata rather than the actual resume binary.
 
-Example:
+Example (`resume_analyses` collection):
 
 ```text
 resume_analyses
 -----------------------------
-id
+$id
 user_id
 appwrite_file_id
 file_name
@@ -400,6 +406,8 @@ Appwrite Messaging
 User
 ```
 
+For MVP simplicity, in-app notifications can be stored in a `notifications` collection in Appwrite Databases and displayed through the dashboard. Appwrite Messaging is used when push/email/SMS delivery is needed.
+
 ---
 
 # 13. Appwrite Realtime
@@ -420,7 +428,7 @@ User completes task
         ↓
 Node Backend
         ↓
-MySQL updated
+Appwrite Databases updated
         ↓
 Realtime Event
         ↓
@@ -433,21 +441,20 @@ UI updates
 
 # 14. Node.js Backend Architecture
 
-Node.js is the central application server.
+Node.js is a thin application server used for business logic and orchestration. It is **not** the primary data store.
 
 Responsibilities:
 
-- REST API
+- REST API (business-logic endpoints)
 - Business logic
-- Authorization
+- Authorization checks on server-only operations
 - Validation
-- MySQL operations
-- Appwrite server-side integration
+- Appwrite server-side integration (Admin SDK)
 - AI service communication
-- External API integration
+- External API integration (GitHub, courses, internships)
 - Recommendation orchestration
-- Roadmap management
-- Course/internship processing
+- Roadmap generation orchestration
+- Notification triggering
 
 ---
 
@@ -459,7 +466,6 @@ server/
 ├── src/
 │   │
 │   ├── config/
-│   │   ├── database.js
 │   │   ├── appwrite.js
 │   │   └── environment.js
 │   │
@@ -477,7 +483,6 @@ server/
 │   ├── controllers/
 │   │
 │   ├── services/
-│   │   ├── career.service.js
 │   │   ├── recommendation.service.js
 │   │   ├── roadmap.service.js
 │   │   ├── appwrite.service.js
@@ -489,14 +494,11 @@ server/
 │   │   ├── validation.middleware.js
 │   │   └── error.middleware.js
 │   │
-│   ├── models/
-│   │
-│   ├── validators/
-│   │
 │   ├── utils/
 │   │
 │   └── app.js
 │
+├── .env
 └── package.json
 ```
 
@@ -509,7 +511,7 @@ HTTP Request
       ↓
 Express Router
       ↓
-Authentication Middleware
+Authentication Middleware (verify Appwrite JWT)
       ↓
 Validation Middleware
       ↓
@@ -517,9 +519,10 @@ Controller
       ↓
 Service Layer
       ↓
- ┌────┼──────────────┐
- ▼    ▼              ▼
-MySQL Appwrite    AI Service
+  ┌────┼─────────────┐
+  ▼    ▼             ▼
+Appwrite   External   AI Service
+DB/Storage  APIs      (Python/FastAPI)
       │
       ▼
 Response
@@ -527,237 +530,231 @@ Response
 
 ---
 
-# 17. MySQL Architecture
+# 17. Appwrite Database Architecture
 
-MySQL is the primary relational database.
+Appwrite Databases is the primary data store. It is a NoSQL document database organized into **collections** (similar to tables) of **documents**.
 
-It stores application-specific structured data.
+## Collection Overview
 
-## Database Responsibilities
+| Collection | Purpose | Key attributes |
+|---|---|---|
+| `profiles` | One document per user | `user_id`, `education_level`, `degree`, `branch`, `study_year`, `cgpa`, `career_goal`, `preferred_industry`, `preferred_location` |
+| `skills` | Global skill catalog | `name`, `category` |
+| `user_skills` | User ↔ skill proficiency | `user_id`, `skill_id`, `proficiency` |
+| `interests` | Global interest catalog | `name` |
+| `user_interests` | User ↔ interest link | `user_id`, `interest_id` |
+| `careers` | Career catalog | `name`, `category`, `description` |
+| `career_skills` | Career ↔ required skill | `career_id`, `skill_id`, `required_level`, `importance` |
+| `assessments` | Assessment attempts | `user_id`, `type`, `score`, `responses`, `completed_at` |
+| `career_recommendations` | Generated recommendations | `user_id`, `career_id`, `match_score`, `explanation` |
+| `roadmaps` | Roadmaps per user + career | `user_id`, `career_id`, `title`, `status`, `progress_percent` |
+| `roadmap_tasks` | Tasks inside a roadmap | `roadmap_id`, `title`, `description`, `order_index`, `estimated_hours`, `status`, `completed_at` |
+| `courses` | Course catalog | `name`, `provider`, `skill_id`, `level`, `duration_hours`, `url`, `cost`, `rating` |
+| `user_courses` | User course tracking | `user_id`, `course_id`, `status`, `progress` |
+| `internships` | Internship catalog | `title`, `company`, `location`, `description`, `url` |
+| `internship_recommendations` | Internship matches | `user_id`, `internship_id`, `match_score` |
+| `resume_analyses` | Resume analysis metadata | `user_id`, `appwrite_file_id`, `file_name`, `analysis_result` |
+| `github_analyses` | GitHub analysis metadata | `user_id`, `github_username`, `analysis_result` |
+| `notifications` | In-app notifications | `user_id`, `title`, `message`, `is_read` |
 
-MySQL stores:
-
-- User application profile
-- Education
-- Skills
-- Interests
-- Careers
-- Career requirements
-- Assessments
-- Recommendations
-- Skill gaps
-- Roadmaps
-- Roadmap tasks
-- Courses
-- Internships
-- Resume analysis metadata
-- GitHub analysis metadata
-- Notifications metadata
-- User progress
+> **Security note:** Appwrite permissions are configured per collection. Most collections are `user` scoped (a user can only read/write their own documents). Global catalogs (`skills`, `careers`, `courses`, `internships`) are read-only for authenticated users.
 
 ---
 
-# 18. Database ER Diagram
+# 18. Database Relationship Model
 
 ```mermaid
 erDiagram
 
-    USERS {
-        BIGINT id PK
-        VARCHAR appwrite_user_id UK
-        VARCHAR email
-        DATETIME created_at
-        DATETIME updated_at
-    }
-
     PROFILES {
-        BIGINT id PK
-        BIGINT user_id FK
-        VARCHAR education_level
-        VARCHAR degree
-        VARCHAR branch
-        INT study_year
-        DECIMAL cgpa
-        TEXT career_goal
-        VARCHAR preferred_industry
-        VARCHAR preferred_location
-        DATETIME created_at
-        DATETIME updated_at
+        string id PK
+        string user_id UK
+        string education_level
+        string degree
+        string branch
+        int study_year
+        decimal cgpa
+        text career_goal
+        string preferred_industry
+        string preferred_location
+        datetime created_at
+        datetime updated_at
     }
 
     SKILLS {
-        BIGINT id PK
-        VARCHAR name UK
-        VARCHAR category
+        string id PK
+        string name UK
+        string category
     }
 
     USER_SKILLS {
-        BIGINT id PK
-        BIGINT user_id FK
-        BIGINT skill_id FK
-        INT proficiency
+        string id PK
+        string user_id FK
+        string skill_id FK
+        int proficiency
     }
 
     INTERESTS {
-        BIGINT id PK
-        VARCHAR name UK
+        string id PK
+        string name UK
     }
 
     USER_INTERESTS {
-        BIGINT id PK
-        BIGINT user_id FK
-        BIGINT interest_id FK
+        string id PK
+        string user_id FK
+        string interest_id FK
     }
 
     CAREERS {
-        BIGINT id PK
-        VARCHAR name
-        VARCHAR category
-        TEXT description
+        string id PK
+        string name
+        string category
+        text description
     }
 
     CAREER_SKILLS {
-        BIGINT id PK
-        BIGINT career_id FK
-        BIGINT skill_id FK
-        INT required_level
-        INT importance
+        string id PK
+        string career_id FK
+        string skill_id FK
+        int required_level
+        int importance
     }
 
     ASSESSMENTS {
-        BIGINT id PK
-        BIGINT user_id FK
-        VARCHAR type
-        DECIMAL score
-        JSON responses
-        DATETIME completed_at
+        string id PK
+        string user_id FK
+        string type
+        decimal score
+        json responses
+        datetime completed_at
     }
 
     CAREER_RECOMMENDATIONS {
-        BIGINT id PK
-        BIGINT user_id FK
-        BIGINT career_id FK
-        DECIMAL match_score
-        JSON explanation
-        DATETIME created_at
+        string id PK
+        string user_id FK
+        string career_id FK
+        decimal match_score
+        json explanation
+        datetime created_at
     }
 
     ROADMAPS {
-        BIGINT id PK
-        BIGINT user_id FK
-        BIGINT career_id FK
-        VARCHAR title
-        VARCHAR status
-        INT progress_percent
-        DATETIME created_at
-        DATETIME updated_at
+        string id PK
+        string user_id FK
+        string career_id FK
+        string title
+        string status
+        int progress_percent
+        datetime created_at
+        datetime updated_at
     }
 
     ROADMAP_TASKS {
-        BIGINT id PK
-        BIGINT roadmap_id FK
-        VARCHAR title
-        TEXT description
-        INT order_index
-        INT estimated_hours
-        VARCHAR status
-        DATETIME completed_at
+        string id PK
+        string roadmap_id FK
+        string title
+        text description
+        int order_index
+        int estimated_hours
+        string status
+        datetime completed_at
     }
 
     COURSES {
-        BIGINT id PK
-        VARCHAR name
-        VARCHAR provider
-        BIGINT skill_id FK
-        VARCHAR level
-        VARCHAR url
+        string id PK
+        string name
+        string provider
+        string skill_id FK
+        string level
+        int duration_hours
+        string url
+        int cost
+        float rating
     }
 
     USER_COURSES {
-        BIGINT id PK
-        BIGINT user_id FK
-        BIGINT course_id FK
-        VARCHAR status
-        INT progress
+        string id PK
+        string user_id FK
+        string course_id FK
+        string status
+        int progress
     }
 
     INTERNSHIPS {
-        BIGINT id PK
-        VARCHAR title
-        VARCHAR company
-        VARCHAR location
-        TEXT description
-        VARCHAR url
+        string id PK
+        string title
+        string company
+        string location
+        text description
+        string url
     }
 
     INTERNSHIP_RECOMMENDATIONS {
-        BIGINT id PK
-        BIGINT user_id FK
-        BIGINT internship_id FK
-        DECIMAL match_score
-        DATETIME created_at
+        string id PK
+        string user_id FK
+        string internship_id FK
+        decimal match_score
+        datetime created_at
     }
 
     RESUME_ANALYSES {
-        BIGINT id PK
-        BIGINT user_id FK
-        VARCHAR appwrite_file_id
-        VARCHAR file_name
-        JSON extracted_data
-        JSON analysis_result
-        DATETIME created_at
+        string id PK
+        string user_id FK
+        string appwrite_file_id
+        string file_name
+        json extracted_data
+        json analysis_result
+        datetime created_at
     }
 
     GITHUB_ANALYSES {
-        BIGINT id PK
-        BIGINT user_id FK
-        VARCHAR github_username
-        JSON analysis_result
-        DATETIME created_at
+        string id PK
+        string user_id FK
+        string github_username
+        json analysis_result
+        datetime created_at
     }
 
     NOTIFICATIONS {
-        BIGINT id PK
-        BIGINT user_id FK
-        VARCHAR title
-        TEXT message
-        BOOLEAN is_read
-        DATETIME created_at
+        string id PK
+        string user_id FK
+        string title
+        text message
+        boolean is_read
+        datetime created_at
     }
 
-    USERS ||--|| PROFILES : owns
-
-    USERS ||--o{ USER_SKILLS : has
+    PROFILES ||--o{ USER_SKILLS : has
     SKILLS ||--o{ USER_SKILLS : contains
 
-    USERS ||--o{ USER_INTERESTS : has
+    PROFILES ||--o{ USER_INTERESTS : has
     INTERESTS ||--o{ USER_INTERESTS : contains
 
     CAREERS ||--o{ CAREER_SKILLS : requires
     SKILLS ||--o{ CAREER_SKILLS : required_by
 
-    USERS ||--o{ ASSESSMENTS : completes
+    PROFILES ||--o{ ASSESSMENTS : completes
 
-    USERS ||--o{ CAREER_RECOMMENDATIONS : receives
+    PROFILES ||--o{ CAREER_RECOMMENDATIONS : receives
     CAREERS ||--o{ CAREER_RECOMMENDATIONS : recommended
 
-    USERS ||--o{ ROADMAPS : owns
+    PROFILES ||--o{ ROADMAPS : owns
     CAREERS ||--o{ ROADMAPS : targets
 
     ROADMAPS ||--o{ ROADMAP_TASKS : contains
 
     SKILLS ||--o{ COURSES : teaches
 
-    USERS ||--o{ USER_COURSES : tracks
+    PROFILES ||--o{ USER_COURSES : tracks
     COURSES ||--o{ USER_COURSES : selected
 
-    USERS ||--o{ INTERNSHIP_RECOMMENDATIONS : receives
+    PROFILES ||--o{ INTERNSHIP_RECOMMENDATIONS : receives
     INTERNSHIPS ||--o{ INTERNSHIP_RECOMMENDATIONS : recommended
 
-    USERS ||--o{ RESUME_ANALYSES : creates
-    USERS ||--o{ GITHUB_ANALYSES : creates
+    PROFILES ||--o{ RESUME_ANALYSES : creates
+    PROFILES ||--o{ GITHUB_ANALYSES : creates
 
-    USERS ||--o{ NOTIFICATIONS : receives
+    PROFILES ||--o{ NOTIFICATIONS : receives
 ```
 
 ---
@@ -797,30 +794,33 @@ The Python service handles:
 # 20. AI Service Architecture
 
 ```text
-Python/FastAPI
+ai-service/
 │
-├── API
-│
-├── preprocessing/
-│
-├── recommendation/
-│   ├── skill_matcher
-│   ├── career_ranker
-│   └── scoring
-│
-├── resume/
-│   ├── parser
-│   └── analyzer
-│
-├── github/
-│   └── analyzer
-│
-├── assistant/
-│   └── llm_service
+├── app/
+│   ├── main.py
+│   │
+│   ├── api/
+│   │
+│   ├── preprocessing/
+│   │
+│   ├── recommendation/
+│   │   ├── skill_matcher.py
+│   │   ├── career_ranker.py
+│   │   └── scoring.py
+│   │
+│   ├── resume/
+│   │   ├── parser.py
+│   │   └── analyzer.py
+│   │
+│   ├── github/
+│   │   └── analyzer.py
+│   │
+│   └── assistant/
+│       └── llm_service.py
 │
 ├── models/
-│
-└── utils/
+├── data/
+└── requirements.txt
 ```
 
 ---
@@ -880,7 +880,7 @@ Example response:
 {
   "recommendations": [
     {
-      "career_id": 12,
+      "career_id": "career_12",
       "career": "Frontend Developer",
       "score": 91,
       "reasons": [
@@ -901,7 +901,7 @@ Example response:
 # 22. Career Recommendation Pipeline
 
 ```text
-User Profile
+User Profile (Appwrite Databases)
      ↓
 Node Backend
      ↓
@@ -925,7 +925,7 @@ JSON Response
      ↓
 Node Backend
      ↓
-MySQL
+Appwrite Databases
      ↓
 React Dashboard
 ```
@@ -954,18 +954,19 @@ The recommended approach is a hybrid system:
                 Career Ranking
 ```
 
-An initial scoring model can use weighted factors:
+The initial scoring model uses weighted factors:
 
 ```text
 Career Score =
-    Skill Match × 0.45
-  + Interest Match × 0.20
-  + Education Match × 0.15
-  + Assessment Match × 0.10
-  + Experience Match × 0.10
+    Skill Match       × 0.40
+  + Interest Match    × 0.20
+  + Assessment Match  × 0.15
+  + Education Match   × 0.10
+  + Goal Match        × 0.10
+  + Experience Match  × 0.05
 ```
 
-Weights can be changed during testing.
+Weights must be configurable and can be changed during testing.
 
 Machine learning can be introduced later when enough suitable training/evaluation data exists.
 
@@ -1039,7 +1040,7 @@ Projects
       ↓
 Roadmap Tasks
       ↓
-MySQL
+Appwrite Databases
 ```
 
 Example:
@@ -1053,7 +1054,7 @@ Roadmap:
 1. Learn Node.js
 2. Build REST API
 3. Learn SQL
-4. Build MySQL project
+4. Build database-backed project
 5. Learn authentication
 6. Build full-stack project
 7. Deploy project
@@ -1068,7 +1069,7 @@ The simulator must not modify the real user profile unless the user explicitly c
 ```text
 Current Profile
       ↓
-Temporary Copy
+Temporary Copy (in memory)
       ↓
 Modify Skills / Goals / Interests
       ↓
@@ -1102,7 +1103,7 @@ New Career Recommendations
 
 Resume files are stored in Appwrite Storage.
 
-The analysis metadata is stored in MySQL.
+The analysis metadata is stored in the `resume_analyses` collection in Appwrite Databases.
 
 ```text
 Resume
@@ -1123,7 +1124,7 @@ Experience Extraction
    ↓
 Career Alignment
    ↓
-MySQL
+Appwrite Databases
    ↓
 React
 ```
@@ -1152,7 +1153,7 @@ Project Signals
        ↓
 Technical Profile
        ↓
-MySQL
+Appwrite Databases
 ```
 
 The system should only process publicly available GitHub information.
@@ -1203,7 +1204,7 @@ The assistant should not invent structured career information when reliable appl
 
 # 30. Course Recommendation Architecture
 
-Courses are stored or indexed in MySQL.
+Courses are stored in the `courses` collection in Appwrite Databases.
 
 ```text
 User Skill Gap
@@ -1258,6 +1259,8 @@ External internship data must pass through the Node backend before reaching the 
 ---
 
 # 32. API Architecture
+
+Authentication is handled entirely by Appwrite Auth from the client — the Node backend exposes business-logic APIs only.
 
 ## Profile
 
@@ -1362,16 +1365,14 @@ A typical recommendation request:
                            ▼
                     React Frontend
                            │
+                           │ Appwrite session (JWT)
                            ▼
                     Node REST API
                            │
-                    Authentication
+                    Auth Middleware
                            │
                            ▼
-                    Fetch Profile
-                           │
-                           ▼
-                         MySQL
+              Fetch Profile (Appwrite Databases)
                            │
                            ▼
                   Recommendation Service
@@ -1383,14 +1384,12 @@ A typical recommendation request:
                    AI Recommendation
                            │
                            ▼
-                    JSON Response
+                     JSON Response
                            │
                            ▼
-                     Node Backend
+                      Node Backend
                            │
-                           ├── Store Result
-                           ▼
-                         MySQL
+                           ├── Store Result (Appwrite Databases)
                            │
                            ▼
                     React Dashboard
@@ -1407,12 +1406,12 @@ flowchart LR
     FE[React Frontend]
 
     AW_AUTH[Appwrite Auth]
+    AW_DB[(Appwrite Databases)]
     AW_STORAGE[Appwrite Storage]
     AW_MSG[Appwrite Messaging]
     AW_RT[Appwrite Realtime]
 
     API[Node.js + Express]
-    DB[(MySQL)]
     AI[Python + FastAPI]
 
     GITHUB[GitHub API]
@@ -1422,13 +1421,14 @@ flowchart LR
     USER --> FE
 
     FE --> AW_AUTH
-    FE --> API
+    FE --> AW_DB
     FE --> AW_STORAGE
+    FE --> AW_RT
+    FE --> API
 
-    API --> DB
+    API --> AW_DB
     API --> AW_AUTH
     API --> AW_MSG
-    API --> AW_RT
 
     API --> AI
     API --> GITHUB
@@ -1437,10 +1437,9 @@ flowchart LR
     AI --> LLM
     AI --> API
 
-    DB --> API
+    AW_DB --> FE
+    AW_MSG --> FE
     API --> FE
-
-    AW_RT --> FE
 ```
 
 ---
@@ -1451,20 +1450,20 @@ A strict data ownership model must be followed.
 
 | Data | Owner |
 |---|---|
-| Authentication identity | Appwrite |
-| Sessions | Appwrite |
-| Password | Appwrite |
+| Authentication identity | Appwrite Auth |
+| Sessions | Appwrite Auth |
+| Password | Appwrite Auth |
 | Resume binary | Appwrite Storage |
-| Profile | MySQL |
-| Skills | MySQL |
-| Careers | MySQL |
-| Recommendations | MySQL |
-| Roadmaps | MySQL |
-| Courses | MySQL |
-| Internships | MySQL |
+| Profile | Appwrite Databases |
+| Skills | Appwrite Databases |
+| Careers | Appwrite Databases |
+| Recommendations | Appwrite Databases |
+| Roadmaps | Appwrite Databases |
+| Courses | Appwrite Databases |
+| Internships | Appwrite Databases |
 | AI calculations | Python |
-| AI analysis results | MySQL |
-| Notifications | Appwrite Messaging + MySQL metadata |
+| AI analysis results | Appwrite Databases |
+| Notifications | Appwrite Messaging + `notifications` collection |
 
 ---
 
@@ -1472,30 +1471,26 @@ A strict data ownership model must be followed.
 
 No secrets should be committed to Git.
 
-## Frontend
+## Frontend (repo root `.env`)
 
 ```env
 VITE_APPWRITE_ENDPOINT=
 VITE_APPWRITE_PROJECT_ID=
+VITE_APPWRITE_DATABASE_ID=
 VITE_API_BASE_URL=
 ```
 
 Only values safe for client-side exposure should use the `VITE_` prefix.
 
-## Node Backend
+## Node Backend (`server/.env`)
 
 ```env
 PORT=5000
 
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=career_advisor
-
 APPWRITE_ENDPOINT=
 APPWRITE_PROJECT_ID=
 APPWRITE_API_KEY=
+APPWRITE_DATABASE_ID=
 
 AI_SERVICE_URL=http://localhost:8000
 
@@ -1503,7 +1498,7 @@ GITHUB_TOKEN=
 LLM_API_KEY=
 ```
 
-## Python AI Service
+## Python AI Service (`ai-service/.env`)
 
 ```env
 PORT=8000
@@ -1520,17 +1515,14 @@ Docker is not required.
 The development environment consists of:
 
 ```text
-React
-localhost:3000
+React (Vite)
+localhost:5173
 
 Node.js / Express
 localhost:5000
 
 Python / FastAPI
 localhost:8000
-
-MySQL
-localhost:3306
 
 Appwrite
 Cloud / configured Appwrite instance
@@ -1543,7 +1535,7 @@ Cloud / configured Appwrite instance
 Start:
 
 ```text
-1. MySQL
+1. Appwrite (cloud console or local instance)
       ↓
 2. Node.js Backend
       ↓
@@ -1568,6 +1560,7 @@ Handles:
 - Sessions
 - User identity
 - File permissions
+- Database document permissions
 
 ## Node Backend
 
@@ -1579,15 +1572,7 @@ Handles:
 - API security
 - Rate limiting
 - User-resource ownership
-
-## MySQL
-
-Handles:
-
-- Data integrity
-- Foreign keys
-- Constraints
-- Access through backend only
+- Server-side secrets (API keys, tokens)
 
 ## Python
 
@@ -1604,7 +1589,6 @@ Handles:
 The frontend must never contain:
 
 ```text
-MySQL credentials
 Appwrite server API key
 GitHub private token
 LLM secret key
@@ -1669,34 +1653,41 @@ The application must not crash because the AI service is temporarily unavailable
 # 43. Repository Architecture
 
 ```text
-career-advisor/
+skill-guide/
 │
-├── client/
-│   ├── public/
+├── src/                      # React frontend (repo root)
+│   ├── assets/
+│   ├── components/
+│   ├── pages/
+│   ├── services/
+│   ├── hooks/
+│   ├── context/
+│   ├── routes/
+│   ├── App.jsx
+│   └── main.jsx
+│
+├── public/
+│
+├── server/                   # Node.js + Express backend
 │   ├── src/
 │   └── package.json
 │
-├── server/
-│   ├── src/
-│   └── package.json
-│
-├── ai-service/
+├── ai-service/               # Python AI/ML service
 │   ├── app/
 │   ├── models/
 │   ├── data/
 │   └── requirements.txt
-│
-├── database/
-│   ├── schema.sql
-│   └── seed.sql
 │
 ├── docs/
 │   ├── PRD.md
 │   ├── main_architecture.md
 │   └── rules.md
 │
-├── .env.example
+├── .env
+├── .env.sample
 ├── .gitignore
+├── vite.config.js
+├── package.json
 └── README.md
 ```
 
@@ -1711,9 +1702,9 @@ React
 +
 Appwrite Authentication
 +
-Node.js
+Appwrite Databases
 +
-MySQL
+Node.js
 ```
 
 ## Phase 2 — Profile
@@ -1797,13 +1788,14 @@ Notifications
 ┌───────────────────────────────────────────────────────┐
 │                    React Frontend                    │
 │                    Presentation                       │
+│                    Appwrite client SDK                │
 └───────────────────────┬───────────────────────────────┘
                         │
                         ▼
 ┌───────────────────────────────────────────────────────┐
 │                  Appwrite Services                    │
 │                                                       │
-│        Auth │ Storage │ Messaging │ Realtime         │
+│   Auth │ Databases │ Storage │ Messaging │ Realtime  │
 └───────────────────────────────────────────────────────┘
                         │
                         │
@@ -1816,10 +1808,9 @@ Notifications
                 │                       │
                 ▼                       ▼
        ┌─────────────────┐      ┌─────────────────────┐
-       │      MySQL      │      │   Python/FastAPI    │
-       │                 │      │                     │
-       │ Application     │      │ AI / ML             │
-       │ Data            │      │                     │
+       │  Appwrite DB    │      │   Python/FastAPI    │
+       │  (via SDK)      │      │                     │
+       │                 │      │ AI / ML             │
        └─────────────────┘      └─────────────────────┘
 ```
 
@@ -1827,7 +1818,7 @@ Notifications
 
 # 46. Architecture Decision Summary
 
-Skill_Guide intentionally uses Appwrite as a supporting backend infrastructure platform instead of making Appwrite the application's complete backend.
+Skill_Guide uses Appwrite as its infrastructure and primary data layer instead of running a separate database.
 
 ### Appwrite
 
@@ -1835,6 +1826,7 @@ Used for:
 
 ```text
 Authentication
+Databases (primary data store)
 Storage
 Messaging
 Realtime
@@ -1848,24 +1840,8 @@ Used for:
 REST APIs
 Business Logic
 Authorization
-Database Access
 External Integrations
 AI Orchestration
-```
-
-### MySQL
-
-Used for:
-
-```text
-Profiles
-Skills
-Careers
-Recommendations
-Roadmaps
-Courses
-Internships
-Analysis Results
 ```
 
 ### Python/FastAPI
