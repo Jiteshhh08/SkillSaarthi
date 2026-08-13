@@ -11,7 +11,14 @@ import Home from '../pages/public/Home'
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route
+        path="/"
+        element={
+          <PublicOnlyRoute>
+            <Home />
+          </PublicOnlyRoute>
+        }
+      />
 
       <Route
         path="/login"
