@@ -1,30 +1,91 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { educationLevelLabel } from '../../services/profile'
+import { getUserSkills } from '../../services/skills'
+import { getUserInterests } from '../../services/interests'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
 
-const MASTERY = {
-  attempted: 'bg-ink-disabled',
-  familiar: 'bg-accent-blue',
-  proficient: 'bg-accent-purple',
-  mastered: 'bg-brand-deep',
-}
-
-const SUGGESTED_SKILLS = [
-  { name: 'JavaScript', trait: 'mastered' },
-  { name: 'React', trait: 'mastered' },
-  { name: 'Node.js', trait: 'proficient' },
-  { name: 'Express', trait: 'proficient' },
-  { name: 'SQL', trait: 'familiar' },
-  { name: 'REST APIs', trait: 'familiar' },
-  { name: 'Docker', trait: 'attempted' },
-  { name: 'System Design', trait: 'attempted' },
-]
-
 export default function Dashboard() {
   const { user, profile } = useAuth()
+  const [skillCount, setSkillCount] = useState(0)
+  const [interestCount, setInterestCount] = useState(0)
+
+  useEffect(() => {
+    let mounted = true
+    Promise.all([getUserSkills(user.$id), getUserInterests(user.$id)])
+      .then(([skills, interests]) => {
+        if (!mounted) return
+        setSkillCount(skills.length)
+        setInterestCount(interests.length)
+      })
+      .catch(() => {
+        if (mounted) {
+          setSkillCount(0)
+          setInterestCount(0)
+        }
+      })
+    return () => {
+      mounted = false
+    }
+  }, [user.$id])
+
   const educationLabel = educationLevelLabel(profile?.education_level)
+
+  const checklist = [
+    {
+      label: 'Education level',
+      detail: educationLabel || 'Not set',
+      done: Boolean(profile?.education_level),
+      to: '/onboarding/education-level',
+    },
+    {
+      label: 'Academic info',
+      detail: 'Degree, subjects, strengths',
+      done: Boolean(
+        profile?.degree ||
+          profile?.branch ||
+          profile?.subjects ||
+          profile?.academic_strengths ||
+          profile?.experience_years > 0,
+      ),
+      to: '/onboarding',
+    },
+    {
+      label: 'Skills',
+      detail: `${skillCount} skill${skillCount === 1 ? '' : 's'} added`,
+      done: skillCount > 0,
+      to: '/onboarding',
+    },
+    {
+      label: 'Interests',
+      detail: `${interestCount} interest${interestCount === 1 ? '' : 's'} added`,
+      done: interestCount > 0,
+      to: '/onboarding',
+    },
+    {
+      label: 'Career preferences',
+      detail: 'Goal, industry, location',
+      done: Boolean(
+        profile?.career_goal ||
+          profile?.preferred_industry ||
+          profile?.preferred_role ||
+          profile?.preferred_location ||
+          profile?.work_preference,
+      ),
+      to: '/onboarding',
+    },
+    {
+      label: 'Assessment',
+      detail: profile?.assessment_score > 0 ? `Score ${profile.assessment_score}%` : 'Not taken',
+      done: profile?.assessment_score > 0,
+      to: '/assessment',
+    },
+  ]
+
+  const completed = checklist.filter((item) => item.done).length
+  const completion = Math.round((completed / checklist.length) * 100)
 
   return (
     <div className="min-h-screen">
@@ -37,21 +98,53 @@ export default function Dashboard() {
           Build your career readiness, one skill at a time.
         </p>
 
-        <section className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-brand-soft px-6 py-5">
-          <div className="flex items-center gap-4">
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-accent-purple text-xl font-black text-white">
-              {(user?.name || 'U').charAt(0).toUpperCase()}
-            </span>
-            <div>
-              <p className="text-sm font-bold text-ink-muted">Education level</p>
-              <p className="text-xl font-black text-ink">
-                {educationLabel || 'Not set yet'}
-              </p>
+        <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-brand-soft px-6 py-5">
+            <div className="flex items-center gap-4">
+              <span className="grid h-12 w-12 place-items-center rounded-full bg-accent-purple text-xl font-black text-white">
+                {(user?.name || 'U').charAt(0).toUpperCase()}
+              </span>
+              <div>
+                <p className="text-sm font-bold text-ink-muted">Education level</p>
+                <p className="text-xl font-black text-ink">{educationLabel || 'Not set yet'}</p>
+              </div>
             </div>
+            <Link to="/onboarding/education-level" className="btn-secondary !h-10 !px-4 !text-sm">
+              Change education level
+            </Link>
           </div>
-          <Link to="/onboarding/education-level" className="btn-secondary !h-10 !px-4 !text-sm">
-            Change education level
-          </Link>
+
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-black">Profile setup</h2>
+              <span className="text-sm font-black text-brand-deep">{completion}%</span>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-strong">
+              <div className="h-full rounded-full bg-brand" style={{ width: `${completion}%` }} />
+            </div>
+            <ul className="mt-4 space-y-2">
+              {checklist.map((item) => (
+                <li key={item.label}>
+                  <Link
+                    to={item.to}
+                    className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-surface-hover"
+                  >
+                    <span className="flex items-center gap-2 font-bold text-ink">
+                      <span
+                        className={`grid h-5 w-5 place-items-center rounded-full text-[10px] font-black ${
+                          item.done ? 'bg-brand text-white' : 'bg-line text-white'
+                        }`}
+                      >
+                        {item.done ? '✓' : ''}
+                      </span>
+                      {item.label}
+                    </span>
+                    <span className="text-xs text-ink-muted">{item.detail}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
@@ -61,8 +154,8 @@ export default function Dashboard() {
             <p className="mt-1 text-sm leading-relaxed text-ink-muted">
               Complete your profile and assessment to see your best career matches.
             </p>
-            <Link to="/dashboard" className="btn-primary mt-6 !h-10 !px-4 !text-sm">
-              Start assessment
+            <Link to="/assessment" className="btn-primary mt-6 !h-10 !px-4 !text-sm">
+              Take assessment
             </Link>
           </div>
 
@@ -89,31 +182,32 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Suggested skills / learning tree */}
         <section className="mt-12">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">Suggested skills</h2>
-              <p className="mt-1 text-sm text-ink-muted">Mastery powers your career matches.</p>
+              <h2 className="text-2xl font-bold tracking-tight">Your skills</h2>
+              <p className="mt-1 text-sm text-ink-muted">
+                {skillCount > 0
+                  ? 'These power your career matches and skill-gap analysis.'
+                  : 'Add skills to power your career matches.'}
+              </p>
             </div>
-            <span className="rounded-full bg-cream px-4 py-2 text-sm font-bold text-amber-800">
-              ⚡ Earn energy points by practicing
-            </span>
+            <Link to="/onboarding" className="btn-secondary !h-10 !px-4 !text-sm">
+              Manage skills
+            </Link>
           </div>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {SUGGESTED_SKILLS.map((skill) => (
-              <div
-                key={skill.name}
-                className="flex items-center gap-4 rounded-lg border border-line bg-white px-4 py-3 transition-colors hover:bg-surface-hover"
-              >
-                <span className={`dot ${MASTERY[skill.trait]}`} title={skill.trait} />
-                <span className="flex-1 font-bold">{skill.name}</span>
-                <span className="rounded-full px-3 py-1 text-xs font-bold capitalize text-ink-muted">
-                  {skill.trait}
-                </span>
+            {skillCount === 0 ? (
+              <div className="rounded-lg border border-line bg-white px-4 py-8 text-center text-sm text-ink-muted sm:col-span-2">
+                No skills yet — add a few from the onboarding flow to see recommendations here.
               </div>
-            ))}
+            ) : (
+              <p className="rounded-lg border border-line bg-white px-4 py-3 text-sm text-ink-muted sm:col-span-2">
+                {skillCount} skill(s) saved to your profile. Skill-gap analysis and the full skill
+                list arrive with the Phase 3 career engine.
+              </p>
+            )}
           </div>
         </section>
       </main>
