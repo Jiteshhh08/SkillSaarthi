@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 
 export default function TopBar() {
-  const { user, logout } = useAuth()
+  const { user, loading, logout } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -25,13 +25,15 @@ export default function TopBar() {
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
-          <Link to="/dashboard" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
-            Dashboard
-          </Link>
+          {user && (
+            <Link to="/dashboard" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
+              Dashboard
+            </Link>
+          )}
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
-          {user ? (
+          {loading ? null : user ? (
             <>
               <span className="hidden items-center gap-1 rounded-full border border-accent-yellow bg-cream px-3 py-1 text-sm font-bold text-amber-800 sm:inline-flex">
                 ⚡ 0
