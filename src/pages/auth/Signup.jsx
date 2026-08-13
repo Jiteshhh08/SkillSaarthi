@@ -18,7 +18,7 @@ export default function Signup() {
     setSubmitting(true)
     try {
       await signUp(name, email, password)
-      navigate('/onboarding/education-level')
+      navigate('/onboarding')
     } catch (err) {
       setError(err?.message || 'Unable to create your account.')
     } finally {

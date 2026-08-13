@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { isProfileComplete } from '../../services/profile'
 
 export function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -52,8 +53,8 @@ export function ProfileCompleteRoute({ children }) {
     return <Navigate to="/login" replace />
   }
 
-  if (!profile?.education_level) {
-    return <Navigate to="/onboarding/education-level" replace />
+  if (!isProfileComplete(profile)) {
+    return <Navigate to="/onboarding" replace />
   }
 
   return children
