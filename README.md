@@ -475,7 +475,11 @@ skill-guide/
 │   ├── assets/
 │   ├── components/
 │   ├── pages/
-│   ├── services/             # appwrite.js, api.js, auth.js
+│   │   ├── public/
+│   │   ├── auth/
+│   │   ├── private/           # Dashboard, Assessment, EducationLevel
+│   │   └── onboarding/        # Multi-step profile wizard
+│   ├── services/             # appwrite.js, api.js, auth.js, profile.js, skills.js, interests.js, assessment.js
 │   ├── hooks/
 │   ├── context/
 │   ├── routes/
@@ -544,6 +548,13 @@ npm run setup:appwrite
 ```
 
 4. Copy `.env.sample` to `.env` and fill in `VITE_APPWRITE_ENDPOINT`, `VITE_APPWRITE_PROJECT_ID`, and `VITE_APPWRITE_DATABASE_ID`.
+5. Seed the global catalogs (`skills`, `interests`, `careers`, `courses`, `internships`) so the onboarding skill/interest steps and Phase 3 have data to work with:
+
+```bash
+npm run seed:catalog
+```
+
+> The setup and seed scripts are idempotent — safe to re-run after pulling new schema changes.
 
 ---
 
@@ -618,6 +629,75 @@ uvicorn app.main:app --reload
 The service runs at `http://127.0.0.1:8000` — health check: `http://127.0.0.1:8000/health`.
 
 > **Windows note:** PowerShell 5.1 does not support `&&` (use `;` to chain commands). If you prefer to activate the venv explicitly, run `Set-ExecutionPolicy -Scope Process RemoteSigned` once, then activate with `.\venv\Scripts\Activate.ps1`.
+
+---
+
+# 🧭 Phase 2 — Profile & Onboarding
+
+Phase 2 (complete) builds the user's structured career profile in Appwrite. This profile is the primary input to the Phase 3 recommendation engine.
+
+## User flow
+
+```text
+Sign up
+   ↓
+/onboarding — multi-step wizard
+   ├── 1. Education level
+   ├── 2. Academic info (fields vary by education level)
+   ├── 3. Skills (+ proficiency 1–5)
+   ├── 4. Interests
+   ├── 5. Career preferences
+   └── 6. Career assessment (10-question questionnaire)
+       ↓
+Onboarding marked complete → /dashboard
+```
+
+* New users land on `/onboarding` right after signup.
+* The wizard resumes at the first **incomplete** step for returning users (each step can be skipped).
+* `/assessment` is available any time to retake the career assessment and compare scores.
+* `/onboarding/education-level` lets users change their education level later from the dashboard.
+* `/dashboard` is gated by `ProfileCompleteRoute`, which requires `onboarding_completed = true`.
+
+## Profile data
+
+The `profiles` document (document ID = the Appwrite user `$id`) stores:
+
+| Field | Purpose |
+|---|---|
+| `education_level` | `high_school`, `college`, or `job_seeker` |
+| `degree`, `branch`, `study_year`, `cgpa` | College academic info |
+| `subjects`, `academic_strengths` | Academic information (all levels) |
+| `experience_years` | Work experience (job seekers) |
+| `career_goal`, `preferred_role`, `preferred_industry`, `preferred_location`, `work_preference` | Career preferences |
+| `assessment_score` | Latest career assessment score (0–100) |
+| `onboarding_completed` | Flags a complete profile; gates `/dashboard` |
+
+Skills, interests, and assessment attempts live in their own collections:
+
+| Collection | Stores |
+|---|---|
+| `user_skills` | `user_id`, `skill_id`, `proficiency` (1–5) |
+| `user_interests` | `user_id`, `interest_id` |
+| `assessments` | `user_id`, `type`, `score`, `responses`, `created_at` |
+
+* The global `skills` and `interests` catalogs are seeded via `npm run seed:catalog`. Until then, the frontend falls back to a built-in list so the flow always works in dev.
+
+## Upgrading an existing Appwrite setup
+
+Phase 2 added attributes to `profiles` (`subjects`, `academic_strengths`, `preferred_role`, `work_preference`, `experience_years`, `assessment_score`, `onboarding_completed`). The setup script is idempotent — re-run it to add the missing attributes and indexes:
+
+```bash
+npm run setup:appwrite
+```
+
+## Frontend services
+
+* `src/services/profile.js` — profile CRUD, academic info, career preferences, onboarding completion
+* `src/services/skills.js` — skill catalog + `user_skills` CRUD (proficiency)
+* `src/services/interests.js` — interest catalog + `user_interests` CRUD
+* `src/services/assessment.js` — questionnaire, scoring, persistence
+* `src/pages/onboarding/` — the multi-step wizard
+* `src/pages/private/Assessment.jsx` — standalone assessment page
 
 ---
 
@@ -714,11 +794,11 @@ For complete development rules:
 ## Phase 2 — User Profile
 
 * [x] Education-level selection
-* [ ] Profile onboarding
-* [ ] Skills
-* [ ] Interests
-* [ ] Career preferences
-* [ ] Assessment
+* [x] Profile onboarding
+* [x] Skills
+* [x] Interests
+* [x] Career preferences
+* [x] Assessment
 
 ---
 
