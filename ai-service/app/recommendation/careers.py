@@ -5,10 +5,27 @@ Kept small and local until the recommendation pipeline reads the
 catalog directly from Appwrite Databases.
 """
 
+
+def _normalize(name):
+    return " ".join(str(name).strip().lower().split())
+
+
+def get_career(career_name):
+    """Look up a career by name or stable id. Returns None if not found."""
+    target = _normalize(career_name)
+    for career in CAREER_REQUIREMENTS:
+        if career["id"] == career_name or _normalize(career["name"]) == target:
+            return career
+    return None
+
+
 CAREER_REQUIREMENTS = [
     {
+        "id": "career_full_stack_developer",
         "name": "Full Stack Developer",
         "education": "college",
+        "assessment": 70,
+        "experience": 0,
         "skills": {
             "javascript": 4,
             "react": 3,
@@ -23,8 +40,11 @@ CAREER_REQUIREMENTS = [
         "reasons": ["full-stack", "web"],
     },
     {
+        "id": "career_data_analyst",
         "name": "Data Analyst",
         "education": "college",
+        "assessment": 70,
+        "experience": 0,
         "skills": {
             "sql": 4,
             "python": 3,
@@ -38,8 +58,11 @@ CAREER_REQUIREMENTS = [
         "reasons": ["data", "analytics"],
     },
     {
+        "id": "career_cloud_engineer",
         "name": "Cloud Engineer",
         "education": "college",
+        "assessment": 75,
+        "experience": 1,
         "skills": {
             "aws": 4,
             "linux": 4,
@@ -52,8 +75,11 @@ CAREER_REQUIREMENTS = [
         "reasons": ["cloud", "infrastructure"],
     },
     {
+        "id": "career_security_analyst",
         "name": "Security Analyst",
         "education": "college",
+        "assessment": 75,
+        "experience": 0,
         "skills": {
             "network security": 4,
             "security compliance": 4,

@@ -10,10 +10,10 @@ The service does not handle authentication.
 
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from .recommendation.scoring import score_careers
+from .recommendation.scoring import analyze_skill_gaps, score_careers
 
 app = FastAPI(
     title="Skill Guide AI Service",
@@ -32,9 +32,12 @@ class RecommendRequest(BaseModel):
     skills: list[Skill] = Field(default_factory=list)
     interests: list[str] = Field(default_factory=list)
     goals: list[str] = Field(default_factory=list)
+    assessment_score: float | None = Field(default=None, ge=0, le=100)
+    experience_years: int | None = Field(default=None, ge=0, le=60)
 
 
 class Recommendation(BaseModel):
+    career_id: str
     career: str
     score: float = Field(ge=0, le=100)
     reasons: list[str] = Field(default_factory=list)
@@ -43,6 +46,24 @@ class Recommendation(BaseModel):
 
 class RecommendResponse(BaseModel):
     recommendations: list[Recommendation]
+
+
+class SkillGapRequest(BaseModel):
+    career: str
+    skills: list[Skill] = Field(default_factory=list)
+
+
+class SkillGapSkill(BaseModel):
+    skill: str
+    required: int
+    current: int
+
+
+class SkillGapResponse(BaseModel):
+    career_id: str
+    career: str
+    strong: list[SkillGapSkill] = Field(default_factory=list)
+    needs_improvement: list[SkillGapSkill] = Field(default_factory=list)
 
 
 @app.get("/health")
@@ -58,6 +79,18 @@ def recommend_careers(request: RecommendRequest):
     """
     recommendations = score_careers(request.model_dump())
     return RecommendResponse(recommendations=recommendations)
+
+
+@app.post("/ai/skill-gaps", response_model=SkillGapResponse)
+def skill_gaps(request: SkillGapRequest):
+    """Analyze the gap between a user's skills and one career's requirements.
+
+    Mirrors docs/main_architecture.md §24 (Strong vs Needs Improvement).
+    """
+    result = analyze_skill_gaps(request.career, request.model_dump().get("skills", []))
+    if result is None:
+        raise HTTPException(status_code=404, detail="Unknown career")
+    return result
 
 
 if __name__ == "__main__":
