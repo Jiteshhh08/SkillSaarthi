@@ -101,6 +101,9 @@ export async function updateAcademicInfo(userId, data = {}) {
   if (data.cgpa !== '' && data.cgpa != null) fields.cgpa = Number(data.cgpa)
   if (data.subjects) fields.subjects = data.subjects
   if (data.academic_strengths) fields.academic_strengths = data.academic_strengths
+  if (data.experience_years !== '' && data.experience_years != null) {
+    fields.experience_years = Number(data.experience_years)
+  }
   return updateProfile(userId, fields)
 }
 

@@ -538,7 +538,7 @@ Appwrite Databases is the primary data store. It is a NoSQL document database or
 
 | Collection | Purpose | Key attributes |
 |---|---|---|
-| `profiles` | One document per user | `user_id`, `education_level`, `degree`, `branch`, `study_year`, `cgpa`, `career_goal`, `preferred_industry`, `preferred_location` |
+| `profiles` | One document per user | `user_id`, `education_level`, `degree`, `branch`, `study_year`, `cgpa`, `subjects`, `academic_strengths`, `career_goal`, `preferred_industry`, `preferred_role`, `preferred_location`, `work_preference`, `experience_years`, `assessment_score`, `onboarding_completed` |
 | `skills` | Global skill catalog | `name`, `category` |
 | `user_skills` | User ↔ skill proficiency | `user_id`, `skill_id`, `proficiency` |
 | `interests` | Global interest catalog | `name` |
@@ -574,9 +574,16 @@ erDiagram
         string branch
         int study_year
         decimal cgpa
+        text subjects
+        text academic_strengths
         text career_goal
         string preferred_industry
+        string preferred_role
         string preferred_location
+        string work_preference
+        int experience_years
+        float assessment_score
+        boolean onboarding_completed
         datetime created_at
         datetime updated_at
     }
