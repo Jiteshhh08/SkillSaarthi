@@ -870,7 +870,10 @@ Example request:
   "interests": [
     "Web Development",
     "Software Engineering"
-  ]
+  ],
+  "goals": ["internship", "software engineering job"],
+  "assessment_score": 80,
+  "experience_years": 2
 }
 ```
 
@@ -892,6 +895,39 @@ Example response:
         "Accessibility"
       ]
     }
+  ]
+}
+```
+
+Skill-gap analysis for a single target career:
+
+```http
+POST /ai/skill-gaps
+```
+
+Example request:
+
+```json
+{
+  "career": "Full Stack Developer",
+  "skills": [
+    { "name": "JavaScript", "proficiency": 4 },
+    { "name": "Node.js", "proficiency": 1 }
+  ]
+}
+```
+
+Example response:
+
+```json
+{
+  "career_id": "career_full_stack_developer",
+  "career": "Full Stack Developer",
+  "strong": [
+    { "skill": "javascript", "required": 4, "current": 4 }
+  ],
+  "needs_improvement": [
+    { "skill": "node.js", "required": 4, "current": 1 }
   ]
 }
 ```
