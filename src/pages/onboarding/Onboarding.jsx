@@ -116,7 +116,7 @@ export default function Onboarding() {
           } else if (!(snapshot?.assessment_score > 0)) {
             initialStep = 5
           } else {
-            initialStep = STEPS.length - 1
+            initialStep = 2
           }
         }
         setStep(initialStep)
@@ -351,24 +351,31 @@ export default function Onboarding() {
             <ol className="mx-auto mt-8 flex max-w-2xl items-center gap-2">
               {STEPS.map((item, index) => (
                 <li key={item.id} className="flex flex-1 items-center gap-2">
-                  <span
-                    className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black ${
-                      index < step
-                        ? 'bg-brand text-white'
-                        : index === step
-                          ? 'border-2 border-brand bg-brand-soft text-brand-deep'
-                          : 'border border-line bg-white text-ink-soft'
-                    }`}
+                  <button
+                    type="button"
+                    onClick={() => setStep(index)}
+                    className="flex flex-1 items-center gap-2 text-left"
+                    aria-label={`Go to ${item.label} step`}
                   >
-                    {index + 1}
-                  </span>
-                  <span
-                    className={`hidden text-xs font-bold sm:block ${
-                      index <= step ? 'text-ink' : 'text-ink-soft'
-                    }`}
-                  >
-                    {item.label}
-                  </span>
+                    <span
+                      className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black ${
+                        index < step
+                          ? 'bg-brand text-white'
+                          : index === step
+                            ? 'border-2 border-brand bg-brand-soft text-brand-deep'
+                            : 'border border-line bg-white text-ink-soft'
+                      }`}
+                    >
+                      {index + 1}
+                    </span>
+                    <span
+                      className={`hidden text-xs font-bold sm:block ${
+                        index <= step ? 'text-ink' : 'text-ink-soft'
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+                  </button>
                   {index < STEPS.length - 1 && (
                     <span className={`h-0.5 flex-1 ${index < step ? 'bg-brand' : 'bg-line'}`} />
                   )}
