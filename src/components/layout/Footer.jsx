@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom'
+import { useAuth } from '../../hooks/useAuth'
 
 export default function Footer() {
+  const { user } = useAuth()
+
   return (
     <footer className="bg-deep">
       <div className="mx-auto grid max-w-7xl gap-8 px-6 py-12 md:grid-cols-4">
@@ -15,17 +18,34 @@ export default function Footer() {
         <div>
           <p className="text-sm font-bold text-white">Learn</p>
           <ul className="mt-3 space-y-2 text-sm text-slate-400">
-            <li><Link to="/dashboard" className="hover:text-white">Dashboard</Link></li>
-            <li><Link to="/dashboard" className="hover:text-white">Your roadmap</Link></li>
-            <li><Link to="/dashboard" className="hover:text-white">Skill gaps</Link></li>
+            {user ? (
+              <>
+                <li><Link to="/dashboard" className="hover:text-white">Dashboard</Link></li>
+                <li><Link to="/onboarding" className="hover:text-white">Manage my profile</Link></li>
+                <li><Link to="/assessment" className="hover:text-white">Retake assessment</Link></li>
+              </>
+            ) : (
+              <>
+                <li><Link to="/signup" className="hover:text-white">Get started</Link></li>
+                <li><Link to="#subjects" className="hover:text-white">Explore subjects</Link></li>
+              </>
+            )}
           </ul>
         </div>
 
         <div>
           <p className="text-sm font-bold text-white">Account</p>
           <ul className="mt-3 space-y-2 text-sm text-slate-400">
-            <li><Link to="/signup" className="hover:text-white">Create account</Link></li>
-            <li><Link to="/login" className="hover:text-white">Login</Link></li>
+            {user ? (
+              <li>
+                <Link to="/dashboard" className="hover:text-white">My dashboard</Link>
+              </li>
+            ) : (
+              <>
+                <li><Link to="/signup" className="hover:text-white">Create account</Link></li>
+                <li><Link to="/login" className="hover:text-white">Login</Link></li>
+              </>
+            )}
           </ul>
         </div>
 
