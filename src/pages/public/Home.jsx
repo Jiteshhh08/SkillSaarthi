@@ -59,7 +59,7 @@ export default function Home() {
       </section>
 
       {/* Subject tiles */}
-      <section className="mx-auto max-w-7xl px-6 py-16">
+      <section id="subjects" className="mx-auto max-w-7xl px-6 py-16">
         <h2 className="text-3xl font-bold tracking-tight">What do you want to learn?</h2>
         <p className="mt-2 text-lg text-ink-muted">Pick an area to explore career-ready skills.</p>
 
