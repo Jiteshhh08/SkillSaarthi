@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
+import WhatWeDo from '../../components/home/WhatWeDo'
 
 const SUBJECTS = [
   {
@@ -48,7 +49,7 @@ export default function Home() {
             For every student, every skill, real career results.
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-muted">
-            Skill Guidemaps your current skills to your ideal career, shows exactly what you're
+            Skill Guide maps your current skills to your ideal career, shows exactly what you're
             missing, and builds a personalized learning roadmap to get you career-ready.
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
@@ -57,6 +58,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <WhatWeDo mode="guest" />
 
       {/* Subject tiles */}
       <section id="subjects" className="mx-auto max-w-7xl px-6 py-16">
