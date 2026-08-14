@@ -1,0 +1,146 @@
+{
+  "version": "2.0.0",
+
+  "tasks": [
+    {
+      "label": "setup: install all dependencies",
+      "type": "shell",
+      "windows": {
+        "command": "powershell",
+        "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\dev-install.ps1"]
+      },
+      "linux": {
+        "command": "bash",
+        "args": ["${workspaceFolder}/dev-install.sh"]
+      },
+      "osx": {
+        "command": "bash",
+        "args": ["${workspaceFolder}/dev-install.sh"]
+      },
+      "presentation": {
+        "name": "Setup",
+        "group": "setup",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "cleanup: stop running dev servers",
+      "type": "shell",
+      "windows": {
+        "command": "powershell",
+        "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\dev-cleanup.ps1"]
+      },
+      "linux": {
+        "command": "bash",
+        "args": ["${workspaceFolder}/dev-cleanup.sh"]
+      },
+      "osx": {
+        "command": "bash",
+        "args": ["${workspaceFolder}/dev-cleanup.sh"]
+      },
+      "presentation": {
+        "name": "Cleanup",
+        "group": "setup",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "dev: frontend (5173)",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev", "--", "--port", "5173", "--strictPort"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "name": "Frontend",
+        "group": "servers",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "dev: backend (5000)",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "options": {
+        "cwd": "${workspaceFolder}/server"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "name": "Backend",
+        "group": "servers",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "dev: ai-service (8000)",
+      "type": "shell",
+      "windows": {
+        "command": ".\\venv\\Scripts\\python.exe",
+        "args": ["-m", "uvicorn", "app.main:app", "--reload"],
+        "options": {
+          "cwd": "${workspaceFolder}/ai-service"
+        }
+      },
+      "linux": {
+        "command": "venv/bin/python",
+        "args": ["-m", "uvicorn", "app.main:app", "--reload"],
+        "options": {
+          "cwd": "${workspaceFolder}/ai-service"
+        }
+      },
+      "osx": {
+        "command": "venv/bin/python",
+        "args": ["-m", "uvicorn", "app.main:app", "--reload"],
+        "options": {
+          "cwd": "${workspaceFolder}/ai-service"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "name": "AI Service",
+        "group": "servers",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "dev: run all three",
+      "dependsOn": [
+        "dev: frontend (5173)",
+        "dev: backend (5000)",
+        "dev: ai-service (8000)"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "dev: restart everything (clean, then run)",
+      "dependsOn": [
+        "cleanup: stop running dev servers",
+        "dev: run all three"
+      ],
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "dev: setup then run all three",
+      "dependsOn": [
+        "setup: install all dependencies",
+        "dev: run all three"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    }
+  ]
+}
