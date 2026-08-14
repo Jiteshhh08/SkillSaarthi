@@ -1,3 +1,4 @@
+import { ApiError } from '../utils/ApiError.js'
 import { COLLECTIONS, ID, Permission, Query, Role, databases } from '../config/appwrite.js'
 import { config } from '../config/environment.js'
 
@@ -19,13 +20,20 @@ export function parseInternshipSkills(raw) {
   }
 }
 
-async function listAllInternships() {
-  const { documents } = await databases.listDocuments(
-    config.appwrite.databaseId,
-    COLLECTIONS.internships,
-    [Query.limit(100)],
-  )
-  return documents.map((doc) => ({
+export const INTERNSHIP_STATUS = ['pending', 'active', 'rejected']
+
+function isPubliclyVisible(doc) {
+  const status = doc.status == null ? 'active' : String(doc.status)
+  if (status !== 'active') return false
+  if (doc.expires_at) {
+    const expires = Date.parse(doc.expires_at)
+    if (Number.isFinite(expires) && expires < Date.now()) return false
+  }
+  return true
+}
+
+function serializeInternship(doc) {
+  return {
     $id: doc.$id,
     title: doc.title,
     company: doc.company || '',
@@ -34,7 +42,20 @@ async function listAllInternships() {
     url: doc.url || '',
     skills: parseInternshipSkills(doc.skills),
     eligibility: doc.eligibility || '',
-  }))
+    status: doc.status == null ? 'active' : String(doc.status),
+    source: doc.source || '',
+    expires_at: doc.expires_at || null,
+    fetched_at: doc.fetched_at || null,
+  }
+}
+
+async function listAllInternships() {
+  const { documents } = await databases.listDocuments(
+    config.appwrite.databaseId,
+    COLLECTIONS.internships,
+    [Query.limit(100)],
+  )
+  return documents.filter(isPubliclyVisible).map(serializeInternship)
 }
 
 async function getUserSkillsMap(userId) {
@@ -266,4 +287,125 @@ export async function recommendInternships(userId) {
     match_score,
     reasons,
   }))
+}
+
+function normalizeSkillsInput(skills) {
+  if (skills == null) return []
+  const list = Array.isArray(skills) ? skills : String(skills).split(',')
+  return list
+    .map((skill) => String(skill).trim())
+    .filter(Boolean)
+    .slice(0, 50)
+}
+
+function assertStatus(status) {
+  if (status == null || String(status).trim() === '') return null
+  const value = String(status).toLowerCase()
+  if (!INTERNSHIP_STATUS.includes(value)) {
+    throw new ApiError(
+      400,
+      `Invalid status. Use one of: ${INTERNSHIP_STATUS.join(', ')}.`,
+      'INVALID_STATUS',
+    )
+  }
+  return value
+}
+
+export async function listAdminInternships({ status = '', search = '' } = {}) {
+  const { documents } = await databases.listDocuments(
+    config.appwrite.databaseId,
+    COLLECTIONS.internships,
+    [Query.limit(200)],
+  )
+  const statusValue = String(status).trim().toLowerCase()
+  const searchValue = String(search).trim().toLowerCase()
+
+  let rows = documents
+  if (statusValue) {
+    rows = rows.filter((doc) => String(doc.status || 'active') === statusValue)
+  }
+  if (searchValue) {
+    rows = rows.filter((doc) =>
+      `${doc.title} ${doc.company || ''} ${doc.location || ''} ${doc.description || ''}`
+        .toLowerCase()
+        .includes(searchValue),
+    )
+  }
+  return rows.map(serializeInternship)
+}
+
+export async function createInternship(input = {}) {
+  const title = String(input.title || '').trim()
+  if (!title) {
+    throw new ApiError(400, 'Title is required', 'MISSING_TITLE')
+  }
+  const company = String(input.company || '').trim()
+  const status = assertStatus(input.status) || 'pending'
+
+  const payload = {
+    title,
+    company,
+    location: String(input.location || '').trim(),
+    description: String(input.description || '').trim(),
+    url: String(input.url || '').trim(),
+    skills: JSON.stringify(normalizeSkillsInput(input.skills)),
+    eligibility: String(input.eligibility || '').trim(),
+    status,
+    source: 'manual',
+    source_key: `manual:${title.toLowerCase()}:${company.toLowerCase()}`,
+    fetched_at: new Date().toISOString(),
+  }
+  if (input.expires_at) {
+    payload.expires_at = new Date(input.expires_at).toISOString()
+  }
+
+  const created = await databases.createDocument(
+    config.appwrite.databaseId,
+    COLLECTIONS.internships,
+    ID.unique(),
+    payload,
+    [
+      Permission.read(Role.users()),
+      Permission.update(Role.users()),
+      Permission.delete(Role.users()),
+    ],
+  )
+  return serializeInternship(created)
+}
+
+export async function updateInternship(id, input = {}) {
+  const payload = {}
+
+  if (input.title !== undefined) {
+    const title = String(input.title).trim()
+    if (!title) {
+      throw new ApiError(400, 'Title is required', 'MISSING_TITLE')
+    }
+    payload.title = title
+  }
+  if (input.company !== undefined) payload.company = String(input.company).trim()
+  if (input.location !== undefined) payload.location = String(input.location).trim()
+  if (input.description !== undefined) payload.description = String(input.description).trim()
+  if (input.url !== undefined) payload.url = String(input.url).trim()
+  if (input.eligibility !== undefined) payload.eligibility = String(input.eligibility).trim()
+  if (input.skills !== undefined) payload.skills = JSON.stringify(normalizeSkillsInput(input.skills))
+  if (input.status !== undefined) {
+    const status = assertStatus(input.status)
+    if (status) payload.status = status
+  }
+  if (input.expires_at !== undefined) {
+    payload.expires_at = input.expires_at ? new Date(input.expires_at).toISOString() : null
+  }
+
+  const updated = await databases.updateDocument(
+    config.appwrite.databaseId,
+    COLLECTIONS.internships,
+    id,
+    payload,
+  )
+  return serializeInternship(updated)
+}
+
+export async function deleteInternship(id) {
+  await databases.deleteDocument(config.appwrite.databaseId, COLLECTIONS.internships, id)
 }

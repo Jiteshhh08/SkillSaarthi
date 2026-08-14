@@ -584,30 +584,31 @@ async function ensureCourse(dbId, skillId, course) {
 }
 
 async function ensureInternship(dbId, internship) {
+  const id = internship.title.toLowerCase().replace(/[^a-z0-9]+/g, '_')
+  const sourceKey = `manual:${internship.title.toLowerCase()}:${(internship.company || '').toLowerCase()}`
+  const payload = {
+    title: internship.title,
+    company: internship.company,
+    location: internship.location,
+    description: internship.description,
+    url: internship.url,
+    skills: JSON.stringify(internship.skills || []),
+    eligibility: internship.eligibility || '',
+    status: 'active',
+    source: 'manual',
+    source_key: sourceKey,
+    fetched_at: new Date().toISOString(),
+  }
   const { documents } = await databases.listDocuments(dbId, 'internships', [
     Query.equal('title', internship.title),
     Query.limit(1),
   ])
   if (documents.length > 0) {
-    console.log(`  = internship ${internship.title}`)
+    await databases.updateDocument(dbId, 'internships', documents[0].$id, payload)
+    console.log(`  ~ internship ${internship.title}`)
     return
   }
-  const id = internship.title.toLowerCase().replace(/[^a-z0-9]+/g, '_')
-  await databases.createDocument(
-    dbId,
-    'internships',
-    id,
-    {
-      title: internship.title,
-      company: internship.company,
-      location: internship.location,
-      description: internship.description,
-      url: internship.url,
-      skills: JSON.stringify(internship.skills || []),
-      eligibility: internship.eligibility || '',
-    },
-    CATALOG_READ,
-  )
+  await databases.createDocument(dbId, 'internships', id, payload, CATALOG_READ)
   console.log(`  + internship ${internship.title}`)
 }
 
