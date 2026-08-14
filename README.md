@@ -479,7 +479,7 @@ skill-guide/
 │   │   ├── auth/
 │   │   ├── private/           # Dashboard, Assessment, EducationLevel
 │   │   └── onboarding/        # Multi-step profile wizard
-│   ├── services/             # appwrite.js, api.js, auth.js, profile.js, skills.js, interests.js, assessment.js
+│   ├── services/             # appwrite.js, api.js, auth.js, profile.js, skills.js, interests.js, assessment.js, careers.js, recommendations.js
 │   ├── hooks/
 │   ├── context/
 │   ├── routes/
@@ -489,10 +489,18 @@ skill-guide/
 │
 ├── server/                   # Node.js + Express backend
 │   ├── src/
+│   │   ├── config/
+│   │   ├── controllers/      # career, recommendation
+│   │   ├── services/         # appwrite, ai, career, recommendation
+│   │   ├── middleware/       # auth, error
+│   │   ├── routes/           # health, careers, recommendations
+│   │   └── utils/
 │   └── package.json
 │
 ├── ai-service/               # Python AI/ML service
 │   ├── app/
+│   │   ├── recommendation/   # careers.py (dataset), scoring.py (engine)
+│   │   └── main.py           # /health, /ai/careers, /ai/recommend-careers, /ai/skill-gaps
 │   ├── models/
 │   ├── data/
 │   └── requirements.txt
@@ -628,6 +636,15 @@ uvicorn app.main:app --reload
 
 The service runs at `http://127.0.0.1:8000` — health check: `http://127.0.0.1:8000/health`.
 
+Endpoints:
+
+```text
+GET  /health                     service health
+GET  /ai/careers                 scoring catalog (13 careers)
+POST /ai/recommend-careers       ranked recommendations + explanations
+POST /ai/skill-gaps              strong vs needs-improvement for one career
+```
+
 > **Windows note:** PowerShell 5.1 does not support `&&` (use `;` to chain commands). If you prefer to activate the venv explicitly, run `Set-ExecutionPolicy -Scope Process RemoteSigned` once, then activate with `.\venv\Scripts\Activate.ps1`.
 
 ---
@@ -698,6 +715,82 @@ npm run setup:appwrite
 * `src/services/assessment.js` — questionnaire, scoring, persistence
 * `src/pages/onboarding/` — the multi-step wizard
 * `src/pages/private/Assessment.jsx` — standalone assessment page
+
+---
+
+# 🧠 Phase 3 — Core Intelligence
+
+Phase 3 (complete) implements the product's core intelligence: the career/skill
+datasets, the career-skill mapping, the recommendation engine, skill-gap analysis,
+and explainable recommendations.
+
+## What was built
+
+| Sub-part | Where |
+|---|---|
+| Career dataset | `ai-service/app/recommendation/careers.py` (13 careers) + Appwrite `careers` collection |
+| Skill dataset | Appwrite `skills` collection (seeded) |
+| Career-skill mapping | Appwrite `career_skills` collection (`required_level` 1–5, `importance` 1–5) |
+| Recommendation engine | `ai-service/app/recommendation/scoring.py` (`score_careers`) |
+| Skill-gap analysis | `ai-service/app/recommendation/scoring.py` (`analyze_skill_gaps`) + `/ai/skill-gaps` |
+| Recommendation explanations | `reasons`, `strengths`, `next_steps`, score `breakdown` in every recommendation |
+
+## Recommendation scoring
+
+The engine implements the hybrid weighted formula from
+[`docs/main_architecture.md`](docs/main_architecture.md) §23:
+
+```text
+Career Score =
+    Skill Match       × 0.40   (importance-weighted, skill proficiency 1–5)
+  + Interest Match    × 0.20
+  + Assessment Match  × 0.15
+  + Education Match   × 0.10   (against the career's accepted education levels)
+  + Goal Match        × 0.10
+  + Experience Match  × 0.05
+```
+
+Every recommendation includes an explainable payload:
+
+* `score` — 0–100 internal match score (not a career guarantee)
+* `breakdown` — per-factor contribution (skill/interest/education/goal/assessment/experience)
+* `reasons` — why this career matches ("Strong React skills (3/4)", "Interest in Web Development")
+* `strengths` — skills the user already meets
+* `skill_gaps` — required skills the user has not yet met
+* `next_steps` — ordered "Learn/Strengthen X (level a → b)" actions
+
+## API endpoints (Node backend)
+
+All routes require `Authorization: Bearer <jwt>` (Appwrite session token).
+
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/api/careers` | List career catalog with required skills |
+| `GET` | `/api/careers/:careerId` | Single career with required skills |
+| `POST` | `/api/recommendations/generate` | Generate + persist recommendations for the user (`body: { top_n? }`) |
+| `GET` | `/api/recommendations` | Saved recommendations |
+| `GET` | `/api/recommendations/:id` | Single saved recommendation |
+| `GET` | `/api/recommendations/careers/:careerId/skill-gaps` | Skill-gap analysis for a career |
+
+> If the AI service is down, `/api/recommendations/generate` returns a controlled
+> `503 AI_SERVICE_UNAVAILABLE` error (per architecture §42) and the frontend can
+> show "Recommendations are temporarily unavailable."
+
+## Frontend services
+
+* `src/services/careers.js` — career catalog + skill-gap API calls
+* `src/services/recommendations.js` — generate/list/get recommendation API calls
+
+## Upgrading an existing Appwrite setup
+
+Phase 3 changed `career_skills` semantics: `required_level` is now on the user
+proficiency scale (1–5) and `importance` on 1–5 (previously mixed scales). The
+seed script now **updates** existing `career_skills` documents instead of skipping
+them, so re-running it repairs existing data:
+
+```bash
+npm run seed:catalog
+```
 
 ---
 
@@ -804,12 +897,12 @@ For complete development rules:
 
 ## Phase 3 — Core Intelligence
 
-* [ ] Career dataset
-* [ ] Skill dataset
-* [ ] Career-skill mapping
-* [ ] Recommendation engine
-* [ ] Skill-gap analysis
-* [ ] Recommendation explanations
+* [x] Career dataset
+* [x] Skill dataset
+* [x] Career-skill mapping
+* [x] Recommendation engine
+* [x] Skill-gap analysis
+* [x] Recommendation explanations
 
 ---
 
