@@ -5,10 +5,14 @@ import EducationLevel from '../pages/private/EducationLevel'
 import Assessment from '../pages/private/Assessment'
 import GitHubAnalysis from '../pages/private/GitHubAnalysis'
 import Internships from '../pages/private/Internships'
+import Recommendations from '../pages/private/Recommendations'
+import SkillGaps from '../pages/private/SkillGaps'
+import AdminInternships from '../pages/private/AdminInternships'
 import Onboarding from '../pages/onboarding/Onboarding'
 import Login from '../pages/auth/Login'
 import Signup from '../pages/auth/Signup'
 import Home from '../pages/public/Home'
+import PrivateHome from '../pages/private/Home'
 
 export default function AppRoutes() {
   return (
@@ -36,6 +40,15 @@ export default function AppRoutes() {
           <PublicOnlyRoute>
             <Signup />
           </PublicOnlyRoute>
+        }
+      />
+
+      <Route
+        path="/home"
+        element={
+          <ProtectedRoute>
+            <PrivateHome />
+          </ProtectedRoute>
         }
       />
 
@@ -75,6 +88,33 @@ export default function AppRoutes() {
       />
 
       <Route
+        path="/recommendations"
+        element={
+          <ProfileCompleteRoute>
+            <Recommendations />
+          </ProfileCompleteRoute>
+        }
+      />
+
+      <Route
+        path="/skill-gaps"
+        element={
+          <ProfileCompleteRoute>
+            <SkillGaps />
+          </ProfileCompleteRoute>
+        }
+      />
+
+      <Route
+        path="/skill-gaps/:careerId"
+        element={
+          <ProfileCompleteRoute>
+            <SkillGaps />
+          </ProfileCompleteRoute>
+        }
+      />
+
+      <Route
         path="/github"
         element={
           <ProfileCompleteRoute>
@@ -89,6 +129,15 @@ export default function AppRoutes() {
           <ProfileCompleteRoute>
             <Internships />
           </ProfileCompleteRoute>
+        }
+      />
+
+      <Route
+        path="/admin/internships"
+        element={
+          <ProtectedRoute>
+            <AdminInternships />
+          </ProtectedRoute>
         }
       />
 

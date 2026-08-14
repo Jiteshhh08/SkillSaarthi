@@ -152,10 +152,10 @@ export default function Dashboard() {
             <div className="grid h-12 w-12 place-items-center rounded-full bg-brand-soft text-2xl">🎯</div>
             <h3 className="mt-4 text-lg font-bold">Career Match</h3>
             <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-              Complete your profile and assessment to see your best career matches.
+              See your best career matches, ranked by your skills, interests, and assessment.
             </p>
-            <Link to="/assessment" className="btn-primary mt-6 !h-10 !px-4 !text-sm">
-              Take assessment
+            <Link to="/recommendations" className="btn-primary mt-6 !h-10 !px-4 !text-sm">
+              View matches
             </Link>
           </div>
 
@@ -165,8 +165,8 @@ export default function Dashboard() {
             <p className="mt-1 text-sm leading-relaxed text-ink-muted">
               We compare your skills against target careers to show what's missing.
             </p>
-            <Link to="/dashboard" className="btn-text mt-6">
-              View skill gaps →
+            <Link to="/skill-gaps" className="btn-secondary mt-6 !h-10 !px-4 !text-sm">
+              View skill gaps
             </Link>
           </div>
 
@@ -226,8 +226,15 @@ export default function Dashboard() {
               </div>
             ) : (
               <p className="rounded-lg border border-line bg-white px-4 py-3 text-sm text-ink-muted sm:col-span-2">
-                {skillCount} skill(s) saved to your profile. Skill-gap analysis and the full skill
-                list arrive with the Phase 3 career engine.
+                {skillCount} skill(s) saved to your profile — generate{' '}
+                <Link to="/recommendations" className="font-bold text-brand-deep hover:underline">
+                  career matches
+                </Link>{' '}
+                or run a{' '}
+                <Link to="/skill-gaps" className="font-bold text-brand-deep hover:underline">
+                  skill-gap analysis
+                </Link>
+                .
               </p>
             )}
           </div>

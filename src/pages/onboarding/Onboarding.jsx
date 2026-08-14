@@ -241,7 +241,7 @@ export default function Onboarding() {
         await submitAssessment(user.$id, responses)
         await completeOnboarding(user.$id)
         await refreshProfile(user.$id)
-        navigate('/dashboard')
+        navigate('/home')
       } catch (err) {
         handleError(err)
         setSaving(false)
@@ -255,7 +255,7 @@ export default function Onboarding() {
     try {
       await completeOnboarding(user.$id)
       await refreshProfile(user.$id)
-      navigate('/dashboard')
+      navigate('/home')
     } catch (err) {
       handleError(err)
       setSaving(false)
