@@ -357,8 +357,8 @@ Frontend runs at `http://localhost:5173` (Vite default).
 | 3 — Career Engine (complete) | Career/skill datasets, career-skill mapping, recommendation engine, skill-gap, explanations |
 | 4 — AI | Python/FastAPI skill matching, ranking, skill-gap |
 | 5 — Roadmap | Roadmap generator, tasks, progress tracking, dashboard |
-| 6 — Advanced | Resume analysis, GitHub analysis, what-if, comparison, AI assistant |
-| 7 — Integrations | Courses, internships, notifications |
+| 6 — Advanced | Resume analysis, GitHub analysis (implemented), what-if, comparison, AI assistant |
+| 7 — Integrations | Courses, internships (implemented), notifications |
 
 ---
 

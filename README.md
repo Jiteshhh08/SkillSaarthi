@@ -881,6 +881,75 @@ npm run seed:catalog
 
 ---
 
+# 🐙 Phase 6 — GitHub Analysis & Internships
+
+Phase 6 (in progress) adds two advanced career tools backed by the Node backend +
+Python AI service.
+
+## GitHub analysis
+
+Analyzes **publicly accessible** GitHub data (profile + repository metadata only —
+never private content) and translates it into a technical profile with
+languages, skill signals, active domains, activity/open-source indicators, and
+career matches.
+
+## What was built
+
+| Sub-part | Where |
+|---|---|
+| Node provider + orchestration | `server/src/services/github.service.js` (`analyzeGitHub`) — GitHub API fetch → AI call → persist → optional skill apply |
+| Fallback analyzer | `computeFallbackAnalysis` in the same service — same output shape when the AI service is down |
+| Python analyzer | `ai-service/app/github/analyzer.py` + `POST /ai/github/analyze` |
+| Frontend page | `src/pages/private/GitHubAnalysis.jsx` at `/github` |
+| API client | `src/services/github.js` |
+| Internship scoring | `server/src/services/internship.service.js` — weighted matching, top-10 persisted to `internship_recommendations` |
+| Internship seed data | 8 internships, each with `skills` (JSON array) + `eligibility` |
+| Internship frontend | `src/pages/private/Internships.jsx` at `/internships` (recommended grid + searchable catalog) |
+
+## Internship scoring
+
+```text
+Internship Score =
+    Skill Match            × 0.55   (against the user's skill proficiencies)
+  + Role/Goals/Interests   × 0.20   (preferred_role, career_goal, interests)
+  + Education Match        × 0.15   (against the internship eligibility text)
+  + Location Match         × 0.10   (preferred_location, remote/hybrid preference)
+```
+
+## API endpoints (Node backend)
+
+All routes require `Authorization: Bearer <jwt>` (Appwrite session token).
+
+| Method | Route | Description |
+|---|---|---|
+| `POST` | `/api/github/analyze` | Analyze a public GitHub username (`body: { username, apply_skills? }`). Returns `{ username, source, analysis, analysis_id, skills_added }` |
+| `GET` | `/api/github/analysis/:id` | Fetch a saved analysis (owner only) |
+| `GET` | `/api/internships` | List internship catalog (`query: { search?, company?, location? }`) |
+| `GET` | `/api/internships/recommended` | Top-10 ranked matches for the user, persisted to `internship_recommendations` |
+
+> If the AI service is down, GitHub analysis returns the built-in heuristic
+> result with `source: "fallback"` instead of failing.
+
+## Upgrading an existing Appwrite setup
+
+Phase 6 added `profiles.github_username` and `internships.skills` /
+`internships.eligibility`. Apply the schema, then refresh the internship catalog:
+
+```bash
+npm run setup:appwrite
+```
+
+The seed script is idempotent but **skips existing internship documents by title**,
+so internship rows created before this phase lack `skills`/`eligibility` data.
+Delete the old internship documents first (e.g. from the Appwrite console or via
+the Admin SDK), then re-seed:
+
+```bash
+npm run seed:catalog
+```
+
+---
+
 # 🔐 Environment Variables
 
 Create `.env` files based on `.env.sample`.
@@ -933,7 +1002,9 @@ main
  ├── feature/dashboard
  ├── feature/career-recommendation
  ├── feature/roadmap
- └── feature/resume-analysis
+ ├── feature/resume-analysis
+ ├── feature/github-analysis
+ └── feature/internships
 ```
 
 Basic workflow:

@@ -542,7 +542,7 @@ Appwrite Databases is the primary data store. It is a NoSQL document database or
 
 | Collection | Purpose | Key attributes |
 |---|---|---|
-| `profiles` | One document per user | `user_id`, `education_level`, `degree`, `branch`, `study_year`, `cgpa`, `subjects`, `academic_strengths`, `career_goal`, `preferred_industry`, `preferred_role`, `preferred_location`, `work_preference`, `experience_years`, `assessment_score`, `onboarding_completed` |
+| `profiles` | One document per user | `user_id`, `education_level`, `degree`, `branch`, `study_year`, `cgpa`, `subjects`, `academic_strengths`, `career_goal`, `preferred_industry`, `preferred_role`, `preferred_location`, `work_preference`, `experience_years`, `assessment_score`, `onboarding_completed`, `github_username` |
 | `skills` | Global skill catalog | `name`, `category` |
 | `user_skills` | User ↔ skill proficiency | `user_id`, `skill_id`, `proficiency` |
 | `interests` | Global interest catalog | `name` |
@@ -555,7 +555,7 @@ Appwrite Databases is the primary data store. It is a NoSQL document database or
 | `roadmap_tasks` | Tasks inside a roadmap | `roadmap_id`, `title`, `description`, `order_index`, `estimated_hours`, `status`, `completed_at` |
 | `courses` | Course catalog | `name`, `provider`, `skill_id`, `level`, `duration_hours`, `url`, `cost`, `rating` |
 | `user_courses` | User course tracking | `user_id`, `course_id`, `status`, `progress` |
-| `internships` | Internship catalog | `title`, `company`, `location`, `description`, `url` |
+| `internships` | Internship catalog | `title`, `company`, `location`, `description`, `url`, `skills` (JSON array), `eligibility` |
 | `internship_recommendations` | Internship matches | `user_id`, `internship_id`, `match_score` |
 | `resume_analyses` | Resume analysis metadata | `user_id`, `appwrite_file_id`, `file_name`, `analysis_result` |
 | `github_analyses` | GitHub analysis metadata | `user_id`, `github_username`, `analysis_result` |
@@ -588,6 +588,7 @@ erDiagram
         int experience_years
         float assessment_score
         boolean onboarding_completed
+        string github_username
         datetime created_at
         datetime updated_at
     }
@@ -698,6 +699,8 @@ erDiagram
         string location
         text description
         string url
+        string skills
+        string eligibility
     }
 
     INTERNSHIP_RECOMMENDATIONS {
@@ -1231,6 +1234,12 @@ Appwrite Databases
 
 The system should only process publicly available GitHub information.
 
+### Implementation
+
+*Only public data is used* — the user's profile fields and repository metadata (name, description, language, topics, star/fork counts, activity dates). No private or code content is ever fetched or stored.
+The Node backend (`server/src/services/github.service.js`) calls the GitHub API, sends the payload to the Python analyzer at `POST /ai/github/analyze`, and persists the result in `github_analyses`. If the AI service is unreachable, a built-in heuristic analyzer (`computeFallbackAnalysis`) produces the same result shape so the feature degrades gracefully. Optionally, detected skills at ≥70 confidence can be written to the user's `user_skills` to feed recommendations and internships.
+An optional `GITHUB_TOKEN` in the backend environment raises GitHub API rate limits.
+
 ---
 
 # 29. AI Career Assistant
@@ -1329,6 +1338,20 @@ Recommended Internships
 
 External internship data must pass through the Node backend before reaching the frontend.
 
+### Implementation
+
+Internship rows live in the `internships` catalog with a JSON `skills` array and `eligibility` string. Matching is a weighted formula in `server/src/services/internship.service.js`:
+
+```text
+Internship Score =
+    Skill Match            × 0.55   (against the user's skill proficiencies)
+  + Role/Goals/Interests   × 0.20   (tokens from preferred_role, career_goal, interests)
+  + Education Match        × 0.15   (against the internship eligibility text)
+  + Location Match         × 0.10   (preferred_location, remote/hybrid preference)
+```
+
+The top 10 matches are persisted per user in `internship_recommendations`, and scores ≥80 are surfaced as strong matches in the UI.
+
 ---
 
 # 32. API Architecture
@@ -1390,8 +1413,8 @@ GET  /api/resume/analysis/:id
 ## GitHub
 
 ```text
-POST /api/github/analyze
-GET  /api/github/analysis/:id
+POST /api/github/analyze          (implemented)
+GET  /api/github/analysis/:id     (implemented)
 ```
 
 ## What-If
@@ -1410,8 +1433,8 @@ GET /api/courses/recommended
 ## Internships
 
 ```text
-GET /api/internships
-GET /api/internships/recommended
+GET /api/internships              (implemented)
+GET /api/internships/recommended  (implemented)
 ```
 
 ## Assistant
@@ -1839,7 +1862,7 @@ Implement:
 
 ```text
 Resume Analysis
-GitHub Analysis
+GitHub Analysis (implemented)
 What-If Simulator
 Career Comparison
 AI Assistant
@@ -1851,7 +1874,7 @@ Implement:
 
 ```text
 Courses
-Internships
+Internships (implemented)
 Notifications
 ```
 
