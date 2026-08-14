@@ -26,9 +26,17 @@ export default function TopBar() {
 
         <nav className="hidden items-center gap-1 md:flex">
           {user && (
-            <Link to="/dashboard" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
-              Dashboard
-            </Link>
+            <>
+              <Link to="/dashboard" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
+                Dashboard
+              </Link>
+              <Link to="/github" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
+                GitHub
+              </Link>
+              <Link to="/internships" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
+                Internships
+              </Link>
+            </>
           )}
         </nav>
 

@@ -180,6 +180,28 @@ export default function Dashboard() {
               Generate roadmap →
             </Link>
           </div>
+
+          <div className="card flex flex-col items-start">
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-deep text-xl text-white">GH</div>
+            <h3 className="mt-4 text-lg font-bold">GitHub Analysis</h3>
+            <p className="mt-1 text-sm leading-relaxed text-ink-muted">
+              Connect a public GitHub profile to surface your skills and strongest career matches.
+            </p>
+            <Link to="/github" className="btn-primary mt-6 !h-10 !px-4 !text-sm">
+              Analyze my GitHub
+            </Link>
+          </div>
+
+          <div className="card flex flex-col items-start">
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-accent-purple text-xl text-white">💼</div>
+            <h3 className="mt-4 text-lg font-bold">Internships</h3>
+            <p className="mt-1 text-sm leading-relaxed text-ink-muted">
+              Find internship opportunities ranked against your profile and career goals.
+            </p>
+            <Link to="/internships" className="btn-secondary mt-6 !h-10 !px-4 !text-sm">
+              View matches
+            </Link>
+          </div>
         </div>
 
         <section className="mt-12">

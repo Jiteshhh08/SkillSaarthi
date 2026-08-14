@@ -3,6 +3,8 @@ import { ProfileCompleteRoute, ProtectedRoute, PublicOnlyRoute } from '../compon
 import Dashboard from '../pages/private/Dashboard'
 import EducationLevel from '../pages/private/EducationLevel'
 import Assessment from '../pages/private/Assessment'
+import GitHubAnalysis from '../pages/private/GitHubAnalysis'
+import Internships from '../pages/private/Internships'
 import Onboarding from '../pages/onboarding/Onboarding'
 import Login from '../pages/auth/Login'
 import Signup from '../pages/auth/Signup'
@@ -68,6 +70,24 @@ export default function AppRoutes() {
         element={
           <ProfileCompleteRoute>
             <Dashboard />
+          </ProfileCompleteRoute>
+        }
+      />
+
+      <Route
+        path="/github"
+        element={
+          <ProfileCompleteRoute>
+            <GitHubAnalysis />
+          </ProfileCompleteRoute>
+        }
+      />
+
+      <Route
+        path="/internships"
+        element={
+          <ProfileCompleteRoute>
+            <Internships />
           </ProfileCompleteRoute>
         }
       />
