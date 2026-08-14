@@ -868,6 +868,19 @@ All routes require `Authorization: Bearer <jwt>` (Appwrite session token).
 * `src/services/careers.js` — career catalog + skill-gap API calls
 * `src/services/recommendations.js` — generate/list/get recommendation API calls
 
+## Frontend pages
+
+Phase 3 UI is wired and routed behind `ProfileCompleteRoute`:
+
+| Page | Route | What it does |
+|---|---|---|
+| `src/pages/private/Recommendations.jsx` | `/recommendations` | Lists saved matches; "Generate recommendations" rebuilds them from the latest profile |
+| `src/pages/private/SkillGaps.jsx` | `/skill-gaps/:careerId?` | Career dropdown + strong/needs-improvement gap analysis (deep-linked from each recommendation) |
+
+The rule of three: if the AI service is running (ai-service on `:8000`), generate + skill-gap
+analysis work; if it is down, the backend returns a controlled `503 AI_SERVICE_UNAVAILABLE`
+and the pages show "Recommendations are temporarily unavailable."
+
 ## Upgrading an existing Appwrite setup
 
 Phase 3 changed `career_skills` semantics: `required_level` is now on the user
@@ -905,6 +918,9 @@ career matches.
 | Internship scoring | `server/src/services/internship.service.js` — weighted matching, top-10 persisted to `internship_recommendations` |
 | Internship seed data | 8 internships, each with `skills` (JSON array) + `eligibility` |
 | Internship frontend | `src/pages/private/Internships.jsx` at `/internships` (recommended grid + searchable catalog) |
+| Admin backend | `server/src/routes/admin.routes.js` + `requireAdmin` (`ADMIN_EMAILS`) |
+| Admin approval page | `src/pages/private/AdminInternships.jsx` at `/admin/internships` (approve/reject/delete + add form) |
+| Import scheduler | `scripts/import-internships.mjs` + `npm run import:internships` (JSON feed default + Remotive adapter, dedup, pending by default) |
 
 ## Internship scoring
 
@@ -924,27 +940,52 @@ All routes require `Authorization: Bearer <jwt>` (Appwrite session token).
 |---|---|---|
 | `POST` | `/api/github/analyze` | Analyze a public GitHub username (`body: { username, apply_skills? }`). Returns `{ username, source, analysis, analysis_id, skills_added }` |
 | `GET` | `/api/github/analysis/:id` | Fetch a saved analysis (owner only) |
-| `GET` | `/api/internships` | List internship catalog (`query: { search?, company?, location? }`) |
+| `GET` | `/api/internships` | List **active, non-expired** internships (`query: { search?, company?, location? }`) |
 | `GET` | `/api/internships/recommended` | Top-10 ranked matches for the user, persisted to `internship_recommendations` |
+| `GET` | `/api/admin/me` | `{ is_admin }` check (admin only) |
+| `GET` | `/api/admin/internships` | List all listings, filter by `status` (admin only) |
+| `POST` | `/api/admin/internships` | Add a listing (created as `pending`) (admin only) |
+| `PATCH` | `/api/admin/internships/:id` | Update fields/`status` — Approve/Reject/Restore (admin only) |
+| `DELETE` | `/api/admin/internships/:id` | Delete a listing (admin only) |
 
 > If the AI service is down, GitHub analysis returns the built-in heuristic
 > result with `source: "fallback"` instead of failing.
 
+## Keeping the catalog fresh (hybrid)
+
+Internships go through an **approval gate** — new openings are never published
+automatically:
+
+1. **Collect** — run the importer on a schedule (cron / Task Scheduler / GitHub Actions):
+
+   ```bash
+   npm run import:internships                          # read scripts/feeds/internships.json (new rows = pending)
+   npm run import:internships -- --dry-run             # fetch + report without writing
+   npm run import:internships -- --source remotive     # pull from the Remotive API instead
+   ```
+
+   Its default source (`file`) reads `scripts/feeds/internships.json` (override with
+   `FEED_FILE`) — replace it with your aggregator's output; `--source remotive` uses the
+   Remotive API. It dedups by `source_key` (`<feed>:<title>:<company>`), refreshes existing rows in
+   place (keeping their status), and stamps `expires_at` (default 30 days, override with
+   `INTERNSHIP_TTL_DAYS`).
+2. **Approve** — sign in as an admin (see `ADMIN_EMAILS` below) and open
+   `/admin/internships` to approve (→ `active`), reject (→ `rejected`), or delete rows.
+3. **Auto-expire** — the public list only returns `active` rows whose `expires_at` has
+   not passed, so stale listings vanish without manual cleanup.
+
+Admin API is disabled until you set `ADMIN_EMAILS` in `server/.env` (comma-separated
+emails). Seeded catalog rows are `active`; manually added rows are `pending`.
+
 ## Upgrading an existing Appwrite setup
 
-Phase 6 added `profiles.github_username` and `internships.skills` /
-`internships.eligibility`. Apply the schema, then refresh the internship catalog:
+Phase 6 added `profiles.github_username`, `internships.skills` /
+`internships.eligibility`, and the internship lifecycle attributes
+(`status`, `source`, `source_key`, `expires_at`, `fetched_at`). Apply the schema,
+then refresh the internship catalog:
 
 ```bash
 npm run setup:appwrite
-```
-
-The seed script is idempotent but **skips existing internship documents by title**,
-so internship rows created before this phase lack `skills`/`eligibility` data.
-Delete the old internship documents first (e.g. from the Appwrite console or via
-the Admin SDK), then re-seed:
-
-```bash
 npm run seed:catalog
 ```
 
@@ -977,6 +1018,9 @@ AI_SERVICE_URL=http://localhost:8000
 
 GITHUB_TOKEN=
 LLM_API_KEY=
+
+# Comma-separated emails allowed to use the admin routes (empty = admin API disabled)
+ADMIN_EMAILS=
 ```
 
 ## AI Service (`ai-service/.env`)
@@ -985,6 +1029,23 @@ LLM_API_KEY=
 PORT=8000
 
 LLM_API_KEY=
+```
+
+## Scripts (`scripts/.env.setup`)
+
+Used by the Appwrite setup/seed/importer scripts.
+
+```env
+APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=
+APPWRITE_API_KEY=
+APPWRITE_DATABASE_ID=
+
+# Internship importer (scripts/import-internships.mjs)
+SOURCE=file             # file (JSON feed) or remotive (API)
+FEED_FILE=              # path to the JSON feed (default: scripts/feeds/internships.json)
+INTERNSHIP_TTL_DAYS=30  # how long imported listings stay visible before auto-expiring
+IMPORT_MAX=50           # max openings imported per run
 ```
 
 > Never commit real secrets to GitHub.

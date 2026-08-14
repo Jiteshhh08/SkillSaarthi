@@ -555,7 +555,7 @@ Appwrite Databases is the primary data store. It is a NoSQL document database or
 | `roadmap_tasks` | Tasks inside a roadmap | `roadmap_id`, `title`, `description`, `order_index`, `estimated_hours`, `status`, `completed_at` |
 | `courses` | Course catalog | `name`, `provider`, `skill_id`, `level`, `duration_hours`, `url`, `cost`, `rating` |
 | `user_courses` | User course tracking | `user_id`, `course_id`, `status`, `progress` |
-| `internships` | Internship catalog | `title`, `company`, `location`, `description`, `url`, `skills` (JSON array), `eligibility` |
+| `internships` | Internship catalog | `title`, `company`, `location`, `description`, `url`, `skills` (JSON array), `eligibility`, `status` (pending/active/rejected), `source`, `source_key`, `expires_at`, `fetched_at` |
 | `internship_recommendations` | Internship matches | `user_id`, `internship_id`, `match_score` |
 | `resume_analyses` | Resume analysis metadata | `user_id`, `appwrite_file_id`, `file_name`, `analysis_result` |
 | `github_analyses` | GitHub analysis metadata | `user_id`, `github_username`, `analysis_result` |
@@ -701,6 +701,11 @@ erDiagram
         string url
         string skills
         string eligibility
+        enum   status            // pending | active | rejected
+        string source            // manual | file | remotive | <feeder>
+        string source_key        // dedup key, e.g. <feed>:<title>:<company>
+        datetime expires_at
+        datetime fetched_at
     }
 
     INTERNSHIP_RECOMMENDATIONS {
@@ -1352,6 +1357,15 @@ Internship Score =
 
 The top 10 matches are persisted per user in `internship_recommendations`, and scores ≥80 are surfaced as strong matches in the UI.
 
+### Hybrid catalog lifecycle
+
+Listings pass through a review gate instead of being published automatically:
+
+- The scheduled importer (`scripts/import-internships.mjs`) reads a JSON feed (`scripts/feeds/internships.json`, `FEED_FILE` override) or the Remotive API (`--source remotive`), dedups by `source_key`, and creates **new** rows as `pending`. Re-imports refresh existing rows and keep their status.
+- An admin approves (`active`) or rejects (`rejected`) rows from the admin page (`src/pages/private/AdminInternships.jsx`).
+- `expires_at` + the `active`-only public filter make stale listings disappear automatically without manual cleanup.
+- Manually added listings default to `pending`; seeded catalog rows are `active`.
+
 ---
 
 # 32. API Architecture
@@ -1436,6 +1450,20 @@ GET /api/courses/recommended
 GET /api/internships              (implemented)
 GET /api/internships/recommended  (implemented)
 ```
+
+## Admin (internships)
+
+```text
+GET    /api/admin/me              (implemented)
+GET    /api/admin/internships     (implemented)
+POST   /api/admin/internships     (implemented)
+PATCH  /api/admin/internships/:id (implemented)
+DELETE /api/admin/internships/:id (implemented)
+```
+
+Admin endpoints require `requireAuth` + `requireAdmin` (`ADMIN_EMAILS` in the
+backend environment; empty = admin API disabled). The public catalog
+`GET /api/internships` returns only `active`, non-expired rows.
 
 ## Assistant
 

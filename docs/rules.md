@@ -249,6 +249,7 @@ Key routes (full list in `main_architecture.md` section 32):
 /api/what-if
 /api/courses
 /api/internships
+/api/admin
 /api/assistant
 /api/notifications
 ```
