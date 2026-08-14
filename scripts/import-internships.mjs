@@ -37,6 +37,7 @@ function loadEnv(file) {
     if (eq === -1) continue
     process.env[trimmed.slice(0, eq).trim()] = trimmed
       .slice(eq + 1)
+      .replace(/\s+#.*$/, '')
       .trim()
       .replace(/^["']|["']$/g, '')
   }
