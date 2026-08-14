@@ -17,7 +17,7 @@ export default function Login() {
     setSubmitting(true)
     try {
       await login(email, password)
-      navigate('/dashboard')
+      navigate('/home')
     } catch (err) {
       setError(err?.message || 'Unable to log in. Check your credentials.')
     } finally {

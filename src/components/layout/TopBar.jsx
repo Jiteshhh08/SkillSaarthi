@@ -1,8 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { useAdmin } from '../../hooks/useAdmin'
 
 export default function TopBar() {
   const { user, loading, logout } = useAuth()
+  const { isAdmin } = useAdmin()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -13,7 +15,7 @@ export default function TopBar() {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-white">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-6">
-        <Link to={user ? '/dashboard' : '/'} className="flex items-center gap-2">
+        <Link to={user ? '/home' : '/'} className="flex items-center gap-2">
           <span className="grid h-8 w-8 place-items-center rounded-full bg-brand">
             <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M16 16v1a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-1" strokeLinecap="round" strokeLinejoin="round" />
@@ -27,8 +29,17 @@ export default function TopBar() {
         <nav className="hidden items-center gap-1 md:flex">
           {user && (
             <>
+              <Link to="/home" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
+                Home
+              </Link>
               <Link to="/dashboard" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
                 Dashboard
+              </Link>
+              <Link to="/recommendations" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
+                Matches
+              </Link>
+              <Link to="/skill-gaps" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
+                Skill Gaps
               </Link>
               <Link to="/github" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
                 GitHub
@@ -36,6 +47,11 @@ export default function TopBar() {
               <Link to="/internships" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
                 Internships
               </Link>
+              {isAdmin && (
+                <Link to="/admin/internships" className="rounded-md px-3 py-2 text-sm font-bold text-brand-deep hover:bg-surface-hover">
+                  Admin
+                </Link>
+              )}
             </>
           )}
         </nav>

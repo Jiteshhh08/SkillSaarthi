@@ -20,6 +20,7 @@ export default function Footer() {
           <ul className="mt-3 space-y-2 text-sm text-slate-400">
             {user ? (
               <>
+                <li><Link to="/home" className="hover:text-white">Home</Link></li>
                 <li><Link to="/dashboard" className="hover:text-white">Dashboard</Link></li>
                 <li><Link to="/onboarding" className="hover:text-white">Manage my profile</Link></li>
                 <li><Link to="/assessment" className="hover:text-white">Retake assessment</Link></li>
