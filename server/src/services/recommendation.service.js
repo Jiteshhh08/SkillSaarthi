@@ -9,6 +9,7 @@ import {
   getUserSkills,
   saveRecommendations,
 } from './appwrite.service.js'
+import { listCareers } from './career.service.js'
 import { recommendCareers, skillGaps } from './ai.service.js'
 import { ApiError } from '../utils/ApiError.js'
 
@@ -61,7 +62,24 @@ async function buildUserProfile(userId) {
 export async function generateRecommendations(userId, topN = 6) {
   const userProfile = await buildUserProfile(userId)
   const result = await recommendCareers({ ...userProfile, top_n: topN })
-  const saved = await saveRecommendations(userId, result.recommendations)
+
+  // The AI engine ranks against its built-in career names; map each result to the
+  // Appwrite career document (by name) so `career_id` links back to the catalog and
+  // skill-gap deep links resolve. Attach catalog metadata for the UI.
+  const catalog = await listCareers()
+  const byName = new Map(catalog.map((career) => [career.name.toLowerCase().trim(), career]))
+
+  const enriched = (result.recommendations || []).map((rec) => {
+    const career = byName.get(String(rec.career || '').toLowerCase().trim())
+    return {
+      ...rec,
+      career_id: career ? career.$id : rec.career_id,
+      category: career?.category || rec.category,
+      description: career?.description || rec.description,
+    }
+  })
+
+  const saved = await saveRecommendations(userId, enriched)
   return saved.map((doc) => ({
     $id: doc.$id,
     career_id: doc.career_id,
