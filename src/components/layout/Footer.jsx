@@ -23,6 +23,8 @@ export default function Footer() {
                 <li><Link to="/dashboard" className="hover:text-white">Dashboard</Link></li>
                 <li><Link to="/onboarding" className="hover:text-white">Manage my profile</Link></li>
                 <li><Link to="/assessment" className="hover:text-white">Retake assessment</Link></li>
+                <li><Link to="/github" className="hover:text-white">GitHub analysis</Link></li>
+                <li><Link to="/internships" className="hover:text-white">Internships</Link></li>
               </>
             ) : (
               <>

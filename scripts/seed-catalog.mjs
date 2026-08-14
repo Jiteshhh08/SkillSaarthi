@@ -347,7 +347,7 @@ const COURSES = [
   { skill: 'C++', name: 'C++ For C Programmers', provider: 'Coursera', level: 'intermediate', duration_hours: 30, url: 'https://www.coursera.org/learn/c-plus-plus-a', cost: 49, rating: 4.5 },
 ]
 
-// { title, company, location, description, url }
+// { title, company, location, description, url, skills, eligibility }
 const INTERNSHIPS = [
   {
     title: 'Software Engineering Intern',
@@ -356,6 +356,8 @@ const INTERNSHIPS = [
     description:
       'Work on real products alongside experienced engineers, focusing on full-stack or backend software development across Google services.',
     url: 'https://careers.google.com/students/internships/',
+    skills: ['JavaScript', 'Python', 'Java', 'C++', 'SQL', 'Git & GitHub', 'Problem Solving'],
+    eligibility: 'Open to undergraduate and graduate students in CS or related fields.',
   },
   {
     title: 'Data Science Intern',
@@ -364,6 +366,8 @@ const INTERNSHIPS = [
     description:
       'Partner with data scientists to analyze production datasets and build models that improve Microsoft products and services.',
     url: 'https://careers.microsoft.com/students/explore',
+    skills: ['Python', 'SQL', 'Data Analysis', 'Statistics', 'Machine Learning', 'Pandas', 'NumPy'],
+    eligibility: 'Open to undergraduate and graduate students with a quantitative background.',
   },
   {
     title: 'Frontend Engineering Intern',
@@ -372,6 +376,8 @@ const INTERNSHIPS = [
     description:
       'Contribute to Airbnb web platforms including design systems, performance improvements, and new user-facing features.',
     url: 'https://careers.airbnb.com/students/',
+    skills: ['JavaScript', 'React', 'HTML/CSS', 'TypeScript', 'Next.js', 'Git & GitHub'],
+    eligibility: 'Open to undergraduate students with web development experience.',
   },
   {
     title: 'DevOps Intern',
@@ -380,6 +386,8 @@ const INTERNSHIPS = [
     description:
       'Support AWS infrastructure automation, CI/CD pipelines, and reliability engineering while learning cloud best practices.',
     url: 'https://www.amazon.jobs/en/students',
+    skills: ['Linux', 'Docker', 'Kubernetes', 'CI/CD', 'AWS', 'Git & GitHub', 'Python'],
+    eligibility: 'Open to undergraduate and graduate students in CS or IT.',
   },
   {
     title: 'Cybersecurity Analyst Intern',
@@ -388,6 +396,8 @@ const INTERNSHIPS = [
     description:
       'Assist the security operations team with threat monitoring, incident analysis, and vulnerability assessments.',
     url: 'https://www.paloaltonetworks.com/company/employment/internships',
+    skills: ['Network Security', 'Security Compliance', 'Linux', 'Cryptography', 'Penetration Testing'],
+    eligibility: 'Open to students pursuing a degree in cybersecurity, CS, or related fields.',
   },
   {
     title: 'AI/ML Research Intern',
@@ -396,6 +406,8 @@ const INTERNSHIPS = [
     description:
       'Collaborate with research scientists on applied machine learning projects spanning NLP, computer vision, and reasoning systems.',
     url: 'https://research.ibm.com/careers',
+    skills: ['Python', 'Machine Learning', 'Deep Learning', 'Statistics', 'Data Analysis', 'NumPy'],
+    eligibility: 'Open to graduate students with strong ML and Python skills.',
   },
   {
     title: 'Backend Developer Intern',
@@ -404,6 +416,8 @@ const INTERNSHIPS = [
     description:
       'Build and scale APIs and financial infrastructure that power payments for millions of businesses worldwide.',
     url: 'https://stripe.com/jobs#students-and-graduates',
+    skills: ['Node.js', 'Express', 'SQL', 'REST APIs', 'Python', 'Docker', 'Git & GitHub'],
+    eligibility: 'Open to students with strong systems and API development experience.',
   },
   {
     title: 'Cloud Engineering Intern',
@@ -412,6 +426,8 @@ const INTERNSHIPS = [
     description:
       'Work with cloud infrastructure teams on networking, storage, and container orchestration for OCI services.',
     url: 'https://www.oracle.com/careers/students/',
+    skills: ['AWS', 'Linux', 'Docker', 'Kubernetes', 'Network Security', 'CI/CD'],
+    eligibility: 'Open to undergraduate and graduate students in CS or related fields.',
   },
 ]
 
@@ -587,6 +603,8 @@ async function ensureInternship(dbId, internship) {
       location: internship.location,
       description: internship.description,
       url: internship.url,
+      skills: JSON.stringify(internship.skills || []),
+      eligibility: internship.eligibility || '',
     },
     CATALOG_READ,
   )

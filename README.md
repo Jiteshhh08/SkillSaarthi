@@ -513,6 +513,13 @@ skill-guide/
 ├── .env
 ├── .env.sample
 ├── .gitignore
+├── .vscode/tasks.json    # VS Code tasks: launch all 3 services in integrated terminals
+├── dev.ps1               # Windows: launch all 3 services in separate OS windows
+├── dev.sh                # macOS/Linux: launch all 3 services in separate OS windows
+├── dev-install.ps1       # Windows: one-time dependency installer
+├── dev-install.sh        # macOS/Linux: one-time dependency installer
+├── dev-cleanup.ps1       # Windows: kill leftover dev servers on 5173/5000/8000
+├── dev-cleanup.sh        # macOS/Linux: kill leftover dev servers on 5173/5000/8000
 ├── vite.config.js
 └── package.json
 ```
@@ -646,6 +653,86 @@ POST /ai/skill-gaps              strong vs needs-improvement for one career
 ```
 
 > **Windows note:** PowerShell 5.1 does not support `&&` (use `;` to chain commands). If you prefer to activate the venv explicitly, run `Set-ExecutionPolicy -Scope Process RemoteSigned` once, then activate with `.\venv\Scripts\Activate.ps1`.
+
+> **Keep it running.** The AI service is a standalone process and must stay up for recommendations
+> to work. The Node backend calls it on demand at `AI_SERVICE_URL=http://localhost:8000`; if it is
+> down, the app stays usable but the career/skill-gap/GitHub analysis endpoints return a controlled
+> "temporarily unavailable" error (see [docs/main_architecture.md §42](docs/main_architecture.md)).
+> So during local development you keep **three** things running at once:
+
+| # | Service | Folder | Command | URL |
+|---|---------|--------|---------|-----|
+| 1 | Frontend (Vite) | repo root | `npm run dev` | http://localhost:5173 |
+| 2 | Backend (Express) | `server/` | `npm run dev` | http://localhost:5000 |
+| 3 | AI Service (FastAPI) | `ai-service/` | `.\venv\Scripts\python.exe -m uvicorn app.main:app --reload` | http://localhost:8000 |
+
+---
+
+# 6. Start Everything at Once
+
+## Option A — VS Code integrated terminals (recommended)
+
+If you use VS Code, the included **tasks** launch each service in its **own integrated terminal
+panel** inside the editor (no external windows). Definitions live in `.vscode/tasks.json`.
+
+1. Open the Skill_Guide folder in VS Code.
+2. Run **Terminal → Run Task…** and pick one:
+   - **`dev: restart everything (clean, then run)`** (default, **Ctrl/Cmd + Shift + B**) — stops any
+     stale dev servers on ports 5173/5000/8000, then starts all three fresh. Use this whenever a
+     terminal is missing or a port is reported as "in use".
+   - **`dev: run all three`** — starts Frontend, Backend, and AI Service in parallel
+   - **`dev: setup then run all three`** — same as above, but first runs the dependency installer
+     (use on a fresh clone; afterwards it's a no-op)
+   - **`setup: install all dependencies`** — install frontend/backend `node_modules` and create
+     `ai-service/venv` + `pip install -r requirements.txt`
+   - **`cleanup: stop running dev servers`** — manually kills anything left listening on
+     5173/5000/8000
+
+> The frontend task pins Vite to port `5173` with `--strictPort`. If you ever see
+> `Port 5173 is in use, trying another one...` or `EADDRINUSE`, it means a previous run is still
+> alive — run **`dev: restart everything`** (or **`cleanup`**) to clear it before starting.
+
+Three terminal panels open (Frontend / Backend / AI Service):
+
+| Panel | What it runs | Open at |
+|-------|--------------|---------|
+| Frontend | Vite | http://localhost:5173 |
+| Backend | Express | http://localhost:5000 |
+| AI Service | FastAPI (`uvicorn --reload`) | http://localhost:8000 |
+
+## Option B — Standalone terminal windows (any editor)
+
+Covers the case where you are not using VS Code (or prefer separate OS windows). The bundled
+scripts install missing dependencies, then open **one terminal window per service**.
+
+### Windows (PowerShell)
+
+```powershell
+.\dev.ps1
+```
+
+If PowerShell blocks the script, allow it for the current session once:
+
+```powershell
+Set-ExecutionPolicy -Scope Process RemoteSigned
+```
+
+### macOS / Linux
+
+```bash
+./dev.sh
+```
+
+## After either option
+
+Keep all three terminals open — closing one stops that service. Everything runs in auto-reload
+mode, so changes to frontend/backend code or `ai-service/` Python files restart on save. Confirm the
+AI service is ready by opening `http://localhost:8000/health` — it should return
+`{"status":"ok","service":"ai-service","version":"0.1.0"}`.
+
+> **Tip:** if the AI service terminal shows nothing, check it for the venv creation/install step
+> output — the installers create `ai-service/venv` and pip-install `requirements.txt` automatically
+> when they are missing.
 
 ---
 
@@ -928,8 +1015,8 @@ For complete development rules:
 
 ## Phase 6 — Advanced Features
 
-* [ ] GitHub analysis
-* [ ] Internship recommendations
+* [x] GitHub analysis
+* [x] Internship recommendations
 * [ ] AI career assistant
 * [ ] Personalized notifications
 * [ ] Advanced ML recommendation
