@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "setup:appwrite": "node scripts/setup-appwrite.mjs",
-    "seed:catalog": "node scripts/seed-catalog.mjs"
+    "seed:catalog": "node scripts/seed-catalog.mjs",
+    "import:internships": "node scripts/import-internships.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
