@@ -4,6 +4,7 @@ Serves AI/ML endpoints consumed by the Node backend:
   GET  /health
   POST /ai/recommend-careers
   POST /ai/skill-gaps
+  POST /ai/github/analyze
 
 The service does not handle authentication.
 """
@@ -13,6 +14,7 @@ import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from .github.analyzer import analyze as analyze_github
 from .recommendation.scoring import analyze_skill_gaps, score_careers
 
 app = FastAPI(
@@ -66,6 +68,36 @@ class SkillGapResponse(BaseModel):
     needs_improvement: list[SkillGapSkill] = Field(default_factory=list)
 
 
+class RepoInfo(BaseModel):
+    name: str
+    description: str | None = None
+    language: str | None = None
+    topics: list[str] = Field(default_factory=list)
+    stargazers_count: int | None = None
+    forks_count: int | None = None
+    size: int | None = None
+    fork: bool = False
+    created_at: str | None = None
+    updated_at: str | None = None
+    pushed_at: str | None = None
+
+
+class GitHubAnalyzeRequest(BaseModel):
+    username: str
+    public_repos: int = 0
+    public_gists: int = 0
+    followers: int = 0
+    following: int = 0
+    created_at: str | None = None
+    repos: list[RepoInfo] = Field(default_factory=list)
+
+
+class GitHubAnalyzeResponse(BaseModel):
+    username: str
+    source: str = "full"
+    analysis: dict
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "ai-service", "version": app.version}
@@ -91,6 +123,13 @@ def skill_gaps(request: SkillGapRequest):
     if result is None:
         raise HTTPException(status_code=404, detail="Unknown career")
     return result
+
+
+@app.post("/ai/github/analyze", response_model=GitHubAnalyzeResponse)
+def github_analyze(request: GitHubAnalyzeRequest):
+    """Turn public GitHub data into a technical profile (docs §28)."""
+    analysis = analyze_github(request.model_dump())
+    return GitHubAnalyzeResponse(username=request.username, source="full", analysis=analysis)
 
 
 if __name__ == "__main__":
