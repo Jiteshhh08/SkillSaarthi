@@ -127,14 +127,14 @@ const CAREERS = [
     description:
       'Builds and maintains both front-end and back-end of web applications, working across the full technology stack from databases and APIs to user interfaces.',
     skills: [
-      ['JavaScript', 70, 4],
-      ['React', 70, 3],
-      ['Node.js', 60, 4],
-      ['Express', 60, 4],
-      ['REST APIs', 60, 4],
-      ['SQL', 60, 3],
-      ['Git & GitHub', 50, 3],
-      ['Problem Solving', 50, 3],
+      ['JavaScript', 4, 5],
+      ['React', 3, 5],
+      ['Node.js', 4, 4],
+      ['Express', 4, 4],
+      ['REST APIs', 4, 4],
+      ['SQL', 3, 4],
+      ['Git & GitHub', 3, 3],
+      ['Problem Solving', 3, 3],
     ],
   },
   {
@@ -143,14 +143,14 @@ const CAREERS = [
     description:
       'Designs and implements server-side logic, databases, and API integrations that power web and mobile applications.',
     skills: [
-      ['Node.js', 70, 4],
-      ['Express', 70, 4],
-      ['SQL', 70, 4],
-      ['REST APIs', 70, 4],
-      ['Python', 60, 3],
-      ['Docker', 50, 3],
-      ['Git & GitHub', 50, 3],
-      ['Problem Solving', 50, 3],
+      ['Node.js', 4, 5],
+      ['Express', 4, 5],
+      ['SQL', 4, 4],
+      ['REST APIs', 4, 5],
+      ['Python', 3, 3],
+      ['Docker', 3, 3],
+      ['Git & GitHub', 3, 3],
+      ['Problem Solving', 3, 3],
     ],
   },
   {
@@ -159,14 +159,14 @@ const CAREERS = [
     description:
       'Creates responsive user interfaces and interactive experiences using modern web technologies and frameworks.',
     skills: [
-      ['JavaScript', 80, 4],
-      ['React', 75, 4],
-      ['HTML/CSS', 80, 4],
-      ['TypeScript', 60, 3],
-      ['Next.js', 50, 3],
-      ['Git & GitHub', 50, 3],
-      ['Communication', 50, 3],
-      ['Problem Solving', 50, 3],
+      ['JavaScript', 4, 5],
+      ['React', 4, 5],
+      ['HTML/CSS', 4, 5],
+      ['TypeScript', 3, 3],
+      ['Next.js', 3, 3],
+      ['Git & GitHub', 3, 3],
+      ['Communication', 3, 3],
+      ['Problem Solving', 3, 3],
     ],
   },
   {
@@ -175,12 +175,12 @@ const CAREERS = [
     description:
       'Builds cross-platform or native mobile applications for iOS and Android, focusing on performance and user experience.',
     skills: [
-      ['JavaScript', 70, 4],
-      ['TypeScript', 60, 3],
-      ['REST APIs', 60, 3],
-      ['Git & GitHub', 50, 3],
-      ['Problem Solving', 50, 3],
-      ['Communication', 40, 2],
+      ['JavaScript', 4, 4],
+      ['TypeScript', 3, 3],
+      ['REST APIs', 3, 3],
+      ['Git & GitHub', 3, 3],
+      ['Problem Solving', 3, 3],
+      ['Communication', 2, 2],
     ],
   },
   {
@@ -189,15 +189,15 @@ const CAREERS = [
     description:
       'Applies engineering principles to design, develop, test, and maintain software systems of varying scale and complexity.',
     skills: [
-      ['JavaScript', 70, 4],
-      ['Python', 60, 3],
-      ['Java', 60, 3],
-      ['SQL', 60, 3],
-      ['C++', 50, 2],
-      ['Git & GitHub', 60, 3],
-      ['Docker', 50, 3],
-      ['Problem Solving', 70, 4],
-      ['Teamwork', 50, 3],
+      ['JavaScript', 4, 4],
+      ['Python', 3, 4],
+      ['Java', 3, 3],
+      ['SQL', 3, 3],
+      ['C++', 2, 2],
+      ['Git & GitHub', 3, 3],
+      ['Docker', 3, 3],
+      ['Problem Solving', 4, 5],
+      ['Teamwork', 3, 3],
     ],
   },
   {
@@ -206,14 +206,14 @@ const CAREERS = [
     description:
       'Collects, cleans, and interprets data to help organizations make informed decisions, producing reports and dashboards.',
     skills: [
-      ['SQL', 75, 4],
-      ['Python', 60, 3],
-      ['Data Analysis', 70, 4],
-      ['Statistics', 60, 4],
-      ['Data Visualization', 70, 4],
-      ['Pandas', 60, 3],
-      ['Communication', 60, 3],
-      ['Problem Solving', 60, 3],
+      ['SQL', 4, 5],
+      ['Python', 3, 3],
+      ['Data Analysis', 4, 5],
+      ['Statistics', 4, 4],
+      ['Data Visualization', 4, 4],
+      ['Pandas', 3, 3],
+      ['Communication', 3, 3],
+      ['Problem Solving', 3, 3],
     ],
   },
   {
@@ -222,15 +222,15 @@ const CAREERS = [
     description:
       'Uses advanced statistics and machine learning on large datasets to discover patterns and build predictive models.',
     skills: [
-      ['Python', 80, 4],
-      ['Statistics', 70, 4],
-      ['Machine Learning', 70, 4],
-      ['Data Analysis', 70, 4],
-      ['Data Visualization', 60, 3],
-      ['Pandas', 70, 4],
-      ['NumPy', 70, 4],
-      ['Deep Learning', 50, 3],
-      ['Problem Solving', 70, 4],
+      ['Python', 4, 5],
+      ['Statistics', 4, 4],
+      ['Machine Learning', 4, 5],
+      ['Data Analysis', 4, 4],
+      ['Data Visualization', 3, 3],
+      ['Pandas', 4, 4],
+      ['NumPy', 4, 3],
+      ['Deep Learning', 3, 3],
+      ['Problem Solving', 4, 4],
     ],
   },
   {
@@ -239,15 +239,15 @@ const CAREERS = [
     description:
       'Designs, trains, and deploys machine learning models into production systems with focus on scalability and reliability.',
     skills: [
-      ['Python', 80, 4],
-      ['Machine Learning', 80, 4],
-      ['Deep Learning', 70, 4],
-      ['Statistics', 60, 3],
-      ['Data Analysis', 60, 3],
-      ['NumPy', 70, 4],
-      ['Pandas', 70, 4],
-      ['Docker', 60, 3],
-      ['Problem Solving', 70, 4],
+      ['Python', 4, 5],
+      ['Machine Learning', 4, 5],
+      ['Deep Learning', 4, 4],
+      ['Statistics', 3, 3],
+      ['Data Analysis', 3, 3],
+      ['NumPy', 4, 4],
+      ['Pandas', 4, 4],
+      ['Docker', 3, 3],
+      ['Problem Solving', 4, 4],
     ],
   },
   {
@@ -256,14 +256,14 @@ const CAREERS = [
     description:
       'Builds AI-powered products and services, integrating machine learning models with application-level systems.',
     skills: [
-      ['Python', 80, 4],
-      ['Machine Learning', 75, 4],
-      ['Deep Learning', 70, 4],
-      ['REST APIs', 60, 3],
-      ['Git & GitHub', 50, 3],
-      ['Docker', 50, 3],
-      ['NumPy', 60, 3],
-      ['Problem Solving', 70, 4],
+      ['Python', 4, 5],
+      ['Machine Learning', 4, 5],
+      ['Deep Learning', 4, 4],
+      ['REST APIs', 3, 3],
+      ['Git & GitHub', 3, 3],
+      ['Docker', 3, 3],
+      ['NumPy', 3, 3],
+      ['Problem Solving', 4, 4],
     ],
   },
   {
@@ -272,14 +272,14 @@ const CAREERS = [
     description:
       'Designs and manages cloud infrastructure and services, ensuring security, scalability, and cost efficiency.',
     skills: [
-      ['AWS', 75, 4],
-      ['Linux', 70, 4],
-      ['Docker', 65, 4],
-      ['Kubernetes', 60, 4],
-      ['CI/CD', 65, 4],
-      ['Network Security', 55, 3],
-      ['Git & GitHub', 50, 3],
-      ['Problem Solving', 60, 3],
+      ['AWS', 4, 5],
+      ['Linux', 4, 4],
+      ['Docker', 4, 4],
+      ['Kubernetes', 4, 4],
+      ['CI/CD', 4, 4],
+      ['Network Security', 3, 3],
+      ['Git & GitHub', 3, 3],
+      ['Problem Solving', 3, 3],
     ],
   },
   {
@@ -288,14 +288,14 @@ const CAREERS = [
     description:
       'Automates software delivery and infrastructure to accelerate releases while maintaining stability and security.',
     skills: [
-      ['Linux', 70, 4],
-      ['Docker', 75, 4],
-      ['Kubernetes', 65, 4],
-      ['CI/CD', 75, 4],
-      ['AWS', 65, 4],
-      ['Git & GitHub', 65, 4],
-      ['Python', 50, 3],
-      ['Problem Solving', 60, 3],
+      ['Linux', 4, 4],
+      ['Docker', 4, 5],
+      ['Kubernetes', 4, 4],
+      ['CI/CD', 4, 5],
+      ['AWS', 4, 4],
+      ['Git & GitHub', 4, 4],
+      ['Python', 3, 3],
+      ['Problem Solving', 3, 3],
     ],
   },
   {
@@ -304,13 +304,13 @@ const CAREERS = [
     description:
       'Monitors systems for security threats, conducts vulnerability assessments, and implements protective measures.',
     skills: [
-      ['Network Security', 75, 4],
-      ['Security Compliance', 70, 4],
-      ['Linux', 60, 3],
-      ['Cryptography', 55, 3],
-      ['Penetration Testing', 60, 4],
-      ['Problem Solving', 60, 3],
-      ['Communication', 50, 3],
+      ['Network Security', 4, 5],
+      ['Security Compliance', 4, 4],
+      ['Linux', 3, 3],
+      ['Cryptography', 3, 3],
+      ['Penetration Testing', 4, 4],
+      ['Problem Solving', 3, 3],
+      ['Communication', 3, 3],
     ],
   },
   {
@@ -319,14 +319,14 @@ const CAREERS = [
     description:
       'Designs and engineers secure systems and infrastructure, building security tooling and automating defenses.',
     skills: [
-      ['Network Security', 75, 4],
-      ['Penetration Testing', 75, 4],
-      ['Cryptography', 65, 4],
-      ['Linux', 70, 4],
-      ['Security Compliance', 65, 4],
-      ['Python', 60, 3],
-      ['Docker', 50, 3],
-      ['Problem Solving', 65, 3],
+      ['Network Security', 4, 5],
+      ['Penetration Testing', 4, 5],
+      ['Cryptography', 4, 4],
+      ['Linux', 4, 4],
+      ['Security Compliance', 4, 4],
+      ['Python', 3, 3],
+      ['Docker', 3, 3],
+      ['Problem Solving', 3, 3],
     ],
   },
 ]
@@ -506,13 +506,26 @@ async function ensureCareer(dbId, career) {
 }
 
 async function ensureCareerSkill(dbId, careerId, skillId, requiredLevel, importance) {
+  // required_level is on the user proficiency scale (1-5), importance on 1-5.
   try {
     const { documents } = await databases.listDocuments(dbId, 'career_skills', [
       Query.equal('career_id', careerId),
       Query.equal('skill_id', skillId),
       Query.limit(1),
     ])
-    if (documents.length > 0) return
+    if (documents.length > 0) {
+      const existing = documents[0]
+      const needsUpdate =
+        existing.required_level !== requiredLevel || existing.importance !== importance
+      if (needsUpdate) {
+        await databases.updateDocument(dbId, 'career_skills', existing.$id, {
+          required_level: requiredLevel,
+          importance,
+        })
+        console.log(`  ~ career_skill ${careerId} → skill ${skillId} updated`)
+      }
+      return
+    }
   } catch {
     // fall through and create
   }
