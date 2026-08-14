@@ -9,6 +9,10 @@ export const config = {
     projectId: process.env.APPWRITE_PROJECT_ID,
     apiKey: process.env.APPWRITE_API_KEY,
     databaseId: process.env.APPWRITE_DATABASE_ID,
+    adminEmails: (process.env.ADMIN_EMAILS || '')
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
   },
   aiServiceUrl: process.env.AI_SERVICE_URL || 'http://localhost:8000',
   githubToken: process.env.GITHUB_TOKEN || '',
