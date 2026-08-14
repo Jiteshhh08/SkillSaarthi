@@ -254,6 +254,54 @@ Key routes (full list in `main_architecture.md` section 32):
 /api/notifications
 ```
 
+## Hybrid Internship Catalog (workflow)
+
+Internships are **never published automatically** — imported rows land as `pending`
+and must be approved by an admin.
+
+**1. Collect** — the scheduled importer reads a JSON feed, dedups by `source_key`
+(`<source>:<title>:<company>`), sets `expires_at` (default 30d), and marks new
+rows `pending`. Re-imports refresh existing rows and keep their status.
+
+```bash
+npm run import:internships                          # default: scripts/feeds/internships.json
+npm run import:internships -- --dry-run             # fetch + report without writing
+npm run import:internships -- --source remotive     # pull from the Remotive API instead
+```
+
+Feed format (`scripts/feeds/internships.json`):
+
+```json
+[
+  {
+    "title": "Software Engineering Intern",
+    "company": "Example Inc",
+    "location": "Remote",
+    "description": "…",
+    "url": "https://example.com/careers/intern",
+    "skills": ["JavaScript", "React", "Node.js"]
+  }
+]
+```
+
+Importer env (in `scripts/.env.setup`, all optional — defaults shown):
+
+```env
+SOURCE=file             # file (JSON feed) or remotive (API)
+FEED_FILE=              # path to the JSON feed (default: scripts/feeds/internships.json)
+INTERNSHIP_TTL_DAYS=30  # how long imported listings stay visible before auto-expiring
+IMPORT_MAX=50           # max openings imported per run
+```
+
+**2. Approve** — the admin API is disabled until `ADMIN_EMAILS` is set in
+`server/.env` (comma-separated emails; empty = disabled). Sign in with an
+authorized email, then open `/admin/internships` to approve (`active`), reject
+(`rejected`), or delete rows, or add one manually (created `pending`).
+
+**3. Auto-expire** — the public `GET /api/internships` returns only `active`
+rows whose `expires_at` has not passed, so stale listings drop out without
+manual cleanup.
+
 ---
 
 # 8. Git Workflow

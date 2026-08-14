@@ -964,9 +964,24 @@ automatically:
    npm run import:internships -- --source remotive     # pull from the Remotive API instead
    ```
 
-   Its default source (`file`) reads `scripts/feeds/internships.json` (override with
-   `FEED_FILE`) — replace it with your aggregator's output; `--source remotive` uses the
-   Remotive API. It dedups by `source_key` (`<feed>:<title>:<company>`), refreshes existing rows in
+   Its default source (`file`) reads `scripts/feeds/internships.json`
+   (`FEED_FILE` points at a different file if needed) — replace its contents with
+   your aggregator's output; `--source remotive` uses the Remotive API directly.
+   Feed entries look like:
+
+   ```json
+   {
+     "title": "Software Engineering Intern",
+     "company": "Example Inc",
+     "location": "Remote",
+     "description": "…",
+     "url": "https://example.com/careers/intern",
+     "skills": ["JavaScript", "React", "Node.js", "SQL", "Git"]
+   }
+   ```
+
+   Importer behavior/config lives in `scripts/.env.setup`: it dedups by `source_key`
+   (`<feed>:<title>:<company>`), refreshes existing rows in
    place (keeping their status), and stamps `expires_at` (default 30 days, override with
    `INTERNSHIP_TTL_DAYS`).
 2. **Approve** — sign in as an admin (see `ADMIN_EMAILS` below) and open
@@ -976,6 +991,8 @@ automatically:
 
 Admin API is disabled until you set `ADMIN_EMAILS` in `server/.env` (comma-separated
 emails). Seeded catalog rows are `active`; manually added rows are `pending`.
+Importer vars in `scripts/.env.setup` are all optional (`SOURCE`, `FEED_FILE`,
+`INTERNSHIP_TTL_DAYS`, `IMPORT_MAX`) — omit them to use the defaults above.
 
 ## Upgrading an existing Appwrite setup
 
