@@ -481,13 +481,17 @@ server/
 │   │   └── assistant.routes.js
 │   │
 │   ├── controllers/
+│   │   ├── career.controller.js
+│   │   └── recommendation.controller.js
 │   │
 │   ├── services/
 │   │   ├── recommendation.service.js
-│   │   ├── roadmap.service.js
+│   │   ├── career.service.js
 │   │   ├── appwrite.service.js
+│   │   ├── ai.service.js
+│   │   ├── roadmap.service.js
 │   │   ├── github.service.js
-│   │   └── ai.service.js
+│   │   └── ...
 │   │
 │   ├── middleware/
 │   │   ├── auth.middleware.js
@@ -544,7 +548,7 @@ Appwrite Databases is the primary data store. It is a NoSQL document database or
 | `interests` | Global interest catalog | `name` |
 | `user_interests` | User ↔ interest link | `user_id`, `interest_id` |
 | `careers` | Career catalog | `name`, `category`, `description` |
-| `career_skills` | Career ↔ required skill | `career_id`, `skill_id`, `required_level`, `importance` |
+| `career_skills` | Career ↔ required skill | `career_id`, `skill_id`, `required_level` (1–5 proficiency), `importance` (1–5) |
 | `assessments` | Assessment attempts | `user_id`, `type`, `score`, `responses`, `completed_at` |
 | `career_recommendations` | Generated recommendations | `user_id`, `career_id`, `match_score`, `explanation` |
 | `roadmaps` | Roadmaps per user + career | `user_id`, `career_id`, `title`, `status`, `progress_percent` |
@@ -804,16 +808,16 @@ The Python service handles:
 ai-service/
 │
 ├── app/
-│   ├── main.py
+│   ├── main.py              # FastAPI app: /health, /ai/careers, /ai/recommend-careers, /ai/skill-gaps
 │   │
 │   ├── api/
 │   │
 │   ├── preprocessing/
 │   │
 │   ├── recommendation/
-│   │   ├── skill_matcher.py
+│   │   ├── careers.py       # Career dataset (13 careers with required skills/importance)
 │   │   ├── career_ranker.py
-│   │   └── scoring.py
+│   │   └── scoring.py       # Weighted scoring + skill-gap analysis + explanations
 │   │
 │   ├── resume/
 │   │   ├── parser.py
@@ -884,7 +888,7 @@ Example request:
 }
 ```
 
-Example response:
+Example response (Phase 3):
 
 ```json
 {
@@ -892,15 +896,25 @@ Example response:
     {
       "career_id": "career_12",
       "career": "Frontend Developer",
+      "category": "Software & Technology",
+      "description": "Creates responsive user interfaces...",
       "score": 91,
+      "breakdown": {
+        "skill": 92.5,
+        "interest": 100.0,
+        "education": 100.0,
+        "goal": 50.0,
+        "assessment": 100.0,
+        "experience": 100.0
+      },
       "reasons": [
-        "Strong React skills",
-        "Strong JavaScript skills"
+        "Strong React skills (4/4)",
+        "Strong JavaScript skills (4/4)",
+        "Interest in Web Development"
       ],
-      "skill_gaps": [
-        "Testing",
-        "Accessibility"
-      ]
+      "strengths": ["JavaScript", "React"],
+      "skill_gaps": ["Testing", "Accessibility"],
+      "next_steps": ["Learn TypeScript (level 0 → 3)"]
     }
   ]
 }
@@ -930,13 +944,21 @@ Example response:
 {
   "career_id": "career_full_stack_developer",
   "career": "Full Stack Developer",
+  "category": "Software & Technology",
+  "description": "Builds and maintains both front-end and back-end...",
   "strong": [
-    { "skill": "javascript", "required": 4, "current": 4 }
+    { "skill": "javascript", "required": 4, "current": 4, "importance": 5 }
   ],
   "needs_improvement": [
-    { "skill": "node.js", "required": 4, "current": 1 }
+    { "skill": "node.js", "required": 4, "current": 1, "importance": 4 }
   ]
 }
+```
+
+The AI service also exposes the scoring catalog its engine uses:
+
+```http
+GET /ai/careers
 ```
 
 ---
@@ -1009,7 +1031,15 @@ Career Score =
   + Experience Match  × 0.05
 ```
 
-Weights must be configurable and can be changed during testing.
+Skill match is **importance-weighted**: each required skill contributes
+`min(user, required) / required` scaled by its `importance` (1–5), so the skills
+that matter most for a career dominate the score. Each career in the dataset
+accepts a list of `education_levels` (comparison against the user's
+`education_level`), a minimum assessment `assessment` threshold, minimum
+`experience` years, and matching `interests` / `goals`.
+
+Weights are configurable in `ai-service/app/recommendation/scoring.py` and can be
+changed during testing.
 
 Machine learning can be introduced later when enough suitable training/evaluation data exists.
 
@@ -1329,6 +1359,7 @@ POST /api/careers/compare
 POST /api/recommendations/generate
 GET  /api/recommendations
 GET  /api/recommendations/:id
+GET  /api/recommendations/careers/:careerId/skill-gaps
 ```
 
 ## Roadmaps
@@ -1762,15 +1793,16 @@ Interests
 Career Goals
 ```
 
-## Phase 3 — Career Engine
-
-Implement:
+## Phase 3 — Career Engine (complete)
 
 ```text
-Career Database
-Skill Database
-Career-Skill Mapping
-Basic Recommendation Engine
+Career Database          ✓   careers.py (13 careers) + Appwrite careers collection
+Skill Database           ✓   Appwrite skills collection (seeded)
+Career-Skill Mapping     ✓   Appwrite career_skills (required_level 1–5, importance 1–5)
+Basic Recommendation Engine ✓ scoring.py (hybrid weighted scoring)
+Skill-gap analysis       ✓   analyze_skill_gaps / POST /ai/skill-gaps
+Recommendation explanations ✓ reasons / strengths / next_steps / breakdown
+Node API                 ✓   /api/careers, /api/recommendations/*, skill-gaps
 ```
 
 ## Phase 4 — AI

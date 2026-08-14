@@ -354,7 +354,7 @@ Frontend runs at `http://localhost:5173` (Vite default).
 |---|---|
 | 1 — Foundation | Repo setup, React, Appwrite Auth, Appwrite Databases, Node backend |
 | 2 — Profile | Education selection, onboarding, skills, interests, preferences, assessment |
-| 3 — Career Engine | Career/skill datasets, career-skill mapping, recommendation engine |
+| 3 — Career Engine (complete) | Career/skill datasets, career-skill mapping, recommendation engine, skill-gap, explanations |
 | 4 — AI | Python/FastAPI skill matching, ranking, skill-gap |
 | 5 — Roadmap | Roadmap generator, tasks, progress tracking, dashboard |
 | 6 — Advanced | Resume analysis, GitHub analysis, what-if, comparison, AI assistant |
