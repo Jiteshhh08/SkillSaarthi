@@ -446,3 +446,31 @@ cd ai-service && python -m pytest     # 39 tests: scoring, skill-gaps, resume, c
 > **Build one coherent product, not six separate mini-projects.**
 
 Every feature must strengthen the central product loop. Do not build isolated features that do not feed back into the user's profile, recommendations, or roadmap.
+
+---
+
+# 15. Production Hosting
+
+## Live services
+
+| Service | Platform | URL |
+| --- | --- | --- |
+| Frontend | Vercel | `https://skillsaarthi.vercel.app` |
+| Backend | Render | `https://skillsaarthi-node.onrender.com` |
+| AI service | Render | `https://skillsaarthi-ai.onrender.com` |
+| Appwrite | Appwrite Cloud | `https://cloud.appwrite.io` |
+
+## Hosting rules
+
+- The AI service must run **Python 3.12** — set the `PYTHON_VERSION=3.12.10` env var on Render.
+  The pinned AI dependencies (`pandas 2.2.3`, `numpy 2.2.1`, `scikit-learn 1.6.0`, `pydantic 2.10.4`)
+  have no prebuilt wheels for Render's default Python 3.14, and the source build fails.
+- Backend start command: `npm start` (root directory `server`).
+- AI start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT` (root directory `ai-service`).
+- `PORT` is injected by the platform — never hardcode 5000/8000 in production environment settings.
+- The AI service is reached by the backend through `AI_SERVICE_URL=https://skillsaarthi-ai.onrender.com`.
+- The frontend calls the backend through `VITE_API_BASE_URL=https://skillsaarthi-node.onrender.com`.
+- The frontend origin must be added under **Appwrite → Settings → Platforms** (Web App),
+  otherwise email/password auth breaks in production.
+- Never commit `.env` or real secrets; set them only in the Vercel/Render dashboards.
+- All user data persists in Appwrite Cloud — the stateless Node/Python services can be redeployed freely.

@@ -2105,3 +2105,118 @@ LLM Integration
 ```
 
 This separation keeps the system understandable, maintainable, and scalable while allowing the team to develop each part independently.
+
+---
+
+# 47. Production Hosting & Deployment
+
+## 47.1 Live Services
+
+| Service | Platform | URL | Health check |
+| --- | --- | --- | --- |
+| Frontend (React + Vite) | Vercel | `https://skillsaarthi.vercel.app` | — |
+| Backend (Node.js + Express) | Render (web service) | `https://skillsaarthi-node.onrender.com` | `/api/health` |
+| AI service (Python + FastAPI) | Render (web service) | `https://skillsaarthi-ai.onrender.com` | `/health` |
+| Infrastructure & data | Appwrite Cloud | `https://cloud.appwrite.io` | — |
+
+## 47.2 Production Topology
+
+```text
+Browser
+  │
+  ▼
+https://skillsaarthi.vercel.app (Vercel — static React frontend)
+  │                                        │
+  │ direct: auth, DB reads/writes,         │ business logic + AI orchestration
+  │ storage (Appwrite Web SDK)             │
+  ▼                                        ▼
+Appwrite Cloud                      https://skillsaarthi-node.onrender.com
+(cloud.appwrite.io)                 (Render — Node.js backend)
+                                                 │
+                                                 ▼
+                                          https://skillsaarthi-ai.onrender.com
+                                          (Render — Python FastAPI AI service)
+```
+
+## 47.3 Responsibility by Platform
+
+| Platform | Hosts | Notes |
+| --- | --- | --- |
+| Vercel | Frontend static build (`dist/`) | Vite preset; React Router SPA fallback handled automatically |
+| Render | Backend (Node) + AI service (Python) | Two separate web services from one repo |
+| Appwrite Cloud | Auth, Databases, Storage, Messaging, Realtime | Kept on the cloud — not self-hosted for the MVP |
+
+## 47.4 Production Environment Configuration
+
+### Frontend (Vercel env vars)
+
+```env
+VITE_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
+VITE_APPWRITE_PROJECT_ID=<project_id>
+VITE_APPWRITE_DATABASE_ID=<database_id>
+VITE_API_BASE_URL=https://skillsaarthi-node.onrender.com
+```
+
+### Backend (Render env vars)
+
+```env
+APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=<project_id>
+APPWRITE_DATABASE_ID=<database_id>
+APPWRITE_RESUME_BUCKET_ID=resumes
+APPWRITE_API_KEY=<api_key>
+AI_SERVICE_URL=https://skillsaarthi-ai.onrender.com
+GITHUB_TOKEN=<optional>
+LLM_API_KEY=<optional>
+ADMIN_EMAILS=admin@skillguide.com
+```
+
+`PORT` is injected by Render — do not override it.
+
+### AI service (Render env vars)
+
+```env
+PYTHON_VERSION=3.12.10
+LLM_API_KEY=<optional>
+```
+
+`PORT` is injected by Render.
+
+> **Python 3.12 requirement.** The AI service pins `pandas==2.2.3`, `numpy==2.2.1`,
+> `scikit-learn==1.6.0`, and `pydantic==2.10.4`, which ship prebuilt wheels only through
+> Python 3.12. Render's default runtime (3.14) forces source builds that fail on `pydantic-core`
+> (needs Rust/maturin against a read-only cargo cache). Set the `PYTHON_VERSION` env var to
+> `3.12.10` (fully qualified) to use prebuilt wheels.
+
+## 47.5 Render Service Settings
+
+| Setting | Backend (`skillsaarthi-node`) | AI service (`skillsaarthi-ai`) |
+| --- | --- | --- |
+| Environment | Node | Python |
+| Root directory | `server` | `ai-service` |
+| Build command | `npm install` | `pip install -r requirements.txt` |
+| Start command | `npm start` | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Python version | — | `3.12.10` (`PYTHON_VERSION`) |
+
+## 47.6 Vercel Settings
+
+* Framework preset: **Vite**
+* Build command: `npm run build`
+* Output directory: `dist`
+
+## 47.7 Deployment Order
+
+1. Deploy the **AI service** first; copy `https://skillsaarthi-ai.onrender.com`.
+2. Deploy the **backend** with `AI_SERVICE_URL` pointing at the AI service URL.
+3. Deploy the **frontend** with `VITE_API_BASE_URL` pointing at the backend URL.
+4. Add `https://skillsaarthi.vercel.app` to **Appwrite → Settings → Platforms** (Web App) so
+   email/password auth sessions work in production.
+5. Run `npm run setup:appwrite` and `npm run seed:catalog` once against the cloud project.
+
+## 47.8 Production Notes
+
+* Render free tier services sleep after ~15 minutes of inactivity — warm them up before a demo.
+* The Node backend serves only `/api/*`; `/` intentionally returns 404 (the frontend handles all routing).
+* Secrets (Appwrite API key, GitHub token, LLM key) live only in the hosting dashboards; `.env` files are gitignored and never committed.
+* All user data persists in Appwrite Cloud, so the stateless Node/Python services can be redeployed freely without data loss.
+* If the AI service is down the backend returns a controlled `503 AI_SERVICE_UNAVAILABLE` (see §42).

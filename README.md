@@ -1288,6 +1288,115 @@ IMPORT_MAX=50           # max openings imported per run
 
 ---
 
+# 🌐 Deployment / Production Hosting
+
+The product runs as four independent services. Frontend and the two backends are hosted on
+platforms with free tiers; all data/auth stays on Appwrite Cloud.
+
+## Live URLs
+
+| Service | Platform | URL | Health check |
+| --- | --- | --- | --- |
+| Frontend (React + Vite) | Vercel | `https://skillsaarthi.vercel.app` | — |
+| Backend (Node.js + Express) | Render | `https://skillsaarthi-node.onrender.com` | `/api/health` |
+| AI service (Python + FastAPI) | Render | `https://skillsaarthi-ai.onrender.com` | `/health` |
+| Appwrite | Appwrite Cloud | `https://cloud.appwrite.io` | — |
+
+## Production topology
+
+```text
+Browser
+  │
+  ▼
+https://skillsaarthi.vercel.app            (Vercel — static React frontend)
+  │                                      │
+  │ direct: auth, DB reads/writes,       │ business logic + AI orchestration
+  │ storage (Appwrite Web SDK)           │
+  ▼                                      ▼
+Appwrite Cloud                    https://skillsaarthi-node.onrender.com
+(cloud.appwrite.io)               (Render — Node.js backend)
+                                             │
+                                             ▼
+                                      https://skillsaarthi-ai.onrender.com
+                                      (Render — Python FastAPI AI service)
+```
+
+## Production environment variables
+
+### Frontend (Vercel → Settings → Environment Variables)
+
+```env
+VITE_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
+VITE_APPWRITE_PROJECT_ID=<your-project-id>
+VITE_APPWRITE_DATABASE_ID=<your-database-id>
+VITE_API_BASE_URL=https://skillsaarthi-node.onrender.com
+```
+
+### Backend (Render → `skillsaarthi-node` → Environment)
+
+```env
+APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=<your-project-id>
+APPWRITE_DATABASE_ID=<your-database-id>
+APPWRITE_RESUME_BUCKET_ID=resumes
+APPWRITE_API_KEY=<your-api-key>
+AI_SERVICE_URL=https://skillsaarthi-ai.onrender.com
+GITHUB_TOKEN=<optional>
+LLM_API_KEY=<optional>
+ADMIN_EMAILS=admin@skillguide.com
+```
+
+> `PORT` is injected by Render automatically — do not override it.
+
+### AI service (Render → `skillsaarthi-ai` → Environment)
+
+```env
+PYTHON_VERSION=3.12.10
+LLM_API_KEY=<optional>
+```
+
+> The AI service must run on **Python 3.12** (set via the `PYTHON_VERSION` env var). The pinned
+> dependencies (`pandas==2.2.3`, `numpy==2.2.1`, `scikit-learn==1.6.0`, `pydantic==2.10.4`) ship
+> prebuilt wheels only through Python 3.12 — on Render's default Python 3.14 pip compiles from
+> source and the `pydantic-core` build fails. `PORT` is injected by Render.
+
+## Render service settings
+
+| Setting | `skillsaarthi-node` (backend) | `skillsaarthi-ai` (AI service) |
+| --- | --- | --- |
+| Environment | Node | Python |
+| Root Directory | `server` | `ai-service` |
+| Build Command | `npm install` | `pip install -r requirements.txt` |
+| Start Command | `npm start` | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Python Version | — | `3.12.10` (via `PYTHON_VERSION`) |
+
+## Vercel settings
+
+* Framework preset: **Vite** (auto-detected)
+* Build command: `npm run build`
+* Output directory: `dist`
+* SPA fallback (React Router) is handled automatically by Vercel's Vite preset.
+
+## Deployment order
+
+1. Deploy the **AI service** first, copy its URL.
+2. Deploy the **backend** with `AI_SERVICE_URL` pointing at the AI service URL.
+3. Deploy the **frontend** with `VITE_API_BASE_URL` pointing at the backend URL.
+4. Add `https://skillsaarthi.vercel.app` to **Appwrite → Settings → Platforms** (Web App) —
+   without this, email/password login fails in production.
+5. Run `npm run setup:appwrite` and `npm run seed:catalog` once against the cloud project.
+
+## Production notes
+
+* Render free tier services sleep after ~15 minutes of inactivity — warm them up before a demo.
+* The backend intentionally has no route at `/` (it returns a 404); all API routes live under `/api/*`.
+* Secrets (Appwrite API key, GitHub token, LLM key) live only in the hosting dashboards — `.env`
+  files are gitignored and never committed.
+* All user data persists in Appwrite Cloud, so the stateless Node/Python services can be
+  redeployed freely without data loss.
+
+---
+
 # 🌱 Development Workflow
 
 We use feature branches.
