@@ -85,15 +85,15 @@
 
 @layer components {
   .btn-primary {
-    @apply inline-flex h-12 items-center justify-center rounded-full bg-brand px-6 text-base font-bold text-white transition-colors hover:bg-brand-hover active:bg-brand-active;
+    @apply inline-flex h-12 items-center justify-center rounded-2xl bg-brand px-6 text-base font-bold text-white transition-colors hover:bg-brand-hover active:bg-brand-active;
   }
 
   .btn-secondary {
-    @apply inline-flex h-12 items-center justify-center rounded-full border-2 border-brand-deep bg-white px-6 text-base font-bold text-brand-deep transition-colors hover:bg-brand-soft;
+    @apply inline-flex h-12 items-center justify-center rounded-2xl border-1 border-brand-deep bg-white px-6 text-base font-bold text-brand-deep transition-colors hover:bg-brand-soft;
   }
 
   .btn-donate {
-    @apply inline-flex h-12 items-center justify-center rounded-full bg-accent-blue px-6 text-base font-bold text-white transition-colors hover:bg-blue-700;
+    @apply inline-flex h-12 items-center justify-center rounded-2xl bg-accent-blue px-6 text-base font-bold text-white transition-colors hover:bg-blue-700;
   }
 
   .btn-text {
