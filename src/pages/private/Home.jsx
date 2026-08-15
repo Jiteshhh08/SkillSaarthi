@@ -16,7 +16,7 @@ const TOOLS = [
     icon: '🧩',
     name: 'Skill gaps',
     description: 'Find out which skills to learn next.',
-    to: '/dashboard',
+    to: '/skill-gaps',
   },
   {
     icon: '🐙',
