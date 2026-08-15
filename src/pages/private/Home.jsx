@@ -41,18 +41,8 @@ const TOOLS = [
 
 export default function Home() {
   const { user, profile } = useAuth()
-  const { isAdmin, loading: adminLoading } = useAdmin()
+  const { isAdmin } = useAdmin()
   const complete = isProfileComplete(profile)
-
-  if (adminLoading) {
-    return (
-      <div className="min-h-screen">
-        <TopBar />
-        <div className="flex min-h-[60vh] items-center justify-center text-ink-muted">Loading…</div>
-        <Footer />
-      </div>
-    )
-  }
 
   const cta = isAdmin
     ? { label: 'Open admin panel', to: '/admin/internships' }
