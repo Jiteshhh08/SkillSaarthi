@@ -25,9 +25,16 @@ function RecommendationCard({ recommendation }) {
             {explanation.category || 'Career match'}
           </p>
         </div>
-        <span className={`rounded-full px-3 py-1 text-sm font-black ${scoreTone(recommendation.match_score)}`}>
-          {recommendation.match_score}%
-        </span>
+        <div className="flex items-start gap-2">
+          {explanation.source === 'fallback' && (
+            <span className="rounded-full bg-warning-soft px-3 py-1 text-xs font-black text-warning">
+              Estimated · AI offline
+            </span>
+          )}
+          <span className={`rounded-full px-3 py-1 text-sm font-black ${scoreTone(recommendation.match_score)}`}>
+            {recommendation.match_score}%
+          </span>
+        </div>
       </div>
 
       {explanation.description && (

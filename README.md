@@ -862,9 +862,10 @@ All routes require `Authorization: Bearer <jwt>` (Appwrite session token).
 | `GET` | `/api/recommendations/:id` | Single saved recommendation |
 | `GET` | `/api/recommendations/careers/:careerId/skill-gaps` | Skill-gap analysis for a career |
 
-> If the AI service is down, `/api/recommendations/generate` returns a controlled
-> `503 AI_SERVICE_UNAVAILABLE` error (per architecture §42) and the frontend can
-> show "Recommendations are temporarily unavailable."
+> If the AI service is down, the backend falls back to a rule-based scorer in
+> `server/src/services/recommendation.service.js`: it returns `200` with
+> `source: "fallback"` estimates instead of the controlled
+> `503 AI_SERVICE_UNAVAILABLE` error (see the Phase 4 — AI section below).
 
 ## Frontend services
 
@@ -881,8 +882,8 @@ Phase 3 UI is wired and routed behind `ProfileCompleteRoute`:
 | `src/pages/private/SkillGaps.jsx` | `/skill-gaps/:careerId?` | Career dropdown + strong/needs-improvement gap analysis (deep-linked from each recommendation) |
 
 The rule of three: if the AI service is running (ai-service on `:8000`), generate + skill-gap
-analysis work; if it is down, the backend returns a controlled `503 AI_SERVICE_UNAVAILABLE`
-and the pages show "Recommendations are temporarily unavailable."
+analysis run in Python; if it is down, the backend returns rule-based estimates with
+`source: "fallback"` and the pages show an "Estimated · AI offline" badge on each card.
 
 ## Upgrading an existing Appwrite setup
 
@@ -897,10 +898,46 @@ npm run seed:catalog
 
 ---
 
-# 🐙 Phase 6 — GitHub Analysis & Internships
+# 🤖 Phase 4 — AI
 
-Phase 6 (in progress) adds two advanced career tools backed by the Node backend +
-Python AI service.
+Phase 4 (complete) implements the AI layer as an independent Python service and hardens
+the Phase 3 engine against failure.
+
+## What was built
+
+| Sub-part | Where |
+|---|---|
+| Python AI service | `ai-service/` — FastAPI app on port 8000 |
+| Endpoints | `GET /health`, `GET /ai/careers`, `POST /ai/recommend-careers`, `POST /ai/skill-gaps`, `POST /ai/github/analyze` |
+| Skill matching + ranking | `ai-service/app/recommendation/scoring.py` (`score_careers`, hybrid weights from §23) |
+| Skill-gap analysis | `ai-service/app/recommendation/scoring.py` (`analyze_skill_gaps`, strong vs needs_improvement) |
+| Tests | `ai-service/tests/` (pytest) — 15 tests: ranking, explainability, validation, alias normalization |
+| Fallback scorer | `server/src/services/recommendation.service.js` — rule-based estimates when the AI service is down |
+
+## Fallback behavior
+
+If the AI service is unreachable, the Node backend still returns recommendations and
+skill-gaps (instead of a hard failure):
+
+* `POST /api/recommendations/generate` → `200` rule-based matches with `source: "fallback"` (embedded in each explanation)
+* `GET /api/recommendations/careers/:careerId/skill-gaps` → `200` rule-based gaps with `source: "fallback"`
+* The React pages show an **"Estimated · AI offline"** badge so users know the scores are estimates
+
+Successful AI runs are tagged `source: "ai"`, and live AI results are mapped back to Appwrite
+career documents by name.
+
+## Running the tests
+
+```bash
+cd ai-service
+python -m pytest        # 15 passed
+```
+
+---
+
+# 🐙 GitHub Analysis & Internships
+
+Two implemented advanced career tools backed by the Node backend + Python AI service.
 
 ## GitHub analysis
 
@@ -1002,7 +1039,7 @@ Importer vars in `scripts/.env.setup` are all optional (`SOURCE`, `FEED_FILE`,
 
 ## Upgrading an existing Appwrite setup
 
-Phase 6 added `profiles.github_username`, `internships.skills` /
+The GitHub + internships work added `profiles.github_username`, `internships.skills` /
 `internships.eligibility`, and the internship lifecycle attributes
 (`status`, `source`, `source_key`, `expires_at`, `fetched_at`). Apply the schema,
 then refresh the internship catalog:
@@ -1148,7 +1185,17 @@ For complete development rules:
 
 ---
 
-## Phase 4 — Roadmap
+## Phase 4 — AI
+
+* [x] Python AI service (FastAPI)
+* [x] Skill matching + ranking
+* [x] Skill-gap analysis
+* [x] AI test suite (pytest)
+* [x] Rule-based fallback when the AI service is down
+
+---
+
+## Phase 5 — Roadmap
 
 * [ ] Roadmap generator
 * [ ] Roadmap tasks
@@ -1158,23 +1205,21 @@ For complete development rules:
 
 ---
 
-## Phase 5 — Differentiating Features
-
-* [ ] What-If simulator
-* [ ] Career comparison
-* [ ] Career explorer
-* [ ] Resume analysis
-* [ ] Course recommendations
-
----
-
 ## Phase 6 — Advanced Features
 
 * [x] GitHub analysis
-* [x] Internship recommendations
+* [ ] Resume analysis
+* [ ] What-If simulator
+* [ ] Career comparison
 * [ ] AI career assistant
+
+---
+
+## Phase 7 — External Integrations
+
+* [x] Internship recommendations
+* [ ] Courses
 * [ ] Personalized notifications
-* [ ] Advanced ML recommendation
 
 ---
 

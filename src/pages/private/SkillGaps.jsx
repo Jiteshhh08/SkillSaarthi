@@ -152,6 +152,12 @@ export default function SkillGaps() {
               </div>
             </section>
 
+            {gaps.source === 'fallback' && (
+              <div className="mt-4 rounded-lg border border-accent-yellow bg-cream px-4 py-3 text-sm text-ink">
+                AI service is offline — showing <strong>estimated</strong> gaps based on your skill levels.
+              </div>
+            )}
+
             {strongCount > 0 && (
               <section className="mt-6">
                 <h3 className="text-base font-black text-success">✓ Skills you already meet</h3>

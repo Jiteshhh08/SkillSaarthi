@@ -148,6 +148,7 @@ export async function saveRecommendations(userId, recommendations) {
           skill_gaps: rec.skill_gaps,
           skill_gap_details: rec.skill_gap_details,
           next_steps: rec.next_steps,
+          source: rec.source || 'ai',
         }),
         created_at: new Date().toISOString(),
       },
