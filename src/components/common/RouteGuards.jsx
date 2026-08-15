@@ -40,10 +40,10 @@ export function PublicOnlyRoute({ children }) {
 }
 
 export function ProfileCompleteRoute({ children }) {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, loading, profileLoading } = useAuth()
   const { isAdmin, loading: adminLoading } = useAdmin()
 
-  if (loading || adminLoading) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-canvas text-ink-muted">
         Loading…
@@ -55,7 +55,7 @@ export function ProfileCompleteRoute({ children }) {
     return <Navigate to="/login" replace />
   }
 
-  if (!isAdmin && !isProfileComplete(profile)) {
+  if (!profileLoading && !isProfileComplete(profile) && !adminLoading && !isAdmin) {
     return <Navigate to="/onboarding" replace />
   }
 
