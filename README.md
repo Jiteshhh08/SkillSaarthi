@@ -935,6 +935,56 @@ python -m pytest        # 15 passed
 
 ---
 
+# 🗺️ Phase 5 — Roadmap
+
+Phase 5 (complete) turns your skill gaps into an ordered, editable, trackable learning plan.
+
+## What was built
+
+| Sub-part | Where |
+|---|---|
+| Data model | `roadmaps` + `roadmap_tasks` collections (user-scoped, already deployed) |
+| Generator | `server/src/services/roadmap.service.js` — builds `Learn/Strengthen {skill}` tasks from `analyzeCareerGaps` (AI or fallback), plus project + interview milestones |
+| Task lifecycle | `pending → in_progress → paused → completed`, reorder, add custom tasks |
+| Progress | `completed / total × 100`, auto-recomputed and stored on `roadmaps.progress_percent` |
+| API | `server/src/routes/roadmap.routes.js` — full CRUD under `/api/roadmaps` |
+
+**Behavior notes**
+
+- Reopening, adding, or removing a task recalculates progress and automatically flips a
+  `completed` roadmap back to `active` — the status never stays "completed" with unfinished tasks.
+- Reorder is a single batch call (`PUT /api/roadmaps/:id/tasks` with the full ordered id list).
+- Backend operations parallelize independent Appwrite reads/writes and return state from
+  memory instead of re-fetching, so mutations stay fast (a status change ~0.8s, a full
+  10-task generation ~1.5s on Appwrite cloud).
+
+## Roadmap endpoints
+
+All routes require `Authorization: Bearer <jwt>` (Appwrite session token).
+
+| Method | Route | Description |
+|---|---|---|
+| `POST` | `/api/roadmaps` | Generate + save a roadmap for a career (`body: { career_id, title? }`) |
+| `GET` | `/api/roadmaps` | List your roadmaps (active first) |
+| `GET` | `/api/roadmaps/:id` | Roadmap with its tasks, ordered |
+| `PUT` | `/api/roadmaps/:id` | Rename / pause / mark completed |
+| `DELETE` | `/api/roadmaps/:id` | Delete roadmap + tasks |
+| `POST` | `/api/roadmaps/:id/tasks` | Add a custom task |
+| `PUT` | `/api/roadmaps/:id/tasks` | Reorder all tasks (`body: { order: [taskId, …] }`) |
+| `PUT` | `/api/roadmaps/:id/tasks/:taskId` | Start, pause, complete, or reorder a task |
+| `DELETE` | `/api/roadmaps/:id/tasks/:taskId` | Remove a task |
+
+## Frontend pages
+
+| Page | Route | What it does |
+|---|---|---|
+| `src/pages/private/Roadmaps.jsx` | `/roadmaps` | Generate a roadmap from any career; progress bars per roadmap |
+| `src/pages/private/RoadmapDetail.jsx` | `/roadmaps/:id` | Task controls (start/pause/complete/reopen), reorder, custom tasks, rename, delete |
+
+The dashboard shows your current roadmap and its progress, and the top nav links to it.
+
+---
+
 # 🐙 GitHub Analysis & Internships
 
 Two implemented advanced career tools backed by the Node backend + Python AI service.
@@ -1197,11 +1247,11 @@ For complete development rules:
 
 ## Phase 5 — Roadmap
 
-* [ ] Roadmap generator
-* [ ] Roadmap tasks
-* [ ] Progress tracking
-* [ ] Task modification
-* [ ] Dashboard
+* [x] Roadmap generator
+* [x] Roadmap tasks
+* [x] Progress tracking
+* [x] Task modification
+* [x] Dashboard
 
 ---
 
