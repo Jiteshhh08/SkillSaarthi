@@ -1,4 +1,4 @@
-# 🎯 Skill_Guide — One-Stop Personalized Career & Education Advisor
+# 🎯 skillsaarthi — One-Stop Personalized Career & Education Advisor
 
 > **An intelligent, personalized career and education guidance platform that helps students and learners discover suitable career paths, identify skill gaps, build personalized roadmaps, and track their progress.**
 
@@ -37,14 +37,14 @@ The project is being developed as a Smart India Hackathon solution based on the 
 
 # 🚀 About the Project
 
-**Skill_Guide** is a personalized career and education advisor designed for:
+**skillsaarthi** is a personalized career and education advisor designed for:
 
 * High school students
 * College students
 * Job seekers
 * Learners exploring new career paths
 
-Instead of providing generic career advice, Skill_Guide analyzes a user's:
+Instead of providing generic career advice, skillsaarthi analyzes a user's:
 
 * Education
 * Skills
@@ -99,13 +99,13 @@ Students and learners often face difficulty answering questions such as:
 
 Career information is often distributed across multiple platforms, making it difficult for users to create a clear and personalized path.
 
-Skill_Guide brings these capabilities together into a single platform.
+skillsaarthi brings these capabilities together into a single platform.
 
 ---
 
 # 💡 Our Solution
 
-Skill_Guide creates a **personalized career profile** for each user.
+skillsaarthi creates a **personalized career profile** for each user.
 
 The platform then analyzes that profile against career requirements and generates:
 
@@ -348,7 +348,7 @@ For graduates and professionals exploring employment opportunities or career tra
 
 # 🧠 Intelligent Recommendation System
 
-Skill_Guide uses a **hybrid recommendation architecture** rather than relying entirely on a machine-learning model.
+skillsaarthi uses a **hybrid recommendation architecture** rather than relying entirely on a machine-learning model.
 
 ```text
                 User Profile
@@ -469,7 +469,7 @@ For the complete architecture, database design, ER diagram, API architecture, AI
 # 📂 Project Structure
 
 ```text
-skill-guide/
+skillsaarthi/
 │
 ├── src/                      # React frontend (repo root)
 │   ├── assets/
@@ -544,7 +544,7 @@ Make sure the following are installed:
 
 ```bash
 git clone <REPOSITORY_URL>
-cd skill-guide
+cd skillsaarthi
 ```
 
 ---
@@ -675,7 +675,7 @@ POST /ai/skill-gaps              strong vs needs-improvement for one career
 If you use VS Code, the included **tasks** launch each service in its **own integrated terminal
 panel** inside the editor (no external windows). Definitions live in `.vscode/tasks.json`.
 
-1. Open the Skill_Guide folder in VS Code.
+1. Open the skillsaarthi folder in VS Code.
 2. Run **Terminal → Run Task…** and pick one:
    - **`dev: restart everything (clean, then run)`** (default, **Ctrl/Cmd + Shift + B**) — stops any
      stale dev servers on ports 5173/5000/8000, then starts all three fresh. Use this whenever a
@@ -1534,7 +1534,7 @@ docs/
 
 # 🔒 Security
 
-Skill_Guide handles personal user information.
+skillsaarthi handles personal user information.
 
 The application follows these principles:
 
@@ -1551,7 +1551,7 @@ The application follows these principles:
 
 # ⚠️ Important Disclaimer
 
-Skill_Guide provides **personalized guidance and recommendations**.
+skillsaarthi provides **personalized guidance and recommendations**.
 
 Career recommendations are not guarantees of:
 
@@ -1569,7 +1569,7 @@ Users should use the platform as a decision-support tool and consider additional
 
 # 🎯 Project Goal
 
-Skill_Guide aims to move career guidance from:
+skillsaarthi aims to move career guidance from:
 
 ```text
 "What career should I choose?"
@@ -1627,6 +1627,6 @@ UPDATE RECOMMENDATIONS
 
 ---
 
-## 🚀 Skill_Guide
+## 🚀 skillsaarthi
 
 **Understand yourself. Discover possibilities. Build your path.**

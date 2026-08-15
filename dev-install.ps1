@@ -1,5 +1,5 @@
 #Requires -Version 5.1
-# One-time dependency installer for Skill_Guide (Windows PowerShell).
+# One-time dependency installer for skillsaarthi (Windows PowerShell).
 # Installs frontend, backend, and AI-service dependencies if missing.
 # Used by .vscode/tasks.json ("setup: install all dependencies") and safe to run directly.
 
@@ -15,7 +15,7 @@ function Invoke-In([string]$Dir, [scriptblock]$Action) {
 }
 
 Write-Host ''
-Write-Host '===== Skill_Guide dependency installer =====' -ForegroundColor Cyan
+Write-Host '===== skillsaarthi dependency installer =====' -ForegroundColor Cyan
 
 if (-not (Test-Path (Join-Path $Root 'node_modules'))) {
     Write-Host 'Installing frontend dependencies (npm install) ...' -ForegroundColor Yellow

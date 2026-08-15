@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Skill_Guide one-command dev launcher (macOS / Linux).
+# skillsaarthi one-command dev launcher (macOS / Linux).
 #
 # Opens one terminal window per service:
 #   1. Frontend (Vite)      -> http://localhost:5173   (repo root / npm run dev)
@@ -20,7 +20,7 @@ AI_DIR="$ROOT/ai-service"
 VENV_PYTHON="$AI_DIR/venv/bin/python"
 
 echo ""
-echo "===== Skill_Guide dev launcher ====="
+echo "===== skillsaarthi dev launcher ====="
 
 # --- Frontend dependencies (repo root) ---
 if [ ! -d "$ROOT/node_modules" ]; then

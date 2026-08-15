@@ -1,9 +1,9 @@
 {
-  "name": "skill-guide-server",
+  "name": "skillsaarthi-server",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Skill Guide — Node.js + Express backend (business logic and orchestration)",
+  "description": "skillsaarthi — Node.js + Express backend (business logic and orchestration)",
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch src/index.js",

@@ -1,4 +1,4 @@
-"""Skill Guide AI service — FastAPI application.
+"""skillsaarthi AI service — FastAPI application.
 
 Serves AI/ML endpoints consumed by the Node backend:
   GET  /health
@@ -23,7 +23,7 @@ from .recommendation.scoring import analyze_skill_gaps, compare_careers, score_c
 from .resume.analyzer import analyze as analyze_resume
 
 app = FastAPI(
-    title="Skill Guide AI Service",
+    title="skillsaarthi AI Service",
     version="0.2.0",
     description="AI/ML layer: skill matching, recommendation, and skill-gap analysis.",
 )

@@ -127,7 +127,7 @@ export default function Recommendations() {
             <h1 className="mt-2 text-3xl font-black tracking-tight">Career Recommendations</h1>
             <p className="mt-2 max-w-2xl text-lg text-ink-muted">
               Careers ranked against your skills, interests, education, assessment score, and goals.
-              Scores are internal relevance estimates from your Skill Guide profile.
+              Scores are internal relevance estimates from your skillsaarthi profile.
             </p>
           </div>
           <div className="flex items-center gap-3">

@@ -1,5 +1,5 @@
 #Requires -Version 5.1
-# Kills any leftover Skill_Guide dev servers listening on ports 5173 (Vite),
+# Kills any leftover skillsaarthi dev servers listening on ports 5173 (Vite),
 # 5000 (Express), and 8000 (FastAPI/uvicorn). Safe to re-run.
 # Also stops the uvicorn --reload parent so it does not respawn the server.
 

@@ -31,7 +31,7 @@ export default function Login() {
       <div className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-warm px-4 py-12">
         <form onSubmit={handleSubmit} className="w-full max-w-sm rounded-xl bg-white p-8 shadow-card-rest">
           <h1 className="text-2xl font-black tracking-tight">Login</h1>
-          <p className="mt-1 text-sm text-ink-muted">Welcome back to Skill Guide.</p>
+          <p className="mt-1 text-sm text-ink-muted">Welcome back to skillsaarthi.</p>
 
           {error && (
             <p className="mt-4 rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">

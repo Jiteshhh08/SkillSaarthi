@@ -1,4 +1,4 @@
-"""Resume analyzer for the Skill Guide AI service.
+"""Resume analyzer for the skillsaarthi AI service.
 
 Turns resume content (PDF text or raw text) into a structured profile:
 extracted skills, estimated experience, projects, education, and career

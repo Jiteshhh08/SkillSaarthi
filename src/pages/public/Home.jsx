@@ -49,7 +49,7 @@ export default function Home() {
             For every student, every skill, real career results.
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-muted">
-            Skill Guide maps your current skills to your ideal career, shows exactly what you're
+            skillsaarthi maps your current skills to your ideal career, shows exactly what you're
             missing, and builds a personalized learning roadmap to get you career-ready.
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
@@ -91,7 +91,7 @@ export default function Home() {
           <div>
             <h2 className="text-2xl font-bold">Every journey starts with one skill.</h2>
             <p className="mt-2 max-w-2xl text-base leading-relaxed text-ink-muted">
-              Build a profile in minutes, tell us what you already know, and let Skill Guide turn
+              Build a profile in minutes, tell us what you already know, and let skillsaarthi turn
               that into a clear, encouraging path to your dream career.
             </p>
           </div>

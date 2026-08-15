@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time dependency installer for Skill_Guide (macOS / Linux).
+# One-time dependency installer for skillsaarthi (macOS / Linux).
 # Installs frontend, backend, and AI-service dependencies if missing.
 # Used by .vscode/tasks.json ("setup: install all dependencies") and safe to run directly.
 
@@ -11,7 +11,7 @@ AI_DIR="$ROOT/ai-service"
 VENV_PYTHON="$AI_DIR/venv/bin/python"
 
 echo ""
-echo "===== Skill_Guide dependency installer ====="
+echo "===== skillsaarthi dependency installer ====="
 
 if [ ! -d "$ROOT/node_modules" ]; then
   echo "Installing frontend dependencies (npm install) ..."

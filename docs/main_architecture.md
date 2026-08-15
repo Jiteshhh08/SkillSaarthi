@@ -1,6 +1,6 @@
-# Main Architecture — Skill Guide
+# Main Architecture — skillsaarthi
 
-> Technical architecture and implementation blueprint for Skill Guide.
+> Technical architecture and implementation blueprint for skillsaarthi.
 >
 > **Product:** One-Stop Personalized Career & Education Advisor
 >
@@ -10,7 +10,7 @@
 
 # 1. Architecture Overview
 
-Skill Guidefollows a modular architecture consisting of four major application layers:
+skillsaarthi follows a modular architecture consisting of four major application layers:
 
 1. **Frontend Layer** — React + Tailwind CSS (repo root)
 2. **Infrastructure & Data Layer** — Appwrite (Auth, Databases, Storage, Messaging, Realtime, Functions)
@@ -154,7 +154,7 @@ The frontend is responsible for:
 # 6. Frontend Structure
 
 ```text
-skill-guide/                      # repo root = React frontend
+skillsaarthi/                      # repo root = React frontend
 │
 ├── public/
 │
@@ -1284,7 +1284,7 @@ An optional `GITHUB_TOKEN` in the backend environment raises GitHub API rate lim
 
 # 29. AI Career Assistant
 
-The AI assistant uses the user's Skill Guidecontext.
+The AI assistant uses the user's skillsaarthi context.
 
 Context can include:
 
@@ -1815,7 +1815,7 @@ The application must not crash because the AI service is temporarily unavailable
 # 43. Repository Architecture
 
 ```text
-skill-guide/
+skillsaarthi/
 │
 ├── src/                      # React frontend (repo root)
 │   ├── assets/
@@ -2064,7 +2064,7 @@ Notifications
 
 # 46. Architecture Decision Summary
 
-Skill Guideuses Appwrite as its infrastructure and primary data layer instead of running a separate database.
+skillsaarthi uses Appwrite as its infrastructure and primary data layer instead of running a separate database.
 
 ### Appwrite
 

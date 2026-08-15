@@ -17,7 +17,7 @@
 
 Working product name:
 
-**Skill Guide**
+**skillsaarthi**
 
 > The product name can be changed later.
 

@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useAdmin } from '../../hooks/useAdmin'
+import logo from '../../assets/skillsaarthi_logo.jpeg'
 
 export default function TopBar() {
   const { user, loading, logout } = useAuth()
@@ -14,16 +15,9 @@ export default function TopBar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-white">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-6">
+      <div className="mx-auto flex h-20 max-w-7xl items-center gap-6 px-6">
         <Link to={user ? '/home' : '/'} className="flex items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-brand">
-            <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M16 16v1a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-1" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M7 16H4a1 1 0 0 1-1-1V6a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v9a1 1 0 0 1-1 1h-3" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M8 7h6M8 10h6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-          <span className="text-lg font-black text-ink">Skill Guide</span>
+          <img src={logo} alt="skillsaarthi logo" className="h-16 w-48 shrink-0 object-cover" />
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">

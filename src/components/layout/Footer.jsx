@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import logo from '../../assets/skillsaarthi_logo.jpeg'
 
 export default function Footer() {
   const { user } = useAuth()
@@ -8,7 +9,9 @@ export default function Footer() {
     <footer className="bg-deep">
       <div className="mx-auto grid max-w-7xl gap-8 px-6 py-12 md:grid-cols-4">
         <div>
-          <p className="text-lg font-black text-white">Skill Guide</p>
+          <div className="flex items-center gap-2">
+            <img src={logo} alt="skillsaarthi logo" className="h-16 w-48 rounded-lg object-cover" />
+          </div>
           <p className="mt-2 text-sm text-slate-400">
             Personalized career guidance, skill building, and learning roadmaps — for free,
             for everyone.
@@ -62,7 +65,7 @@ export default function Footer() {
       </div>
       <div className="border-t border-slate-800">
         <p className="mx-auto max-w-7xl px-6 py-6 text-center text-xs text-slate-500">
-          © {new Date().getFullYear()} Skill Guide. Inspired by the warmth of free education.
+          © {new Date().getFullYear()} skillsaarthi. Inspired by the warmth of free education.
         </p>
       </div>
     </footer>

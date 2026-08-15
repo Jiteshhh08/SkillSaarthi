@@ -64,13 +64,13 @@ export default function WhatWeDo({ mode = 'guest' }) {
       <section className="mx-auto max-w-7xl px-6 py-16">
         <div className="max-w-3xl">
           <p className="text-sm font-bold uppercase tracking-[0.08em] text-brand-deep">
-            What Skill Guide does
+            What skillsaarthi does
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight">
             One platform for your whole career journey
           </h2>
           <p className="mt-3 text-lg leading-relaxed text-ink-muted">
-            Instead of generic career advice, Skill Guide analyses your education, skills,
+            Instead of generic career advice, skillsaarthi analyses your education, skills,
             interests, goals, and assessment results to recommend careers, uncover your skill
             gaps, and build a roadmap that shows you exactly what to do next.
           </p>

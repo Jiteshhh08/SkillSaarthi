@@ -1,9 +1,9 @@
-# Skill Guide— Product Design Specification
+# skillsaarthi— Product Design Specification
 
 > Design reference: **Khan Academy** (`https://www.khanacademy.org`)
 > Theme mode: **Light only**. No dark mode is offered anywhere in the UI.
 
-This document is the single source of truth for the Skill Guideinterface, adapted
+This document is the single source of truth for the skillsaarthi interface, adapted
 from Khan Academy's design system ("Wonder Blocks" lineage). Every screen, component,
 token, and interaction in the app must follow the rules below.
 
@@ -11,7 +11,7 @@ token, and interaction in the app must follow the rules below.
 
 ## 1. Design Intent & Atmosphere
 
-Skill Guidemirrors Khan Academy's **mission-driven warmth**: a paper-white canvas,
+skillsaarthi mirrors Khan Academy's **mission-driven warmth**: a paper-white canvas,
 a confident **mint green** brand accent, Lato sans-serif throughout, 8px-radius cards,
 pill-shaped primary buttons, and progress rendered as **skill mastery** rather than
 percentage-watched. The tone is the encouraging tutor who believes anyone can learn.
@@ -267,7 +267,7 @@ Base `4px`. Scale: `4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64 / 80 / 96 / 12
 
 ### 5.4 Inputs & forms
 
-**Search** — bg `#f7f8fa`, radius 8px, height 48px, padding `12px 16px 12px 44px`, magnifier left in `#5b5e6b`, placeholder "Search Skill Guide". Focus ring brand.
+**Search** — bg `#f7f8fa`, radius 8px, height 48px, padding `12px 16px 12px 44px`, magnifier left in `#5b5e6b`, placeholder "Search skillsaarthi". Focus ring brand.
 
 **Text input** — bg `#ffffff`, border `1px solid #d6d8de`, radius 8px, height 48px, padding `12px 16px`. Label above 14/700; hint below 13/400 muted. Focus ring brand.
 
@@ -302,10 +302,10 @@ Base `4px`. Scale: `4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64 / 80 / 96 / 12
 
 1. Sticky top bar.
 2. Hero: Lato 56/900 headline, 18px lead, mint primary CTA + outlined secondary.
-3. "What would you like to learn?" subject tile grid (Math, Science, Computing, Arts & humanities, Economics, Reading & language arts, Life skills, Test prep — mapped to Skill Guidesubjects).
+3. "What would you like to learn?" subject tile grid (Math, Science, Computing, Arts & humanities, Economics, Reading & language arts, Life skills, Test prep — mapped to skillsaarthi subjects).
 4. "Recommended for you" rail (authenticated; otherwise "Popular careers").
 5. Encourage-the-learner mint band (e.g. "Every journey starts with one skill").
-6. Warm-cream ask banner ("Help us keep Skill Guidefree").
+6. Warm-cream ask banner ("Help us keep skillsaarthi free").
 7. "Trusted by" partner rail (muted greys).
 8. Footer: 4-column `#21242c` dark band.
 

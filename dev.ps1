@@ -1,5 +1,5 @@
 #Requires -Version 5.1
-# Skill_Guide one-command dev launcher (Windows PowerShell).
+# skillsaarthi one-command dev launcher (Windows PowerShell).
 #
 # Opens one terminal window per service:
 #   1. Frontend (Vite)      -> http://localhost:5173   (repo root / npm run dev)
@@ -27,7 +27,7 @@ function Invoke-In([string]$Dir, [scriptblock]$Action) {
 }
 
 Write-Host ''
-Write-Host '===== Skill_Guide dev launcher =====' -ForegroundColor Cyan
+Write-Host '===== skillsaarthi dev launcher =====' -ForegroundColor Cyan
 
 # --- Frontend dependencies (repo root) ---
 if (-not (Test-Path (Join-Path $Root 'node_modules'))) {

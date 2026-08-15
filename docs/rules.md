@@ -1,6 +1,6 @@
-# Development Rules — Skill Guide
+# Development Rules — skillsaarthi
 
-> Rules and conventions for the Skill Guideteam.
+> Rules and conventions for the skillsaarthi team.
 >
 > **Product:** One-Stop Personalized Career & Education Advisor
 >
@@ -10,7 +10,7 @@
 
 # 1. Project Overview
 
-Skill Guideis a personalized career and education guidance platform.
+skillsaarthi is a personalized career and education guidance platform.
 
 It helps students, learners, and job seekers:
 
@@ -106,7 +106,7 @@ Python handles AI/ML processing.
 # 4. Repository Structure
 
 ```text
-skill-guide/
+skillsaarthi/
 │
 ├── src/                      # React frontend (repo root)
 │   ├── assets/

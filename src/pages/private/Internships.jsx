@@ -135,7 +135,7 @@ function Internships() {
 
         <div className="mt-6 rounded-xl border border-accent-yellow bg-cream px-5 py-4 text-sm text-ink">
           <p>
-            These are internal relevance scores from your Skill Guide profile — keep your skills,
+            These are internal relevance scores from your skillsaarthi profile — keep your skills,
             goals, and preferred location up to date for better matches. You can also{' '}
             <Link to="/github" className="font-bold text-brand-deep hover:underline">
               add skills detected from your GitHub profile

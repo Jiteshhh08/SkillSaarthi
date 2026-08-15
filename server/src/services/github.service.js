@@ -3,10 +3,10 @@ import { config } from '../config/environment.js'
 import { ApiError } from '../utils/ApiError.js'
 
 const GITHUB_API_BASE = 'https://api.github.com'
-const USER_AGENT = 'skill-guide'
+const USER_AGENT = 'skillsaarthi'
 const REPOS_PER_PAGE = 100
 
-// GitHub languages → Skill Guide catalog skill names.
+// GitHub languages → skillsaarthi catalog skill names.
 const LANGUAGE_TO_SKILL = {
   JavaScript: 'JavaScript',
   TypeScript: 'TypeScript',
