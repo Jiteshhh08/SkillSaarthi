@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { educationLevelLabel } from '../../services/profile'
 import { getUserSkills } from '../../services/skills'
 import { getUserInterests } from '../../services/interests'
+import { getRoadmaps } from '../../services/roadmaps'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
 
@@ -11,25 +12,30 @@ export default function Dashboard() {
   const { user, profile } = useAuth()
   const [skillCount, setSkillCount] = useState(0)
   const [interestCount, setInterestCount] = useState(0)
+  const [roadmaps, setRoadmaps] = useState([])
 
   useEffect(() => {
     let mounted = true
-    Promise.all([getUserSkills(user.$id), getUserInterests(user.$id)])
-      .then(([skills, interests]) => {
+    Promise.all([getUserSkills(user.$id), getUserInterests(user.$id), getRoadmaps()])
+      .then(([skills, interests, roadmapDocs]) => {
         if (!mounted) return
         setSkillCount(skills.length)
         setInterestCount(interests.length)
+        setRoadmaps(roadmapDocs || [])
       })
       .catch(() => {
         if (mounted) {
           setSkillCount(0)
           setInterestCount(0)
+          setRoadmaps([])
         }
       })
     return () => {
       mounted = false
     }
   }, [user.$id])
+
+  const currentRoadmap = roadmaps.find((roadmap) => roadmap.status !== 'completed') || roadmaps[0]
 
   const educationLabel = educationLevelLabel(profile?.education_level)
 
@@ -174,11 +180,15 @@ export default function Dashboard() {
             <div className="grid h-12 w-12 place-items-center rounded-full bg-warning-soft text-2xl">🗺️</div>
             <h3 className="mt-4 text-lg font-bold">Roadmap</h3>
             <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-              Generate your first personalized learning roadmap.
+              {currentRoadmap
+                ? `"${currentRoadmap.title}" is ${currentRoadmap.progress_percent}% complete.`
+                : 'Generate your first personalized learning roadmap.'}
             </p>
-            <Link to="/dashboard" className="btn-text mt-6">
-              Generate roadmap →
-            </Link>
+            <div className="mt-6 w-full">
+              <Link to="/roadmaps" className="btn-primary !h-10 !px-4 !text-sm">
+                {currentRoadmap ? 'Continue roadmap' : 'Generate roadmap'}
+              </Link>
+            </div>
           </div>
 
           <div className="card flex flex-col items-start">

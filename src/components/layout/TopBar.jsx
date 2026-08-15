@@ -41,6 +41,9 @@ export default function TopBar() {
               <Link to="/skill-gaps" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
                 Skill Gaps
               </Link>
+              <Link to="/roadmaps" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
+                Roadmap
+              </Link>
               <Link to="/github" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
                 GitHub
               </Link>
