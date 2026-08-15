@@ -423,6 +423,7 @@ cd ai-service && python -m pytest     # 15 tests: scoring, skill-gaps, API
 | 3 — Career Engine (complete) | Career/skill datasets, career-skill mapping, recommendation engine, skill-gap, explanations |
 | 4 — AI (complete) | Python/FastAPI skill matching, ranking, skill-gap (pytest suite + Node fallback scorer) |
 | 5 — Roadmap | Roadmap generator, tasks, progress tracking, dashboard |
+| 6 — Advanced | Resume analysis (implemented), GitHub analysis (implemented), career comparison (implemented), what-if, AI assistant |
 | 6 — Advanced | Resume analysis (implemented), GitHub analysis (implemented), what-if, comparison, AI assistant |
 | 5 — Roadmap (complete) | Roadmap generator from skill gaps, tasks, progress tracking, dashboard wiring |
 | 6 — Advanced | Resume analysis, GitHub analysis (implemented), what-if, comparison, AI assistant |

@@ -51,6 +51,10 @@ export function recommendCareers(payload) {
   return post('/ai/recommend-careers', payload)
 }
 
+export function compareCareers(payload) {
+  return post('/ai/compare-careers', payload)
+}
+
 export function skillGaps(payload) {
   return post('/ai/skill-gaps', payload)
 }

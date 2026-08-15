@@ -5,6 +5,7 @@ import EducationLevel from '../pages/private/EducationLevel'
 import Assessment from '../pages/private/Assessment'
 import GitHubAnalysis from '../pages/private/GitHubAnalysis'
 import ResumeAnalysis from '../pages/private/ResumeAnalysis'
+import CareerComparison from '../pages/private/CareerComparison'
 import Internships from '../pages/private/Internships'
 import Recommendations from '../pages/private/Recommendations'
 import SkillGaps from '../pages/private/SkillGaps'
@@ -149,6 +150,15 @@ export default function AppRoutes() {
         element={
           <ProfileCompleteRoute>
             <ResumeAnalysis />
+          </ProfileCompleteRoute>
+        }
+      />
+
+      <Route
+        path="/career-compare"
+        element={
+          <ProfileCompleteRoute>
+            <CareerComparison />
           </ProfileCompleteRoute>
         }
       />

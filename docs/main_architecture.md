@@ -804,6 +804,7 @@ The Python service handles:
 - Skill-gap calculation
 - Resume analysis
 - GitHub technical profile analysis
+- Career comparison
 - Career ranking
 - What-if simulation
 - LLM-based processing where required
@@ -1050,6 +1051,27 @@ Weights are configurable in `ai-service/app/recommendation/scoring.py` and can b
 changed during testing.
 
 Machine learning can be introduced later when enough suitable training/evaluation data exists.
+
+### Career Comparison
+
+Career comparison (PRD §18) reuses the same hybrid scoring engine instead of
+inventing a separate metric, so a career ranked #1 in *matches* also wins the
+side-by-side *comparison* as the "best pick".
+
+```text
+User selects career names (Backend) → compare_careers(profile, career_names)
+    ├── score via §23 formula (breakdown + reasons + strengths)
+    ├── skill gaps (strong vs needs_improvement, current → required levels)
+    ├── difficulty = f(avg required proficiency, assessment bar, years exp.)
+    └── best pick = highest score, summary sentence
+```
+
+Data flow: frontend (`/career-compare`) → `POST /api/careers/compare` (Node
+backend builds the profile and maps names to the Appwrite career catalog) →
+`POST /ai/compare-careers` (Python, `compare_careers` in
+`ai-service/app/recommendation/scoring.py`). Comparison is stateless — nothing is
+persisted; when the AI service is down the backend scores the selected careers
+with a skills-only fallback and tags the response `source: "fallback"`.
 
 ---
 
@@ -1990,7 +2012,7 @@ Implement:
 Resume Analysis (implemented)
 GitHub Analysis (implemented)
 What-If Simulator
-Career Comparison
+Career Comparison (implemented)
 AI Assistant
 ```
 

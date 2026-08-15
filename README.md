@@ -1001,6 +1001,55 @@ Detected signals:
 If the AI service is unavailable, the backend returns a rule-based read with
 `source: "fallback"` instead of failing.
 
+---
+
+# ⚖️ Career Comparison
+
+An advanced career tool that lets a user select two or more careers and see them
+side by side. Each career card shows the hybrid match score, a difficulty
+estimate, the reasons it matches, the user's current strengths, the exact skills
+to grow (with current → required levels), and next steps — plus a "best pick"
+highlight and a natural-language summary of which career fits best.
+
+It reuses the same hybrid scoring formula as recommendations (docs
+`main_architecture.md` §23 / `PRD.md` §18) and the career-skill catalog, so the
+scores and skill gaps stay consistent with the rest of the product.
+
+## User flow
+
+```text
+User opens /career-compare and selects 2+ careers from the catalog
+    ↓
+Node backend builds the user profile (skills, interests, goals, assessment, experience)
+    ↓
+Python AI service /ai/compare-careers scores each selected career
+    ├── hybrid §23 score + reasons + strengths + skill gaps + next steps
+    ├── difficulty estimate (required proficiency, assessment bar, years)
+    └── recommended best pick + summary
+    ↓
+Backend maps results back to Appwrite career ids and returns them
+    ↓
+Results rendered side by side on /career-compare
+```
+
+## What was built
+
+| Sub-part | Where |
+|---|---|
+| Frontend page | `src/pages/private/CareerComparison.jsx` at `/career-compare` (multi-select catalog, side-by-side cards, best-pick banner, difficulty badge) |
+| API client | `src/services/comparison.js` |
+| Node service | `server/src/services/comparison.service.js` — builds the user profile, orchestrates the AI call, maps results to catalog ids, fallback when AI is down |
+| Node routes | `server/src/routes/comparison.routes.js` — `POST /api/careers/compare` (requires ≥ 2 career ids) |
+| Python compare engine | `ai-service/app/recommendation/scoring.py` `compare_careers(...)` + `POST /ai/compare-careers` |
+| Tests | `ai-service/tests/test_scoring.py` — name filtering, catalog fallback, metadata, gap details, recommended pick |
+| Navigation | Top-bar "Compare" link + Dashboard "Career Comparison" card |
+
+Like the other AI features, comparison is **stateless**: it scores the selected
+careers on demand and does not persist anything. If the AI service is down, the
+backend returns the built-in skills-based fallback with `source: "fallback"`.
+
+---
+
 ## Upgrading an existing Appwrite setup
 
 Resume analysis added the `resumes` storage bucket and the `resume_analyses`
@@ -1331,7 +1380,7 @@ For complete development rules:
 * [x] GitHub analysis
 * [x] Resume analysis
 * [ ] What-If simulator
-* [ ] Career comparison
+* [x] Career comparison
 * [ ] AI career assistant
 
 ---

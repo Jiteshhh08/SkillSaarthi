@@ -3,6 +3,7 @@
 from app.recommendation.scoring import (
     WEIGHTS,
     analyze_skill_gaps,
+    compare_careers,
     normalize_skill,
     score_careers,
 )
@@ -129,3 +130,71 @@ def test_skill_gaps_classification_is_self_consistent():
 
 def test_skill_gaps_unknown_career_returns_none():
     assert analyze_skill_gaps("Hologram Astronaut", []) is None
+
+
+def test_compare_careers_filters_by_name_case_insensitive():
+    profile = {
+        "skills": [{"name": "javascript", "proficiency": 4}, {"name": "react", "proficiency": 3}],
+        "interests": ["web development"],
+        "assessment_score": 70,
+        "experience_years": 1,
+    }
+    result = compare_careers(profile, ["frontend developer", "DATA SCIENTIST"])
+    names = [item["career"] for item in result["careers"]]
+    assert names == ["Frontend Developer", "Data Scientist"]
+    assert result["recommended"] == "Frontend Developer"
+    assert result["recommended_id"] == "frontend_developer"
+
+
+def test_compare_careers_unknown_names_returns_empty():
+    result = compare_careers({}, ["Nonexistent Career XYZ"])
+    assert result["careers"] == []
+    assert result["summary"] == "Select at least one career to compare."
+    assert result["recommended"] is None
+
+
+def test_compare_careers_empty_names_uses_full_catalog():
+    result = compare_careers({}, [])
+    assert len(result["careers"]) == len(get_all_careers())
+    assert result["careers"] == sorted(result["careers"], key=lambda c: c["score"], reverse=True)
+
+
+def test_compare_careers_entry_has_compare_metadata():
+    profile = {
+        "skills": [{"name": "javascript", "proficiency": 4}],
+        "interests": ["web development"],
+    }
+    result = compare_careers(profile, ["Frontend Developer"])
+    entry = result["careers"][0]
+    assert entry["difficulty"] >= 0 and entry["difficulty"] <= 100
+    assert entry["difficulty_label"] in {"Low", "Moderate", "High"}
+    assert entry["skill_gap_details"]
+    assert entry["assessment_bar"] is not None
+    assert entry["experience_required"] >= 0
+    assert entry["required_skills_count"] >= 1
+    assert entry["required_skills_count"] == len(entry["skill_gap_details"]) + len(entry["strengths"])
+
+
+def test_compare_careers_gap_details_show_progress():
+    profile = {
+        "skills": [{"name": "javascript", "proficiency": 4}, {"name": "react", "proficiency": 3}],
+    }
+    result = compare_careers(profile, ["Frontend Developer"])
+    details = result["careers"][0]["skill_gap_details"]
+    react = next(item for item in details if item["skill"] == "react")
+    assert react["current"] == 3
+    assert react["required"] == 4
+    assert react["importance"] >= 1
+    gap_names = {item["skill"] for item in details}
+    assert "javascript" not in gap_names  # met requirement, not a gap
+
+
+def test_compare_careers_recommended_is_highest_score():
+    profile = {
+        "skills": [{"name": "javascript", "proficiency": 4}, {"name": "react", "proficiency": 3}],
+        "interests": ["web development"],
+    }
+    result = compare_careers(profile, ["Frontend Developer", "Backend Developer", "Data Scientist"])
+    scores = [item["score"] for item in result["careers"]]
+    assert scores == sorted(scores, reverse=True)
+    assert any(item["career"] == result["recommended"] and item["score"] == scores[0] for item in result["careers"])
