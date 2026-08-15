@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   createInternship,
   deleteInternship,
@@ -87,14 +87,19 @@ function InternshipRow({ internship, onAction, busy }) {
 
 function AddForm({ onAdded }) {
   const [open, setOpen] = useState(false)
+  const defaultExpiry = () => {
+    const date = new Date(Date.now() + 30 * 86400000)
+    return date.toISOString().slice(0, 10)
+  }
   const [form, setForm] = useState({
     title: '',
     company: '',
     location: '',
     url: '',
+    description: '',
     eligibility: '',
     skills: '',
-    expires_at: '',
+    expires_at: defaultExpiry(),
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -107,7 +112,16 @@ function AddForm({ onAdded }) {
     setError('')
     try {
       await createInternship(form)
-      setForm({ title: '', company: '', location: '', url: '', eligibility: '', skills: '', expires_at: '' })
+      setForm({
+        title: '',
+        company: '',
+        location: '',
+        url: '',
+        description: '',
+        eligibility: '',
+        skills: '',
+        expires_at: defaultExpiry(),
+      })
       setOpen(false)
       onAdded()
     } catch (err) {
@@ -143,6 +157,16 @@ function AddForm({ onAdded }) {
         URL
         <input type="url" value={form.url} onChange={update('url')} className="input-base mt-1" placeholder="https://…" />
       </label>
+      <label className="block text-sm font-bold text-ink sm:col-span-2">
+        Description
+        <textarea
+          value={form.description}
+          onChange={update('description')}
+          rows={4}
+          className="input-base mt-1 resize-y"
+          placeholder="Role overview, day-to-day work, what the intern will learn…"
+        />
+      </label>
       <label className="block text-sm font-bold text-ink">
         Skills (comma separated)
         <input value={form.skills} onChange={update('skills')} className="input-base mt-1" placeholder="React, Node.js, SQL" />
@@ -174,7 +198,7 @@ function AdminInternships() {
   const { isAdmin, loading } = useAdmin()
   const [statusFilter, setStatusFilter] = useState('')
   const [search, setSearch] = useState('')
-  const [internships, setInternships] = useState([])
+  const [allInternships, setAllInternships] = useState([])
   const [pageLoading, setPageLoading] = useState(true)
   const [busyId, setBusyId] = useState('')
   const [error, setError] = useState('')
@@ -184,14 +208,14 @@ function AdminInternships() {
     setPageLoading(true)
     setError('')
     try {
-      const data = await getAdminInternships({ status: statusFilter, search })
-      setInternships(data.internships || [])
+      const data = await getAdminInternships()
+      setAllInternships(data.internships || [])
     } catch (err) {
       setError(err?.response?.data?.message || 'Could not load internships.')
     } finally {
       setPageLoading(false)
     }
-  }, [statusFilter, search])
+  }, [])
 
   useEffect(() => {
     if (isAdmin) load()
@@ -216,10 +240,24 @@ function AdminInternships() {
     }
   }
 
-  const counts = internships.reduce((acc, item) => {
-    acc[item.status || 'active'] = (acc[item.status || 'active'] || 0) + 1
-    return acc
-  }, {})
+  const counts = useMemo(() => {
+    return allInternships.reduce((acc, item) => {
+      const status = item.status || 'active'
+      acc[status] = (acc[status] || 0) + 1
+      return acc
+    }, {})
+  }, [allInternships])
+
+  const visibleInternships = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return allInternships.filter((item) => {
+      if (statusFilter && (item.status || 'active') !== statusFilter) return false
+      if (!query) return true
+      return `${item.title} ${item.company || ''} ${item.location || ''} ${item.description || ''} ${(item.skills || []).join(' ')}`
+        .toLowerCase()
+        .includes(query)
+    })
+  }, [allInternships, statusFilter, search])
 
   if (loading) {
     return (
@@ -287,7 +325,7 @@ function AdminInternships() {
               }`}
             >
               {filter.label}
-              {filter.key ? ` (${counts[filter.key] || 0})` : ` (${internships.length})`}
+              {filter.key ? ` (${counts[filter.key] || 0})` : ` (${allInternships.length})`}
             </button>
           ))}
           <input
@@ -305,9 +343,13 @@ function AdminInternships() {
               <div key={item} className="card h-44 animate-pulse bg-warm" />
             ))}
           </div>
-        ) : internships.length > 0 ? (
+        ) : allInternships.length === 0 ? (
+          <p className="mt-6 rounded-lg border border-line bg-white px-4 py-8 text-center text-sm text-ink-muted">
+            Nothing here yet. Run <code>node scripts/import-internships.mjs</code> to pull new openings.
+          </p>
+        ) : visibleInternships.length > 0 ? (
           <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {internships.map((internship) => (
+            {visibleInternships.map((internship) => (
               <InternshipRow
                 key={internship.$id}
                 internship={internship}
@@ -318,7 +360,7 @@ function AdminInternships() {
           </div>
         ) : (
           <p className="mt-6 rounded-lg border border-line bg-white px-4 py-8 text-center text-sm text-ink-muted">
-            Nothing here yet. Run <code>node scripts/import-internships.mjs</code> to pull new openings.
+            No listings match this filter or search.
           </p>
         )}
       </main>
