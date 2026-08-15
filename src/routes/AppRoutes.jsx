@@ -9,6 +9,8 @@ import CareerComparison from '../pages/private/CareerComparison'
 import Internships from '../pages/private/Internships'
 import Recommendations from '../pages/private/Recommendations'
 import SkillGaps from '../pages/private/SkillGaps'
+import Roadmaps from '../pages/private/Roadmaps'
+import RoadmapDetail from '../pages/private/RoadmapDetail'
 import AdminInternships from '../pages/private/AdminInternships'
 import Onboarding from '../pages/onboarding/Onboarding'
 import Login from '../pages/auth/Login'
@@ -112,6 +114,24 @@ export default function AppRoutes() {
         element={
           <ProfileCompleteRoute>
             <SkillGaps />
+          </ProfileCompleteRoute>
+        }
+      />
+
+      <Route
+        path="/roadmaps"
+        element={
+          <ProfileCompleteRoute>
+            <Roadmaps />
+          </ProfileCompleteRoute>
+        }
+      />
+
+      <Route
+        path="/roadmaps/:id"
+        element={
+          <ProfileCompleteRoute>
+            <RoadmapDetail />
           </ProfileCompleteRoute>
         }
       />

@@ -20,6 +20,12 @@ const TOOLS = [
     to: '/skill-gaps',
   },
   {
+    icon: '🗺️',
+    name: 'Roadmap',
+    description: 'Follow an ordered learning plan toward your goal.',
+    to: '/roadmaps',
+  },
+  {
     icon: '🐙',
     name: 'GitHub analysis',
     description: 'Turn your code into a career profile.',
