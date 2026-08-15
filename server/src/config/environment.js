@@ -9,6 +9,7 @@ export const config = {
     projectId: process.env.APPWRITE_PROJECT_ID,
     apiKey: process.env.APPWRITE_API_KEY,
     databaseId: process.env.APPWRITE_DATABASE_ID,
+    resumeBucketId: process.env.APPWRITE_RESUME_BUCKET_ID || 'resumes',
     adminEmails: (process.env.ADMIN_EMAILS || '')
       .split(',')
       .map((email) => email.trim().toLowerCase())

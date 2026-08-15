@@ -551,6 +551,7 @@ async function main() {
         BUCKET_ID,
         BUCKET_NAME,
         [
+          Permission.create(Role.users()),
           Permission.read(Role.users()),
           Permission.update(Role.users()),
           Permission.delete(Role.users()),
