@@ -1210,6 +1210,19 @@ Appwrite Databases
 React
 ```
 
+### Implementation
+
+The frontend (`src/pages/private/ResumeAnalysis.jsx`) supports click-to-browse and
+drag-and-drop upload, storing the file in the Appwrite `resumes` bucket via the web
+SDK. The Node backend (`server/src/services/resume.service.js`) fetches the file
+bytes and calls the Python analyzer at `POST /ai/resume/analyze`, which uses pypdf
+to extract the text layer and normalizes letter-spaced fonts (`densify_text`) so
+word-boundary detection works. Results are persisted in `resume_analyses`
+(latest analysis per user), and detected skills can optionally be written to
+`user_skills` to feed recommendations. If the AI service is unreachable, a built-in
+heuristic (`computeFallbackAnalysis`) returns the same result shape with
+`source: "fallback"`.
+
 ---
 
 # 28. GitHub Analysis
@@ -1952,7 +1965,7 @@ not in Appwrite, so the catalog stays user-data-free.
 Implement:
 
 ```text
-Resume Analysis
+Resume Analysis (implemented)
 GitHub Analysis (implemented)
 What-If Simulator
 Career Comparison
