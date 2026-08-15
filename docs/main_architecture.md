@@ -1858,33 +1858,94 @@ Recommendation explanations ✓ reasons / strengths / next_steps / breakdown
 Node API                 ✓   /api/careers, /api/recommendations/*, skill-gaps
 ```
 
-## Phase 4 — AI
-
-Introduce:
+## Phase 4 — AI (complete)
 
 ```text
-Python
-FastAPI
-Skill Matching
-Recommendation Ranking
-Skill Gap
+Python                       ✓   ai-service/ (FastAPI on port 8000)
+FastAPI                      ✓   /health, /ai/careers, /ai/recommend-careers, /ai/skill-gaps, /ai/github/analyze
+Skill Matching               ✓   importance-weighted matching (scoring.py, §23)
+Recommendation Ranking       ✓   score_careers — hybrid weights, sorted, reasons/strengths/next_steps
+Skill Gap                    ✓   analyze_skill_gaps (§24, strong vs needs_improvement)
+Tests                        ✓   ai-service/tests (pytest) — 15 tests, incl. alias normalization
+Node resilience              ✓   rule-based fallback in recommendation.service.js when the AI
+                                 service is down (200 + source:"fallback" instead of 503); mirrored
+                                 UI badges ("Estimated · AI offline")
 ```
 
-## Phase 5 — Roadmap
+## Phase 5 — Roadmap (Implementation Plan — pending build)
 
-Implement:
+> Status: **planned, not built**. This section is the working spec to implement against.
+
+### Goal
+
+Turn the career skill-gap output (§24) into an ordered, editable, trackable roadmap:
+`Skill Gaps → Learning Resources → Projects → Roadmap → Progress Tracking`.
+
+### Data model
+
+Both collections are user-scoped (`USER_SCOPE` permissions in `setup-appwrite.mjs`),
+following the existing §17 conventions.
+
+| Collection | Attributes (key → type) | Indexes |
+|---|---|---|
+| `roadmaps` | `user_id` (string, 100, `required`), `career_id` (string, 100, `required`), `title` (string, 500), `status` (`enum`: `active` \| `completed` \| `archived`, default `active`), `progress_percent` (integer, default 0), `created_at`, `updated_at` | `user_id` (non-unique, list by user) |
+| `roadmap_tasks` | `roadmap_id` (string, 100, `required`), `title` (string, 500, `required`), `description` (string, 2000), `order_index` (integer, default 0), `estimated_hours` (float, default 1), `resources` (string → JSON array of links), `status` (`enum`: `not_started` \| `in_progress` \| `completed`, default `not_started`), `completed_at` (datetime), `created_at`, `updated_at` | `roadmap_id` (non-unique) |
+
+`roadmap_tasks` docs **create the parent roadmap** (`roadmap_id`), cascade-delete with it,
+and order by `order_index ASC`.
+
+### Generation algorithm (`roadmap.service.js::generateRoadmap`)
+
+Inputs: `career_id` + `userId`. Reuses `recommendation.service.js::analyzeCareerGaps`
+(strong / `needs_improvement[]` with `skill`, `required`, `current`, `importance`), so the
+AI-service + fallback path comes for free.
+
+1. For each `needs_improvement` entry create a task: title
+   `Learn {skill}` / `Strengthen {skill} (level {current} → {required})`, description from the
+   career's context, `estimated_hours = (required - current) × 8`.
+2. Order tasks by `importance` (desc), then `current` (asc, easiest gap first), for
+   `order_index` 1..n.
+3. Skip skills the user already meets (they become "maintain" suggestions shown but inactive).
+4. Append fixed milestone tasks: `Build {career}-focused project`, `Update resume + interview
+   prep` (own resource links).
+5. Persist roadmap (`title` default `{career} Roadmap`, `progress_percent` 0) + tasks.
+
+### Progress tracking
+
+`completed / total × 100`. Recompute on every task status/CRUD write and update the parent
+`roadmaps.progress_percent`. `roadmaps.status = completed` auto-marks remaining tasks completed.
+
+### API (new `roadmap.routes.js`, mounted at `/api/roadmaps`, JWT-guarded)
+
+| Method | Route | Body / Notes |
+|---|---|---|
+| `POST` | `/api/roadmaps` | `{ career_id, title? }` → generate + save; returns `{ roadmap, tasks }` |
+| `GET` | `/api/roadmaps` | list user's roadmaps (active first) with `progress_percent` |
+| `GET` | `/api/roadmaps/:id` | roadmap + tasks sorted by `order_index` |
+| `PUT` | `/api/roadmaps/:id` | `{ title?, status? }` (`completed` → complete all tasks) |
+| `DELETE` | `/api/roadmaps/:id` | cascade-delete tasks |
+| `POST` | `/api/roadmaps/:id/tasks` | custom task `{ title, description?, estimated_hours?, order_index? }` (append) |
+| `PUT` | `/api/roadmaps/:id/tasks/:taskId` | `{ status?, title?, estimated_hours?, order_index? }` → start/pause/complete/reorder, recompute progress |
+| `DELETE` | `/api/roadmaps/:id/tasks/:taskId` | remove task, recompute + renumber `order_index` |
+
+### File layout
 
 ```text
-Skill Gap
-↓
-Learning Resources
-↓
-Projects
-↓
-Roadmap
-↓
-Progress Tracking
+scripts/setup-appwrite.mjs                    add roadmaps + roadmap_tasks collections (idempotent)
+server/src/services/appwrite.service.js       add roadmap/task CRUD helpers (owner-scoped)
+server/src/services/roadmap.service.js         NEW: generateRoadmap, progress recompute, task ops
+server/src/controllers/roadmap.controller.js   NEW: thin handlers
+server/src/routes/roadmap.routes.js            NEW: routes (mirror recommendation.routes.js)
+server/src/app.js                              mount roadmapRoutes at /api/roadmaps
+src/services/roadmaps.js                       NEW: frontend API calls
+src/pages/private/Roadmaps.jsx                 NEW: list + "Generate roadmap from career" + progress bars
+src/pages/private/RoadmapDetail.jsx            NEW: task checkboxes, start/pause/complete, reorder, add custom task
+src/router + sidebar                            add /roadmaps route (behind ProfileCompleteRoute)
+Home.jsx (dashboard bit)                        "Current roadmap" card with progress_percent + link
 ```
+
+Static template tasks + resource links live in `roadmap.service.js` (or a `data/` module),
+not in Appwrite, so the catalog stays user-data-free.
 
 ## Phase 6 — Advanced Features
 
