@@ -23,11 +23,12 @@ function NavDropdown({ label, items, active }) {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className={`inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-bold transition-colors ${
+        className={`relative inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-bold transition-colors ${
           active ? 'text-brand-deep' : 'text-ink hover:bg-surface-hover'
         }`}
       >
         {label}
+        {active && <span className="absolute inset-x-3 -bottom-1 h-0.5 rounded-full bg-brand" />}
         <svg
           className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
           viewBox="0 0 20 20"
@@ -124,22 +125,28 @@ export default function TopBar() {
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`rounded-md px-3 py-2 text-sm font-bold transition-colors ${
+                  className={`relative rounded-md px-3 py-2 text-sm font-bold transition-colors ${
                     isActive(item.to) ? 'text-brand-deep' : 'text-ink hover:bg-surface-hover'
                   }`}
                 >
                   {item.label}
+                  {isActive(item.to) && (
+                    <span className="absolute inset-x-3 -bottom-1 h-0.5 rounded-full bg-brand" />
+                  )}
                 </Link>
               )
             )}
           {user && isAdmin && (
             <Link
               to="/admin/internships"
-              className={`rounded-md px-3 py-2 text-sm font-bold transition-colors ${
+              className={`relative rounded-md px-3 py-2 text-sm font-bold transition-colors ${
                 isActive('/admin') ? 'text-brand-deep' : 'text-brand-deep hover:bg-surface-hover'
               }`}
             >
               Admin
+              {isActive('/admin') && (
+                <span className="absolute inset-x-3 -bottom-1 h-0.5 rounded-full bg-brand" />
+              )}
             </Link>
           )}
         </nav>
@@ -151,7 +158,7 @@ export default function TopBar() {
                 🔥 0 day streak
               </span>
               <span
-                className="hidden max-w-36 truncate text-sm font-bold text-ink lg:block"
+                className="hidden max-w-36 truncate text-sm font-bold text-brand-deep lg:block"
                 title={user.name}
               >
                 {user.name}
