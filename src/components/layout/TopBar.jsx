@@ -154,11 +154,11 @@ export default function TopBar() {
         <div className="ml-auto flex items-center gap-3">
           {loading ? null : user ? (
             <>
-              <span className="hidden items-center gap-1 rounded-full border border-accent-orange bg-orange-50 px-3 py-1 text-sm font-bold text-orange-800 sm:inline-flex">
+              <span className="hidden items-center gap-1 py-2 rounded-sm border border-accent-orange bg-orange-50 px-3 py-1 text-sm font-bold text-orange-800 sm:inline-flex">
                 🔥 0 day streak
               </span>
               <span
-                className="hidden max-w-36 truncate text-md font-bold text-ink lg:block"
+                className="hidden max-w-40 truncate rounded-sm px-3 py-2 text-md font-bold text-black lg:inline-block"
                 title={user.name}
               >
                 {user.name}
@@ -169,7 +169,7 @@ export default function TopBar() {
               >
                 {(user.name || 'U').charAt(0).toUpperCase()}
               </span>
-              <button onClick={handleLogout} className="btn-secondary !h-10 !px-4 !text-sm">
+              <button onClick={handleLogout} className="btn-secondary rounded-l-none !h-10 !px-4 !text-sm">
                 Logout
               </button>
             </>
