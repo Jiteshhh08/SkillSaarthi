@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { getAdminStatus } from '../../services/admin'
 import TopBar from '../../components/layout/TopBar'
 
 export default function Signup() {
@@ -18,7 +19,14 @@ export default function Signup() {
     setSubmitting(true)
     try {
       await signUp(name, email, password)
-      navigate('/onboarding')
+      let isAdmin = false
+      try {
+        const status = await getAdminStatus()
+        isAdmin = Boolean(status?.is_admin)
+      } catch {
+        isAdmin = false
+      }
+      navigate(isAdmin ? '/home' : '/onboarding')
     } catch (err) {
       setError(err?.message || 'Unable to create your account.')
     } finally {

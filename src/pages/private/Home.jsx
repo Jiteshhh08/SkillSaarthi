@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { useAdmin } from '../../hooks/useAdmin'
 import { isProfileComplete } from '../../services/profile'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
@@ -34,7 +35,24 @@ const TOOLS = [
 
 export default function Home() {
   const { user, profile } = useAuth()
+  const { isAdmin, loading: adminLoading } = useAdmin()
   const complete = isProfileComplete(profile)
+
+  if (adminLoading) {
+    return (
+      <div className="min-h-screen">
+        <TopBar />
+        <div className="flex min-h-[60vh] items-center justify-center text-ink-muted">Loading…</div>
+        <Footer />
+      </div>
+    )
+  }
+
+  const cta = isAdmin
+    ? { label: 'Open admin panel', to: '/admin/internships' }
+    : complete
+      ? { label: 'Go to dashboard', to: '/dashboard' }
+      : { label: 'Continue onboarding', to: '/onboarding' }
 
   return (
     <div className="min-h-screen">
@@ -47,13 +65,15 @@ export default function Home() {
             Hi {(user?.name || 'there').split(' ')[0]},
           </h1>
           <p className="mt-4 max-w-2xl text-lg leading-relaxed text-ink-muted">
-            {complete
-              ? 'Your career hub is ready — pick up where you left off.'
-              : 'Finish setting up your profile to unlock your career matches.'}
+            {isAdmin
+              ? 'You are signed in as an administrator — manage the internship catalog below.'
+              : complete
+                ? 'Your career hub is ready — pick up where you left off.'
+                : 'Finish setting up your profile to unlock your career matches.'}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <Link to={complete ? '/dashboard' : '/onboarding'} className="btn-primary">
-              {complete ? 'Go to dashboard' : 'Continue onboarding'}
+            <Link to={cta.to} className="btn-primary">
+              {cta.label}
             </Link>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { useAdmin } from '../../hooks/useAdmin'
 import { isProfileComplete } from '../../services/profile'
 
 export function ProtectedRoute({ children }) {
@@ -40,8 +41,9 @@ export function PublicOnlyRoute({ children }) {
 
 export function ProfileCompleteRoute({ children }) {
   const { user, profile, loading } = useAuth()
+  const { isAdmin, loading: adminLoading } = useAdmin()
 
-  if (loading) {
+  if (loading || adminLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-canvas text-ink-muted">
         Loading…
@@ -53,7 +55,7 @@ export function ProfileCompleteRoute({ children }) {
     return <Navigate to="/login" replace />
   }
 
-  if (!isProfileComplete(profile)) {
+  if (!isAdmin && !isProfileComplete(profile)) {
     return <Navigate to="/onboarding" replace />
   }
 
