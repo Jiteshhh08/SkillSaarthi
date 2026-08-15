@@ -34,7 +34,7 @@ _WHITESPACE_RE = re.compile(r"\s+")
 # Common word adjustments so "JavaScript" and "JS", "Node.js" and "NodeJS",
 # "React" and "React.js" still match against the curated dataset.
 _ALIASES = {
-    "JS": "javascript",
+    "js": "javascript",
     "reactjs": "react",
     "react.js": "react",
     "nodejs": "node.js",
