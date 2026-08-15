@@ -372,6 +372,10 @@ test: add recommendation engine tests
 - Keep Appwrite and API logic in `src/services/` (`appwrite.js`, `api.js`, `auth.js`).
 - Use React Router for navigation; protected routes for private pages.
 - Never store server secrets in the frontend.
+- Admin users (in `ADMIN_EMAILS`) bypass the student onboarding gate: signup sends them to
+  `/home`, and `ProfileCompleteRoute` skips the `onboarding_completed` redirect for admins
+  (`useAdmin` caches the `/api/admin/me` result per user so the UI doesn't flash between
+  admin/non-admin views).
 
 ## Backend
 

@@ -757,10 +757,13 @@ Onboarding marked complete → /dashboard
 ```
 
 * New users land on `/onboarding` right after signup.
+* **Admins skip onboarding** — if the signup email is in `ADMIN_EMAILS`, signup sends the user
+  to `/home` instead, the home page shows an "Open admin panel" CTA, and `ProfileCompleteRoute`
+  lets admins through without a completed profile.
 * The wizard resumes at the first **incomplete** step for returning users (each step can be skipped).
 * `/assessment` is available any time to retake the career assessment and compare scores.
 * `/onboarding/education-level` lets users change their education level later from the dashboard.
-* `/dashboard` is gated by `ProfileCompleteRoute`, which requires `onboarding_completed = true`.
+* `/dashboard` is gated by `ProfileCompleteRoute`, which requires `onboarding_completed = true` (admins exempt).
 
 ## Profile data
 
@@ -919,7 +922,7 @@ career matches.
 | Internship seed data | 8 internships, each with `skills` (JSON array) + `eligibility` |
 | Internship frontend | `src/pages/private/Internships.jsx` at `/internships` (recommended grid + searchable catalog) |
 | Admin backend | `server/src/routes/admin.routes.js` + `requireAdmin` (`ADMIN_EMAILS`) |
-| Admin approval page | `src/pages/private/AdminInternships.jsx` at `/admin/internships` (approve/reject/delete + add form) |
+| Admin approval page | `src/pages/private/AdminInternships.jsx` at `/admin/internships` (approve/reject/delete + add form with description; status counts stay live via client-side filtering) |
 | Import scheduler | `scripts/import-internships.mjs` + `npm run import:internships` (JSON feed default + Remotive adapter, dedup, pending by default) |
 
 ## Internship scoring
@@ -986,6 +989,9 @@ automatically:
    `INTERNSHIP_TTL_DAYS`).
 2. **Approve** — sign in as an admin (see `ADMIN_EMAILS` below) and open
    `/admin/internships` to approve (→ `active`), reject (→ `rejected`), or delete rows.
+   The page lists every status with live counts (client-side filter/search, no re-fetch),
+   and the manual "Add internship" form includes a description field and pre-fills
+   `expires_at` 30 days out to match the importer's default TTL.
 3. **Auto-expire** — the public list only returns `active` rows whose `expires_at` has
    not passed, so stale listings vanish without manual cleanup.
 

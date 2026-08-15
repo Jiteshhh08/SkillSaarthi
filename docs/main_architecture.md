@@ -1363,6 +1363,8 @@ Listings pass through a review gate instead of being published automatically:
 
 - The scheduled importer (`scripts/import-internships.mjs`) reads a JSON feed (`scripts/feeds/internships.json`, `FEED_FILE` override) or the Remotive API (`--source remotive`), dedups by `source_key`, and creates **new** rows as `pending`. Re-imports refresh existing rows and keep their status.
 - An admin approves (`active`) or rejects (`rejected`) rows from the admin page (`src/pages/private/AdminInternships.jsx`).
+- The admin page loads the full list once and filters client-side by status/search, so status counts stay accurate under any filter; the manual add form includes a `description` field and pre-fills `expires_at` 30 days out (importer default TTL).
+- Admin accounts bypass the student onboarding flow: signup routes admins to `/home`, the home hero shows an "Open admin panel" CTA, and `ProfileCompleteRoute` skips the `onboarding_completed` gate for admins. `useAdmin` caches the `/api/admin/me` result per user to avoid a flash of the non-admin UI on revisit.
 - `expires_at` + the `active`-only public filter make stale listings disappear automatically without manual cleanup.
 - Manually added listings default to `pending`; seeded catalog rows are `active`.
 
