@@ -243,7 +243,7 @@ Key routes (full list in `main_architecture.md` section 32):
 /api/profile
 /api/careers
 /api/recommendations
-/api/roadmaps
+/api/roadmaps           + /api/roadmaps/:id/tasks (incl. batch reorder PUT with { order: [taskId, …] })
 /api/resume
 /api/github
 /api/what-if
@@ -383,6 +383,13 @@ test: add recommendation engine tests
 - Controllers handle HTTP concerns; services contain business logic.
 - Middleware handles auth, validation, and errors.
 - Use the Appwrite server SDK with the API key for server-side operations.
+- Every Appwrite call is a network round-trip — parallelize independent reads/writes with
+  `Promise.all`, avoid redundant refetches (return detail from in-memory state after a
+  mutation), and prefer one batch call over N sequential calls (e.g. roadmap reorder is a
+  single `PUT /api/roadmaps/:id/tasks` with the full ordered id list).
+- Derived state is recomputed server-side and persisted (e.g. `roadmaps.progress_percent`),
+  including invariants like "a completed roadmap reverts to active when progress drops below
+  100%".
 
 ---
 
@@ -417,6 +424,8 @@ cd ai-service && python -m pytest     # 15 tests: scoring, skill-gaps, API
 | 4 — AI (complete) | Python/FastAPI skill matching, ranking, skill-gap (pytest suite + Node fallback scorer) |
 | 5 — Roadmap | Roadmap generator, tasks, progress tracking, dashboard |
 | 6 — Advanced | Resume analysis (implemented), GitHub analysis (implemented), what-if, comparison, AI assistant |
+| 5 — Roadmap (complete) | Roadmap generator from skill gaps, tasks, progress tracking, dashboard wiring |
+| 6 — Advanced | Resume analysis, GitHub analysis (implemented), what-if, comparison, AI assistant |
 | 7 — Integrations | Courses, internships (implemented), notifications |
 
 ---

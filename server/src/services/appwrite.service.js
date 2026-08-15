@@ -18,6 +18,8 @@ export const COLLECTIONS = {
   careerSkills: 'career_skills',
   assessments: 'assessments',
   careerRecommendations: 'career_recommendations',
+  roadmaps: 'roadmaps',
+  roadmapTasks: 'roadmap_tasks',
 }
 
 async function listAll(collectionId, queries = []) {
@@ -156,4 +158,67 @@ export async function saveRecommendations(userId, recommendations) {
     saved.push(created)
   }
   return saved
+}
+
+export async function createRoadmap(userId, { career_id, title }) {
+  const now = new Date().toISOString()
+  return databases.createDocument(config.appwrite.databaseId, COLLECTIONS.roadmaps, 'unique()', {
+    user_id: userId,
+    career_id,
+    title,
+    status: 'active',
+    progress_percent: 0,
+    created_at: now,
+    updated_at: now,
+  })
+}
+
+export async function listRoadmaps(userId) {
+  try {
+    return await listAll(COLLECTIONS.roadmaps, [Query.equal('user_id', userId)])
+  } catch {
+    return []
+  }
+}
+
+export async function getRoadmap(roadmapId) {
+  try {
+    return await databases.getDocument(config.appwrite.databaseId, COLLECTIONS.roadmaps, roadmapId)
+  } catch {
+    return null
+  }
+}
+
+export async function updateRoadmap(roadmapId, data) {
+  return databases.updateDocument(config.appwrite.databaseId, COLLECTIONS.roadmaps, roadmapId, {
+    ...data,
+    updated_at: new Date().toISOString(),
+  })
+}
+
+export async function deleteRoadmap(roadmapId) {
+  await databases.deleteDocument(config.appwrite.databaseId, COLLECTIONS.roadmaps, roadmapId)
+}
+
+export async function listRoadmapTasks(roadmapId) {
+  try {
+    return await listAll(COLLECTIONS.roadmapTasks, [Query.equal('roadmap_id', roadmapId)])
+  } catch {
+    return []
+  }
+}
+
+export async function createRoadmapTask(roadmapId, data) {
+  return databases.createDocument(config.appwrite.databaseId, COLLECTIONS.roadmapTasks, 'unique()', {
+    roadmap_id: roadmapId,
+    ...data,
+  })
+}
+
+export async function updateRoadmapTask(taskId, data) {
+  return databases.updateDocument(config.appwrite.databaseId, COLLECTIONS.roadmapTasks, taskId, data)
+}
+
+export async function deleteRoadmapTask(taskId) {
+  await databases.deleteDocument(config.appwrite.databaseId, COLLECTIONS.roadmapTasks, taskId)
 }
