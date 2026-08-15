@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from .recommendation.careers import get_all_careers
 from .github.analyzer import analyze as analyze_github
 from .recommendation.scoring import analyze_skill_gaps, score_careers
+from .resume.analyzer import analyze as analyze_resume
 
 app = FastAPI(
     title="Skill Guide AI Service",
@@ -133,6 +134,18 @@ class GitHubAnalyzeResponse(BaseModel):
     analysis: dict
 
 
+class ResumeAnalyzeRequest(BaseModel):
+    text: str | None = None
+    pdf: str | None = None
+    file_name: str | None = None
+
+
+class ResumeAnalyzeResponse(BaseModel):
+    file_name: str | None = None
+    source: str = "full"
+    analysis: dict
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "ai-service", "version": app.version}
@@ -179,6 +192,18 @@ def github_analyze(request: GitHubAnalyzeRequest):
     """Turn public GitHub data into a technical profile (docs §28)."""
     analysis = analyze_github(request.model_dump())
     return GitHubAnalyzeResponse(username=request.username, source="full", analysis=analysis)
+
+
+@app.post("/ai/resume/analyze", response_model=ResumeAnalyzeResponse)
+def resume_analyze(request: ResumeAnalyzeRequest):
+    """Extract skills, experience, and career matches from a resume (docs §27).
+
+    Accepts either pre-extracted text or base64-encoded PDF bytes.
+    """
+    analysis = analyze_resume(request.model_dump())
+    return ResumeAnalyzeResponse(
+        file_name=request.file_name, source="full", analysis=analysis
+    )
 
 
 if __name__ == "__main__":
