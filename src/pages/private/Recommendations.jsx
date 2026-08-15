@@ -123,7 +123,7 @@ export default function Recommendations() {
       <main className="mx-auto max-w-7xl px-6 py-10">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.08em]">Phase 3 · Career intelligence</p>
+            <p className="text-sm font-bold uppercase tracking-[0.08em]">Career intelligence</p>
             <h1 className="mt-2 text-3xl font-black tracking-tight">Career Recommendations</h1>
             <p className="mt-2 max-w-2xl text-lg text-ink-muted">
               Careers ranked against your skills, interests, education, assessment score, and goals.
