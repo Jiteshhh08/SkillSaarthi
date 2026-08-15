@@ -158,7 +158,7 @@ export default function TopBar() {
                 🔥 0 day streak
               </span>
               <span
-                className="hidden max-w-36 truncate text-sm font-bold text-ink lg:block"
+                className="hidden max-w-36 truncate text-md font-bold text-ink lg:block"
                 title={user.name}
               >
                 {user.name}
