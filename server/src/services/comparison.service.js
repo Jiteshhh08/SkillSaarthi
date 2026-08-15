@@ -176,6 +176,10 @@ export async function compareSelectedCareers(userId, careerIds) {
       }
     })
 
+    // Remap the best-pick id the same way: the AI reports its own catalog id,
+    // which must be translated to the Appwrite doc id used everywhere else.
+    const recommendedCareer = byName.get(normalizeSkillName(aiResult.recommended || ''))
+
     // Re-sort by the user's chosen order so the UI shows selection order.
     mapped.sort((a, b) => {
       const ai = desiredOrder.get(a.career_id)
@@ -184,7 +188,12 @@ export async function compareSelectedCareers(userId, careerIds) {
       return ai - bi
     })
 
-    result = { ...aiResult, careers: mapped, source: 'ai' }
+    result = {
+      ...aiResult,
+      recommended_id: recommendedCareer ? recommendedCareer.$id : aiResult.recommended_id,
+      careers: mapped,
+      source: 'ai',
+    }
   } catch (error) {
     if (!(error instanceof ApiError) || error.code !== 'AI_SERVICE_UNAVAILABLE') throw error
     result = { ...computeFallbackComparison(userProfile, selected), source: 'fallback' }

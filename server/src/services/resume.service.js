@@ -349,6 +349,7 @@ export async function analyzeResume(userId, { fileId, fileName, text, applySkill
     source,
     analysis,
     analysis_id: analysisId,
+    file_name: fileName,
     skills_added: skillsAdded,
   }
 }

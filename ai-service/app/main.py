@@ -5,7 +5,9 @@ Serves AI/ML endpoints consumed by the Node backend:
   GET  /ai/careers
   POST /ai/recommend-careers
   POST /ai/skill-gaps
+  POST /ai/compare-careers
   POST /ai/github/analyze
+  POST /ai/resume/analyze
 
 The service does not handle authentication.
 """

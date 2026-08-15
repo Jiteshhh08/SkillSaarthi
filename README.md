@@ -911,7 +911,7 @@ the Phase 3 engine against failure.
 | Endpoints | `GET /health`, `GET /ai/careers`, `POST /ai/recommend-careers`, `POST /ai/skill-gaps`, `POST /ai/github/analyze` |
 | Skill matching + ranking | `ai-service/app/recommendation/scoring.py` (`score_careers`, hybrid weights from §23) |
 | Skill-gap analysis | `ai-service/app/recommendation/scoring.py` (`analyze_skill_gaps`, strong vs needs_improvement) |
-| Tests | `ai-service/tests/` (pytest) — 15 tests: ranking, explainability, validation, alias normalization |
+| Tests | `ai-service/tests/` (pytest) — 39 tests: ranking, explainability, validation, alias normalization, resume, comparison |
 | Fallback scorer | `server/src/services/recommendation.service.js` — rule-based estimates when the AI service is down |
 
 ## Fallback behavior
@@ -930,7 +930,7 @@ career documents by name.
 
 ```bash
 cd ai-service
-python -m pytest        # 15 passed
+python -m pytest        # 39 passed
 ```
 
 ---
@@ -963,9 +963,6 @@ Optional: detected skills applied to the user profile (feeds recommendations)
     ↓
 Results rendered on /resume
 ```
-# 🗺️ Phase 5 — Roadmap
-
-Phase 5 (complete) turns your skill gaps into an ordered, editable, trackable learning plan.
 
 ## What was built
 
@@ -1000,6 +997,70 @@ Detected signals:
 
 If the AI service is unavailable, the backend returns a rule-based read with
 `source: "fallback"` instead of failing.
+
+## Upgrading an existing Appwrite setup
+
+Resume analysis added the `resumes` storage bucket and the `resume_analyses`
+collection, and requires the bucket to allow authenticated users to create files.
+Apply the schema (idempotent — safe to re-run):
+
+```bash
+npm run setup:appwrite
+```
+
+> If your `resumes` bucket already exists, re-running setup just reuses it — confirm
+> its permissions include `create("users")` so the frontend upload works
+> (`storage.updateBucket` can add it if not).
+
+---
+
+# 🗺️ Phase 5 — Roadmap
+
+Phase 5 (complete) turns your skill gaps into an ordered, editable, trackable learning plan.
+
+## What was built
+
+| Sub-part | Where |
+|---|---|
+| Data model | `roadmaps` + `roadmap_tasks` collections (user-scoped, already deployed) |
+| Generator | `server/src/services/roadmap.service.js` — builds `Learn/Strengthen {skill}` tasks from `analyzeCareerGaps` (AI or fallback), plus project + interview milestones |
+| Task lifecycle | `pending → in_progress → paused → completed`, reorder, add custom tasks |
+| Progress | `completed / total × 100`, auto-recomputed and stored on `roadmaps.progress_percent` |
+| API | `server/src/routes/roadmap.routes.js` — full CRUD under `/api/roadmaps` |
+
+**Behavior notes**
+
+- Reopening, adding, or removing a task recalculates progress and automatically flips a
+  `completed` roadmap back to `active` — the status never stays "completed" with unfinished tasks.
+- Reorder is a single batch call (`PUT /api/roadmaps/:id/tasks` with the full ordered id list).
+- Backend operations parallelize independent Appwrite reads/writes and return state from
+  memory instead of re-fetching, so mutations stay fast (a status change ~0.8s, a full
+  10-task generation ~1.5s on Appwrite cloud).
+
+## Roadmap endpoints
+
+All routes require `Authorization: Bearer <jwt>` (Appwrite session token).
+
+| Method | Route | Description |
+|---|---|---|
+| `POST` | `/api/roadmaps` | Generate + save a roadmap for a career (`body: { career_id, title? }`) |
+| `GET` | `/api/roadmaps` | List your roadmaps (active first) |
+| `GET` | `/api/roadmaps/:id` | Roadmap with its tasks, ordered |
+| `PUT` | `/api/roadmaps/:id` | Rename / pause / mark completed |
+| `DELETE` | `/api/roadmaps/:id` | Delete roadmap + tasks |
+| `POST` | `/api/roadmaps/:id/tasks` | Add a custom task |
+| `PUT` | `/api/roadmaps/:id/tasks` | Reorder all tasks (`body: { order: [taskId, …] }`) |
+| `PUT` | `/api/roadmaps/:id/tasks/:taskId` | Start, pause, complete, or reorder a task |
+| `DELETE` | `/api/roadmaps/:id/tasks/:taskId` | Remove a task |
+
+## Frontend pages
+
+| Page | Route | What it does |
+|---|---|---|
+| `src/pages/private/Roadmaps.jsx` | `/roadmaps` | Generate a roadmap from any career; progress bars per roadmap |
+| `src/pages/private/RoadmapDetail.jsx` | `/roadmaps/:id` | Task controls (start/pause/complete/reopen), reorder, custom tasks, rename, delete |
+
+The dashboard shows your current roadmap and its progress, and the top nav links to it.
 
 ---
 
@@ -1047,61 +1108,6 @@ Results rendered side by side on /career-compare
 Like the other AI features, comparison is **stateless**: it scores the selected
 careers on demand and does not persist anything. If the AI service is down, the
 backend returns the built-in skills-based fallback with `source: "fallback"`.
-
----
-
-## Upgrading an existing Appwrite setup
-
-Resume analysis added the `resumes` storage bucket and the `resume_analyses`
-collection, and requires the bucket to allow authenticated users to create files.
-Apply the schema (idempotent — safe to re-run):
-
-```bash
-npm run setup:appwrite
-```
-
-> If your `resumes` bucket already exists, re-running setup just reuses it — confirm
-> its permissions include `create("users")` so the frontend upload works
-> (`storage.updateBucket` can add it if not).
-| Data model | `roadmaps` + `roadmap_tasks` collections (user-scoped, already deployed) |
-| Generator | `server/src/services/roadmap.service.js` — builds `Learn/Strengthen {skill}` tasks from `analyzeCareerGaps` (AI or fallback), plus project + interview milestones |
-| Task lifecycle | `pending → in_progress → paused → completed`, reorder, add custom tasks |
-| Progress | `completed / total × 100`, auto-recomputed and stored on `roadmaps.progress_percent` |
-| API | `server/src/routes/roadmap.routes.js` — full CRUD under `/api/roadmaps` |
-
-**Behavior notes**
-
-- Reopening, adding, or removing a task recalculates progress and automatically flips a
-  `completed` roadmap back to `active` — the status never stays "completed" with unfinished tasks.
-- Reorder is a single batch call (`PUT /api/roadmaps/:id/tasks` with the full ordered id list).
-- Backend operations parallelize independent Appwrite reads/writes and return state from
-  memory instead of re-fetching, so mutations stay fast (a status change ~0.8s, a full
-  10-task generation ~1.5s on Appwrite cloud).
-
-## Roadmap endpoints
-
-All routes require `Authorization: Bearer <jwt>` (Appwrite session token).
-
-| Method | Route | Description |
-|---|---|---|
-| `POST` | `/api/roadmaps` | Generate + save a roadmap for a career (`body: { career_id, title? }`) |
-| `GET` | `/api/roadmaps` | List your roadmaps (active first) |
-| `GET` | `/api/roadmaps/:id` | Roadmap with its tasks, ordered |
-| `PUT` | `/api/roadmaps/:id` | Rename / pause / mark completed |
-| `DELETE` | `/api/roadmaps/:id` | Delete roadmap + tasks |
-| `POST` | `/api/roadmaps/:id/tasks` | Add a custom task |
-| `PUT` | `/api/roadmaps/:id/tasks` | Reorder all tasks (`body: { order: [taskId, …] }`) |
-| `PUT` | `/api/roadmaps/:id/tasks/:taskId` | Start, pause, complete, or reorder a task |
-| `DELETE` | `/api/roadmaps/:id/tasks/:taskId` | Remove a task |
-
-## Frontend pages
-
-| Page | Route | What it does |
-|---|---|---|
-| `src/pages/private/Roadmaps.jsx` | `/roadmaps` | Generate a roadmap from any career; progress bars per roadmap |
-| `src/pages/private/RoadmapDetail.jsx` | `/roadmaps/:id` | Task controls (start/pause/complete/reopen), reorder, custom tasks, rename, delete |
-
-The dashboard shows your current roadmap and its progress, and the top nav links to it.
 
 ---
 
