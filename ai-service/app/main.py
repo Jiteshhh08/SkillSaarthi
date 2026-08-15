@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 
 from .recommendation.careers import get_all_careers
 from .github.analyzer import analyze as analyze_github
-from .recommendation.scoring import analyze_skill_gaps, score_careers
+from .recommendation.scoring import analyze_skill_gaps, compare_careers, score_careers
 from .resume.analyzer import analyze as analyze_resume
 
 app = FastAPI(
@@ -104,6 +104,42 @@ class SkillGapResponse(BaseModel):
     needs_improvement: list[SkillGapSkill] = Field(default_factory=list)
 
 
+class CompareItem(BaseModel):
+    career_id: str
+    career: str
+    category: str = ""
+    description: str = ""
+    score: float = Field(ge=0, le=100)
+    breakdown: ScoreBreakdown
+    reasons: list[str] = Field(default_factory=list)
+    strengths: list[str] = Field(default_factory=list)
+    skill_gaps: list[str] = Field(default_factory=list)
+    skill_gap_details: list[SkillGapItem] = Field(default_factory=list)
+    next_steps: list[str] = Field(default_factory=list)
+    difficulty: int = Field(ge=0, le=100, default=0)
+    difficulty_label: str = "Low"
+    required_skills_count: int = 0
+    assessment_bar: int | None = None
+    experience_required: int = 0
+
+
+class CompareRequest(BaseModel):
+    education_level: str | None = None
+    skills: list[Skill] = Field(default_factory=list)
+    interests: list[str] = Field(default_factory=list)
+    goals: list[str] = Field(default_factory=list)
+    assessment_score: float | None = Field(default=None, ge=0, le=100)
+    experience_years: int | None = Field(default=None, ge=0, le=60)
+    career_names: list[str] = Field(default_factory=list)
+
+
+class CompareResponse(BaseModel):
+    summary: str
+    recommended: str | None = None
+    recommended_id: str | None = None
+    careers: list[CompareItem]
+
+
 class RepoInfo(BaseModel):
     name: str
     description: str | None = None
@@ -184,6 +220,17 @@ def skill_gaps(request: SkillGapRequest):
     result = analyze_skill_gaps(request.career, request.model_dump().get("skills", []))
     if result is None:
         raise HTTPException(status_code=404, detail="Unknown career")
+    return result
+
+
+@app.post("/ai/compare-careers", response_model=CompareResponse)
+def career_compare(request: CompareRequest):
+    """Compare careers side-by-side for a user profile (docs §23 / PRD §18).
+
+    Accepts the same profile fields as /ai/recommend-careers plus a list of
+    career names to compare; when `career_names` is empty every career is scored.
+    """
+    result = compare_careers(request.model_dump(), request.career_names)
     return result
 
 

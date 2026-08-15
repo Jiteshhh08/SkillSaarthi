@@ -325,3 +325,116 @@ def analyze_skill_gaps(career_name, skills):
         "strong": strong,
         "needs_improvement": needs_improvement,
     }
+
+
+def _career_difficulty(career):
+    """Estimate a career's difficulty from its skill expectations.
+
+    0-100 scale: higher means more demanding (higher required proficiency,
+    stricter education bar, and years of experience expected).
+    """
+    required = career.get("skills", {})
+    if not required:
+        return 0
+    avg_level = sum(int(meta.get("required", 1)) for meta in required.values()) / len(required)
+    difficulty = (avg_level / 5) * 70
+    if career.get("assessment"):
+        difficulty += 10
+    if career.get("experience"):
+        difficulty += 20
+    return min(100, round(difficulty))
+
+
+def _difficulty_label(difficulty):
+    if difficulty >= 75:
+        return "High"
+    if difficulty >= 45:
+        return "Moderate"
+    return "Low"
+
+
+def compare_careers(profile, career_names=None, careers=None):
+    """Compare two or more careers side-by-side for a single user profile.
+
+    Scores each career with the same hybrid formula as recommendations, then
+    adds compare-focused metadata: difficulty, the skills the user already has
+    vs. each career, and a recommended "best pick" for the user.
+
+    `career_names` filters the catalog by name (case-insensitive); when omitted
+    (or empty) every catalog career is included. `careers` overrides the catalog
+    (used by tests / callers with a subset).
+    """
+    catalog = careers if careers is not None else get_all_careers()
+    if career_names:
+        wanted = {_WHITESPACE_RE.sub(" ", str(name).strip().lower()) for name in career_names}
+        catalog = [
+            career
+            for career in catalog
+            if _WHITESPACE_RE.sub(" ", str(career["name"]).lower()) in wanted
+        ]
+
+    user_skills = _user_skill_map(profile.get("skills", []))
+
+    entries = []
+    for career in catalog:
+        scored = _score_career(career, profile)
+        required = career.get("skills", {})
+        user_has = [
+            {
+                "skill": name,
+                "required": int(meta.get("required", 1)),
+                "current": user_skills.get(normalize_skill(name), 0),
+                "importance": int(meta.get("importance", 1)),
+            }
+            for name, meta in required.items()
+        ]
+        gaps = sorted(
+            (item for item in user_has if item["current"] < item["required"]),
+            key=lambda item: item["importance"],
+            reverse=True,
+        )
+        difficulty = _career_difficulty(career)
+        entries.append(
+            {
+                "career_id": career["id"],
+                "career": career["name"],
+                "category": career.get("category", ""),
+                "description": career.get("description", ""),
+                "score": scored["score"],
+                "breakdown": scored["breakdown"],
+                "reasons": scored["reasons"],
+                "strengths": scored["strengths"],
+                "skill_gaps": scored["skill_gaps"],
+                "skill_gap_details": gaps,
+                "next_steps": scored["next_steps"],
+                "difficulty": difficulty,
+                "difficulty_label": _difficulty_label(difficulty),
+                "required_skills_count": len(required),
+                "assessment_bar": career.get("assessment"),
+                "experience_required": career.get("experience", 0),
+            }
+        )
+
+    entries.sort(key=lambda item: item["score"], reverse=True)
+
+    best = entries[0] if entries else None
+    if best:
+        strengths = best.get("strengths", [])
+        strength_clause = (
+            f", with {', '.join(strengths[:2]).lower()} as strengths"
+            if strengths
+            else ""
+        )
+        summary = (
+            f"Of the careers compared, {best['career']} fits you best at {best['score']}% "
+            f"match — {best['difficulty_label'].lower()} difficulty{strength_clause}."
+        )
+    else:
+        summary = "Select at least one career to compare."
+
+    return {
+        "summary": summary,
+        "recommended": best["career"] if best else None,
+        "recommended_id": best["career_id"] if best else None,
+        "careers": entries,
+    }
