@@ -4,6 +4,7 @@ import Dashboard from '../pages/private/Dashboard'
 import EducationLevel from '../pages/private/EducationLevel'
 import Assessment from '../pages/private/Assessment'
 import GitHubAnalysis from '../pages/private/GitHubAnalysis'
+import ResumeAnalysis from '../pages/private/ResumeAnalysis'
 import Internships from '../pages/private/Internships'
 import Recommendations from '../pages/private/Recommendations'
 import SkillGaps from '../pages/private/SkillGaps'
@@ -139,6 +140,15 @@ export default function AppRoutes() {
         element={
           <ProfileCompleteRoute>
             <GitHubAnalysis />
+          </ProfileCompleteRoute>
+        }
+      />
+
+      <Route
+        path="/resume"
+        element={
+          <ProfileCompleteRoute>
+            <ResumeAnalysis />
           </ProfileCompleteRoute>
         }
       />

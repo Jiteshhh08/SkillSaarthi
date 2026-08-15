@@ -935,6 +935,34 @@ python -m pytest        # 15 passed
 
 ---
 
+# 📄 Resume Analysis
+
+An advanced career tool that reads a user's resume (PDF / DOC / DOCX) and turns it
+into a structured profile: skills with confidence, estimated experience, projects,
+education, contact, strengths, action items, and best career matches. It is backed
+by the Python AI service and reuses the same skill dataset as the recommendation
+engine.
+
+## User flow
+
+```text
+User uploads resume (or drops it on the drop zone)
+    ↓
+React / Appwrite Storage  (the resume file is stored in the `resumes` bucket)
+    ↓
+Node backend fetches the file bytes
+    ↓
+Python AI service /ai/resume/analyze
+    ├── text-layer extraction (pypdf)
+    ├── letter-spacing normalization (handles letter-spaced PDF fonts)
+    └── skill/experience/project/education/contact detection
+    ↓
+Analysis persisted to resume_analyses  (latest analysis per user)
+    ↓
+Optional: detected skills applied to the user profile (feeds recommendations)
+    ↓
+Results rendered on /resume
+```
 # 🗺️ Phase 5 — Roadmap
 
 Phase 5 (complete) turns your skill gaps into an ordered, editable, trackable learning plan.
@@ -943,6 +971,49 @@ Phase 5 (complete) turns your skill gaps into an ordered, editable, trackable le
 
 | Sub-part | Where |
 |---|---|
+| Frontend page | `src/pages/private/ResumeAnalysis.jsx` at `/resume` (drag-and-drop upload, results, "add skills to profile" checkbox) |
+| API client | `src/services/resume.js` (upload → analyze → fetch) |
+| Appwrite bucket | `resumes` (max 5 MB, pdf/doc/docx) — `create` permission added so users can upload |
+| Node service | `server/src/services/resume.service.js` — fetch bytes via `storage.getFileDownload`, orchestrate AI, persist result, optional skill apply |
+| Node routes | `server/src/routes/resume.routes.js` — `POST /api/resume/analyze`, `GET /api/resume/analysis/:id` (owner only) |
+| Python analyzer | `ai-service/app/resume/analyzer.py` + `POST /ai/resume/analyze` |
+| Resume dataset | `resume_analyses` collection (`user_id`, `appwrite_file_id`, `file_name`, `extracted_data`, `analysis_result`, `created_at`) |
+| Tests | `ai-service/tests/test_resume.py` — skill detection, experience, education, letter-spacing densify, API |
+
+## Extraction & normalization
+
+The analyzer extracts text with **pypdf**, then runs a **letter-spacing normalizer**
+(`densify_text`). Some resume fonts render the text layer with a space between every
+glyph (`D e v e l o p e r` instead of `Developer`), which would otherwise defeat every
+keyword/word-boundary detector. The normalizer detects that pattern (there are almost
+no multi-character runs) and reconstructs words while leaving normal resumes untouched.
+
+Detected signals:
+
+* **Skills** — up to 16, each with a confidence % and proficiency (1–5)
+* **Experience** — estimated years from explicit mentions or date ranges
+* **Projects** — bullet items that describe built/developed work
+* **Education** — highest degree hinted at (doctorate → high school)
+* **Contact** — email extraction
+* **Strengths / areas to improve** — derived from the above
+* **Career matches** — scored against the career-skill catalog (same scoring as §23)
+
+If the AI service is unavailable, the backend returns a rule-based read with
+`source: "fallback"` instead of failing.
+
+## Upgrading an existing Appwrite setup
+
+Resume analysis added the `resumes` storage bucket and the `resume_analyses`
+collection, and requires the bucket to allow authenticated users to create files.
+Apply the schema (idempotent — safe to re-run):
+
+```bash
+npm run setup:appwrite
+```
+
+> If your `resumes` bucket already exists, re-running setup just reuses it — confirm
+> its permissions include `create("users")` so the frontend upload works
+> (`storage.updateBucket` can add it if not).
 | Data model | `roadmaps` + `roadmap_tasks` collections (user-scoped, already deployed) |
 | Generator | `server/src/services/roadmap.service.js` — builds `Learn/Strengthen {skill}` tasks from `analyzeCareerGaps` (AI or fallback), plus project + interview milestones |
 | Task lifecycle | `pending → in_progress → paused → completed`, reorder, add custom tasks |
@@ -1258,7 +1329,7 @@ For complete development rules:
 ## Phase 6 — Advanced Features
 
 * [x] GitHub analysis
-* [ ] Resume analysis
+* [x] Resume analysis
 * [ ] What-If simulator
 * [ ] Career comparison
 * [ ] AI career assistant

@@ -203,6 +203,17 @@ export default function Dashboard() {
           </div>
 
           <div className="card flex flex-col items-start">
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-brand-soft text-2xl">📄</div>
+            <h3 className="mt-4 text-lg font-bold">Resume Analysis</h3>
+            <p className="mt-1 text-sm leading-relaxed text-ink-muted">
+              Upload your resume to extract your skills, strengths, and best career matches.
+            </p>
+            <Link to="/resume" className="btn-secondary mt-6 !h-10 !px-4 !text-sm">
+              Analyze my resume
+            </Link>
+          </div>
+
+          <div className="card flex flex-col items-start">
             <div className="grid h-12 w-12 place-items-center rounded-full bg-accent-purple text-xl text-white">💼</div>
             <h3 className="mt-4 text-lg font-bold">Internships</h3>
             <p className="mt-1 text-sm leading-relaxed text-ink-muted">
