@@ -204,6 +204,17 @@ export default function Dashboard() {
           </div>
 
           <div className="card flex flex-col items-start">
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-info-soft text-2xl">⚖️</div>
+            <h3 className="mt-4 text-lg font-bold">Career Comparison</h3>
+            <p className="mt-1 text-sm leading-relaxed text-ink-muted">
+              Compare two or more careers side by side to see which fits you best.
+            </p>
+            <Link to="/career-compare" className="btn-primary mt-6 !h-10 !px-4 !text-sm">
+              Compare careers
+            </Link>
+          </div>
+
+          <div className="card flex flex-col items-start">
             <div className="grid h-12 w-12 place-items-center rounded-full bg-accent-purple text-xl text-white">💼</div>
             <h3 className="mt-4 text-lg font-bold">Internships</h3>
             <p className="mt-1 text-sm leading-relaxed text-ink-muted">
