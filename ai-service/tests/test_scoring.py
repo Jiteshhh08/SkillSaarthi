@@ -6,6 +6,7 @@ from app.recommendation.scoring import (
     compare_careers,
     normalize_skill,
     score_careers,
+    simulate_what_if,
 )
 from app.recommendation.careers import get_all_careers
 
@@ -198,3 +199,78 @@ def test_compare_careers_recommended_is_highest_score():
     scores = [item["score"] for item in result["careers"]]
     assert scores == sorted(scores, reverse=True)
     assert any(item["career"] == result["recommended"] and item["score"] == scores[0] for item in result["careers"])
+
+
+def test_what_if_learning_skill_raises_relevant_career():
+    profile = {
+        "education_level": "college",
+        "skills": [{"name": "python", "proficiency": 2}],
+        "interests": [],
+        "goals": [],
+        "assessment_score": 70,
+        "experience_years": 0,
+    }
+    changes = {"skills": [{"name": "machine learning", "proficiency": 4}]}
+    result = simulate_what_if(profile, changes)
+    before = {c["career_id"]: c["baseline_score"] for c in result["changes"]}
+    after = {c["career_id"]: c["simulated_score"] for c in result["changes"]}
+    assert "data_scientist" in before
+    assert after["data_scientist"] >= before["data_scientist"]
+
+
+def test_what_if_does_not_mutate_original_profile():
+    profile = {
+        "skills": [{"name": "python", "proficiency": 2}],
+        "interests": [],
+        "goals": [],
+    }
+    changes = {"skills": [{"name": "python", "proficiency": 5}, {"name": "react", "proficiency": 4}]}
+    simulate_what_if(profile, changes)
+    assert profile["skills"] == [{"name": "python", "proficiency": 2}]
+    assert profile["interests"] == []
+    assert profile["goals"] == []
+
+
+def test_what_if_returns_changes_baseline_and_simulated():
+    profile = {
+        "skills": [{"name": "javascript", "proficiency": 4}],
+        "interests": [],
+        "goals": [],
+    }
+    changes = {"skills": [{"name": "react", "proficiency": 4}]}
+    result = simulate_what_if(profile, changes)
+    assert len(result["changes"]) == len(get_all_careers())
+    assert result["baseline"] and result["simulated"]
+    assert len(result["baseline"]) == len(result["simulated"])
+    for item in result["changes"]:
+        assert 0 <= item["baseline_score"] <= 100
+        assert 0 <= item["simulated_score"] <= 100
+        assert item["delta"] == round(item["simulated_score"] - item["baseline_score"], 1)
+
+
+def test_what_if_top_n_limits_each_rank():
+    profile = {"skills": [], "interests": [], "goals": []}
+    result = simulate_what_if(profile, {}, top_n=5)
+    assert len(result["baseline"]) == 5
+    assert len(result["simulated"]) == 5
+    assert len(result["changes"]) == len(get_all_careers())
+
+
+def test_what_if_interest_change_reflected():
+    profile = {
+        "education_level": "college",
+        "skills": [{"name": "javascript", "proficiency": 4}, {"name": "react", "proficiency": 4}],
+        "interests": [],
+        "goals": [],
+        "assessment_score": 90,
+        "experience_years": 0,
+    }
+    before = simulate_what_if(profile, {})
+    after = simulate_what_if(profile, {"interests": ["web development"]})
+    frontend_after = next(
+        c for c in after["changes"] if c["career_id"] == "frontend_developer"
+    )
+    frontend_before = next(
+        c for c in before["changes"] if c["career_id"] == "frontend_developer"
+    )
+    assert frontend_after["simulated_score"] >= frontend_before["simulated_score"]
