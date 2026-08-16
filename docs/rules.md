@@ -409,7 +409,7 @@ Frontend runs at `http://localhost:5173` (Vite default).
 Run the AI service tests (from `ai-service/`):
 
 ```text
-cd ai-service && python -m pytest     # 39 tests: scoring, skill-gaps, resume, comparison
+cd ai-service && python -m pytest     # 44 tests: scoring, skill-gaps, resume, comparison, what-if
 ```
 
 ---
@@ -423,7 +423,7 @@ cd ai-service && python -m pytest     # 39 tests: scoring, skill-gaps, resume, c
 | 3 — Career Engine (complete) | Career/skill datasets, career-skill mapping, recommendation engine, skill-gap, explanations |
 | 4 — AI (complete) | Python/FastAPI skill matching, ranking, skill-gap (pytest suite + Node fallback scorer) |
 | 5 — Roadmap (complete) | Roadmap generator from skill gaps, tasks, progress tracking, dashboard wiring |
-| 6 — Advanced | Resume analysis (implemented), GitHub analysis (implemented), career comparison (implemented), what-if, AI assistant |
+| 6 — Advanced | Resume analysis (implemented), GitHub analysis (implemented), career comparison (implemented), what-if simulator (implemented), AI assistant |
 | 7 — Integrations | Courses, internships (implemented), notifications |
 
 ---

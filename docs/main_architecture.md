@@ -1200,6 +1200,22 @@ Python = 4
 New Career Recommendations
 ```
 
+### Implementation
+
+Implemented end-to-end as `POST /api/what-if/simulate` (Node) →
+`POST /ai/what-if/simulate` (Python `simulate_what_if` in
+`ai-service/app/recommendation/scoring.py`). The Node service builds the user's
+real profile and validates the requested changes (each
+`{ name, proficiency 1–5 }`); the Python engine copies the profile via
+`_apply_what_if_changes` (upsert skills by normalized name, append new
+interests/goals), scores the full catalog for both the baseline and the
+simulated profile, and returns per-career `delta`s plus a summary. `top_n`
+caps the returned baseline/simulated rankings; the `changes` table always
+covers the whole catalog. The real profile is never written to. Results are
+labelled as **estimated**. If the AI service is down, the backend returns a
+skills-only estimate (`source: "fallback"`). Frontend: `WhatIfSimulator.jsx`
+at `/what-if`.
+
 ---
 
 # 27. Resume Analysis
@@ -1471,7 +1487,7 @@ GET  /api/github/analysis/:id     (implemented)
 ## What-If
 
 ```text
-POST /api/what-if/simulate
+POST /api/what-if/simulate   (implemented)
 ```
 
 ## Courses
@@ -1897,11 +1913,11 @@ Node API                 ✓   /api/careers, /api/recommendations/*, skill-gaps
 
 ```text
 Python                       ✓   ai-service/ (FastAPI on port 8000)
-FastAPI                      ✓   /health, /ai/careers, /ai/recommend-careers, /ai/skill-gaps, /ai/github/analyze
+FastAPI                      ✓   /health, /ai/careers, /ai/recommend-careers, /ai/skill-gaps, /ai/github/analyze, /ai/compare-careers, /ai/what-if/simulate
 Skill Matching               ✓   importance-weighted matching (scoring.py, §23)
 Recommendation Ranking       ✓   score_careers — hybrid weights, sorted, reasons/strengths/next_steps
 Skill Gap                    ✓   analyze_skill_gaps (§24, strong vs needs_improvement)
-Tests                        ✓   ai-service/tests (pytest) — 15 tests, incl. alias normalization
+Tests                        ✓   ai-service/tests (pytest) — 44 tests, incl. alias normalization, resume, comparison, what-if
 Node resilience              ✓   rule-based fallback in recommendation.service.js when the AI
                                  service is down (200 + source:"fallback" instead of 503); mirrored
                                  UI badges ("Estimated · AI offline")
@@ -2011,7 +2027,7 @@ Implement:
 ```text
 Resume Analysis (implemented)
 GitHub Analysis (implemented)
-What-If Simulator
+What-If Simulator (implemented)
 Career Comparison (implemented)
 AI Assistant
 ```

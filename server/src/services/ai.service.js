@@ -55,6 +55,10 @@ export function compareCareers(payload) {
   return post('/ai/compare-careers', payload)
 }
 
+export function simulateWhatIf(payload) {
+  return post('/ai/what-if/simulate', payload)
+}
+
 export function skillGaps(payload) {
   return post('/ai/skill-gaps', payload)
 }

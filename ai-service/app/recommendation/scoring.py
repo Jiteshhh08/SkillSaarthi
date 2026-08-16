@@ -327,6 +327,108 @@ def analyze_skill_gaps(career_name, skills):
     }
 
 
+def _apply_what_if_changes(profile, changes):
+    """Return a *copy* of the profile with hypothetical changes applied.
+
+    The original profile is never mutated — the changes only exist on the
+    returned dictionary (docs/main_architecture.md §26). Skills are upserted
+    by normalized name, interests/goals are appended when not already present.
+    """
+    simulated = {
+        "education_level": profile.get("education_level"),
+        "assessment_score": profile.get("assessment_score"),
+        "experience_years": profile.get("experience_years"),
+        "skills": [dict(skill) for skill in profile.get("skills", [])],
+        "interests": list(profile.get("interests", [])),
+        "goals": list(profile.get("goals", [])),
+    }
+
+    by_name = {normalize_skill(skill.get("name", "")): skill for skill in simulated["skills"]}
+    for change in (changes or {}).get("skills", []) or []:
+        name = change.get("name", "")
+        key = normalize_skill(name)
+        proficiency = int(change.get("proficiency", 1))
+        if not name:
+            continue
+        if key in by_name:
+            by_name[key]["proficiency"] = proficiency
+        else:
+            by_name[key] = {"name": name, "proficiency": proficiency}
+            simulated["skills"].append(by_name[key])
+
+    interest_names = {str(i).lower() for i in simulated["interests"]}
+    for interest in (changes or {}).get("interests", []) or []:
+        if str(interest).lower() not in interest_names:
+            simulated["interests"].append(str(interest))
+            interest_names.add(str(interest).lower())
+
+    goal_names = {str(g).lower() for g in simulated["goals"]}
+    for goal in (changes or {}).get("goals", []) or []:
+        if str(goal).lower() not in goal_names:
+            simulated["goals"].append(str(goal))
+            goal_names.add(str(goal).lower())
+
+    return simulated
+
+
+def _what_if_summary(changes, changes_applied):
+    """One-sentence summary of the biggest score movements."""
+    if not changes:
+        return "No career scores to compare."
+    top = sorted(changes, key=lambda item: item["delta"], reverse=True)
+    biggest = top[0]
+    added_skills = ", ".join(
+        f"{s.get('name')} (level {s.get('proficiency', 1)})"
+        for s in (changes_applied or {}).get("skills", [])
+    )
+    scenario = added_skills if added_skills else "the changes"
+    summary = (
+        f"If {scenario}, {biggest['career']} jumps the most "
+        f"({round(biggest['baseline_score'])}% → {round(biggest['simulated_score'])}%, "
+        f"{'+' if biggest['delta'] >= 0 else ''}{round(biggest['delta'])} pts). "
+        "These are estimated scores, not guaranteed outcomes."
+    )
+    return summary
+
+
+def simulate_what_if(profile, changes=None, top_n=None):
+    """Simulate hypothetical profile changes and compare career scores.
+
+    Scores the current profile (baseline) and a temporary modified copy
+    (simulated) with the same hybrid engine, then returns both rankings plus
+    a per-career delta. The real profile is never modified.
+    """
+    baseline = score_careers(profile, top_n=None)
+    simulated_profile = _apply_what_if_changes(profile, changes)
+    simulated = score_careers(simulated_profile, top_n=None)
+
+    baseline_by_id = {item["career_id"]: item for item in baseline}
+    simulated_by_id = {item["career_id"]: item for item in simulated}
+
+    career_changes = []
+    for career_id, before in baseline_by_id.items():
+        after = simulated_by_id.get(career_id, before)
+        career_changes.append(
+            {
+                "career_id": career_id,
+                "career": after["career"],
+                "category": after.get("category", ""),
+                "baseline_score": before["score"],
+                "simulated_score": after["score"],
+                "delta": round(after["score"] - before["score"], 1),
+            }
+        )
+    career_changes.sort(key=lambda item: item["delta"], reverse=True)
+
+    cutoff = int(top_n) if top_n else None
+    return {
+        "changes": career_changes,
+        "baseline": baseline if not cutoff else baseline[:cutoff],
+        "simulated": simulated if not cutoff else simulated[:cutoff],
+        "summary": _what_if_summary(career_changes, changes),
+    }
+
+
 def _career_difficulty(career):
     """Estimate a career's difficulty from its skill expectations.
 

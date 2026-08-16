@@ -225,6 +225,18 @@ export default function Dashboard() {
           </div>
 
           <div className="card flex flex-col items-start">
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-accent-purple text-xl text-white">🔮</div>
+            <h3 className="mt-4 text-lg font-bold">What-If Simulator</h3>
+            <p className="mt-1 text-sm leading-relaxed text-ink-muted">
+              Hypothetically change your skills and see how your career matches would move — without
+              touching your real profile.
+            </p>
+            <Link to="/what-if" className="btn-primary mt-6 !h-10 !px-4 !text-sm">
+              Run a simulation
+            </Link>
+          </div>
+
+          <div className="card flex flex-col items-start">
             <div className="grid h-12 w-12 place-items-center rounded-full bg-accent-purple text-xl text-white">💼</div>
             <h3 className="mt-4 text-lg font-bold">Internships</h3>
             <p className="mt-1 text-sm leading-relaxed text-ink-muted">

@@ -19,7 +19,12 @@ from pydantic import BaseModel, Field
 
 from .recommendation.careers import get_all_careers
 from .github.analyzer import analyze as analyze_github
-from .recommendation.scoring import analyze_skill_gaps, compare_careers, score_careers
+from .recommendation.scoring import (
+    analyze_skill_gaps,
+    compare_careers,
+    score_careers,
+    simulate_what_if,
+)
 from .resume.analyzer import analyze as analyze_resume
 
 app = FastAPI(
@@ -142,6 +147,44 @@ class CompareResponse(BaseModel):
     careers: list[CompareItem]
 
 
+class WhatIfSkillChange(BaseModel):
+    name: str
+    proficiency: int = Field(ge=0, le=5, default=1)
+
+
+class WhatIfChange(BaseModel):
+    skills: list[WhatIfSkillChange] = Field(default_factory=list)
+    interests: list[str] = Field(default_factory=list)
+    goals: list[str] = Field(default_factory=list)
+
+
+class WhatIfRequest(BaseModel):
+    education_level: str | None = None
+    skills: list[Skill] = Field(default_factory=list)
+    interests: list[str] = Field(default_factory=list)
+    goals: list[str] = Field(default_factory=list)
+    assessment_score: float | None = Field(default=None, ge=0, le=100)
+    experience_years: int | None = Field(default=None, ge=0, le=60)
+    top_n: int | None = Field(default=None, ge=1, le=100)
+    changes: WhatIfChange = Field(default_factory=WhatIfChange)
+
+
+class WhatIfScoreChange(BaseModel):
+    career_id: str
+    career: str
+    category: str = ""
+    baseline_score: float = Field(ge=0, le=100)
+    simulated_score: float = Field(ge=0, le=100)
+    delta: float
+
+
+class WhatIfResponse(BaseModel):
+    summary: str
+    changes: list[WhatIfScoreChange] = Field(default_factory=list)
+    baseline: list[Recommendation] = Field(default_factory=list)
+    simulated: list[Recommendation] = Field(default_factory=list)
+
+
 class RepoInfo(BaseModel):
     name: str
     description: str | None = None
@@ -233,6 +276,24 @@ def career_compare(request: CompareRequest):
     career names to compare; when `career_names` is empty every career is scored.
     """
     result = compare_careers(request.model_dump(), request.career_names)
+    return result
+
+
+@app.post("/ai/what-if/simulate", response_model=WhatIfResponse)
+def what_if_simulate(request: WhatIfRequest):
+    """Simulate hypothetical profile changes (docs/main_architecture.md §26).
+
+    Reuses the same hybrid scoring engine as recommendations and returns a
+    full catalog ranking for the current profile (baseline) plus a simulated
+    profile ranking, with per-career score deltas and a plain-language summary.
+    The real profile is never modified — changes stay in memory.
+    """
+    payload = dict(request.model_dump())
+    result = simulate_what_if(
+        payload,
+        changes=payload.get("changes"),
+        top_n=payload.get("top_n"),
+    )
     return result
 
 
