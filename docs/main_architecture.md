@@ -352,8 +352,10 @@ Two storage buckets are provisioned by `scripts/setup-appwrite.mjs`:
 
 Avatar files are stored client-side in the upload bucket and referenced from the
 Appwrite **account prefs** (`account.updatePrefs({ avatar_file_id })`) rather than a DB
-attribute, so no schema migration is needed. `avatarUrl(user)` in
-`src/services/auth.js` returns `storage.getFilePreview(bucket, fileId, 128, 128)`.
+attribute, so no schema migration is needed. `loadAvatarUrl(user)` in
+`src/services/auth.js` streams the original bytes via `storage.getFileView` through the
+SDK client and returns a `blob:` URL (the free plan blocks `getFilePreview` image
+transformations, so the avatar is shown at its uploaded size).
 
 ## Profile update flow
 
@@ -1596,7 +1598,8 @@ POST  /api/admin/notifications  (admin — send to one user or broadcast)
 
 - `src/services/auth.js` — `updateName` (Appwrite `account.updateName`), `uploadAvatar`
   (client-side upload to the upload bucket + `account.updatePrefs({ avatar_file_id })`),
-  `removeAvatar`, `avatarUrl` (`storage.getFilePreview`).
+  `removeAvatar`, `loadAvatarUrl` (SDK-authenticated `storage.getFileView` → blob URL;
+  `getFilePreview` is blocked on the free plan).
 - `src/pages/private/ProfileSettings.jsx` — update display name + profile picture (≤ 5 MB
   image, client-side validated, local preview), email read-only; calls `refreshUser` on save.
 - `src/context/AuthContext.jsx` — `refreshUser` re-fetches the current user so the TopBar
@@ -2330,7 +2333,7 @@ LLM_API_KEY=<optional>
 
 ## 47.8 Production Notes
 
-* Render free tier services sleep after ~15 minutes of inactivity — warm them up before a demo.
+* Render free tier services sleep after ~15 minutes of inactivity. Two cron-job.org cron jobs (every 5 minutes) ping the backend and AI service to keep them awake (`skillsaarthi-node.onrender.com` and `skillsaarthi-f14x.onrender.com`); warm them up manually before a demo as a backup.
 * The Node backend serves only `/api/*`; `/` intentionally returns 404 (the frontend handles all routing).
 * Secrets (Appwrite API key, GitHub token, LLM key) live only in the hosting dashboards; `.env` files are gitignored and never committed.
 * All user data persists in Appwrite Cloud, so the stateless Node/Python services can be redeployed freely without data loss.

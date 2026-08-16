@@ -285,7 +285,8 @@ Base `4px`. Scale: `4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64 / 80 / 96 / 12
   profile's daily-activity counters), then a profile menu and the auth buttons.
 - **Profile menu:** the avatar + name form a hover-triggered dropdown (CSS `group-hover`):
   hovering shows "Update profile" (link to `/settings`) and "Logout" in a white `shadow-popover`
-  panel. The avatar shows the user's uploaded picture (`storage.getFilePreview`, 128×128) when
+  panel. The avatar shows the user's uploaded picture (SDK-authenticated `getFileView`
+  blob; the free plan blocks `getFilePreview`) when
   set, otherwise the purple initial-letter circle.
 - Mobile: nav hidden below `md`, only bell + streak + profile menu remain.
 
@@ -395,7 +396,7 @@ Protected account page for updating the display name and profile picture.
 
 - Header: "Account" eyebrow + "Update profile" 30px/900 title; email is displayed read-only.
 - **Avatar row:** 80px rounded circle (`ring-2` line) showing the uploaded picture
-  (`storage.getFilePreview`, object-cover) or the initial; a mint camera badge sits at the
+  (`storage.getFileView` via the SDK client, object-cover) or the initial; a mint camera badge sits at the
   bottom-right; "Upload picture" / "Change picture" / "Remove" text actions, plus a hidden
   `<input type="file">` (`image/png,image/jpeg,image/webp,image/gif`, ≤ 5 MB, client-side
   validation with inline error). A local `URL.createObjectURL` preview shows before saving.

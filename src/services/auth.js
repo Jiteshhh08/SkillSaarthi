@@ -1,4 +1,4 @@
-import { account, AVATAR_BUCKET_ID, ID, storage } from './appwrite'
+import { account, appwriteClient, AVATAR_BUCKET_ID, ID, storage } from './appwrite'
 
 export async function signUp(name, email, password) {
   await account.create(ID.unique(), email, password, name)
@@ -41,8 +41,30 @@ export function avatarFileId(user) {
   return user?.prefs?.avatar_file_id || ''
 }
 
-export function avatarUrl(user) {
+const avatarObjectUrls = new Map()
+
+export async function loadAvatarUrl(user) {
   const fileId = avatarFileId(user)
   if (!fileId || !AVATAR_BUCKET_ID) return ''
-  return storage.getFilePreview(AVATAR_BUCKET_ID, fileId, 128, 128)
+  if (avatarObjectUrls.has(fileId)) return avatarObjectUrls.get(fileId)
+  try {
+    // The <img> URL alone does not carry the Appwrite session, so fetch the
+    // original bytes through the SDK client (sends the JWT/session) and show a
+    // blob URL. Use the /view endpoint, not /preview — the free plan blocks
+    // image transformations (resize).
+    const url = new URL(storage.getFileView(AVATAR_BUCKET_ID, fileId))
+    const bytes = await appwriteClient.call('get', url, undefined, undefined, 'arrayBuffer')
+    const objectUrl = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }))
+    avatarObjectUrls.set(fileId, objectUrl)
+    return objectUrl
+  } catch {
+    return ''
+  }
+}
+
+export function clearAvatarCache(fileId) {
+  if (fileId && avatarObjectUrls.has(fileId)) {
+    URL.revokeObjectURL(avatarObjectUrls.get(fileId))
+    avatarObjectUrls.delete(fileId)
+  }
 }

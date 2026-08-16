@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { updateName, uploadAvatar, removeAvatar, avatarUrl } from '../../services/auth'
+import { updateName, uploadAvatar, removeAvatar } from '../../services/auth'
+import { useAvatarUrl } from '../../hooks/useAvatarUrl'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
 import Icon from '../../components/common/Icon'
@@ -25,7 +26,7 @@ export default function ProfileSettings() {
     if (user?.name) setName(user.name)
   }, [user?.name])
 
-  const existingAvatar = avatarUrl(user)
+  const existingAvatar = useAvatarUrl(user)
   const showInitial = !file && !preview && !existingAvatar
 
   const handlePick = (event) => {

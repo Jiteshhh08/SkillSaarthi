@@ -506,3 +506,5 @@ Every feature must strengthen the central product loop. Do not build isolated fe
   otherwise email/password auth breaks in production.
 - Never commit `.env` or real secrets; set them only in the Vercel/Render dashboards.
 - All user data persists in Appwrite Cloud — the stateless Node/Python services can be redeployed freely.
+- Render free tier services sleep after ~15 minutes of inactivity — keep them awake with two
+  cron-job.org cron jobs (every 5 minutes) hitting the backend and AI service URLs.

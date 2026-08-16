@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useAdmin } from '../../hooks/useAdmin'
 import NotificationBell from './NotificationBell'
 import Icon from '../common/Icon'
-import { avatarUrl } from '../../services/auth'
+import { useAvatarUrl } from '../../hooks/useAvatarUrl'
 import logo from '../../assets/skillsaarthi_logo.jpeg'
 
 function NavDropdown({ label, items, active }) {
@@ -67,6 +67,86 @@ function NavDropdown({ label, items, active }) {
   )
 }
 
+function ProfileMenu({ user, onLogout }) {
+  const avatarSrc = useAvatarUrl(user)
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function onDocClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-surface-hover"
+      >
+        <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-accent-purple text-sm font-black text-white">
+          {avatarSrc ? (
+            <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
+          ) : (
+            (user.name || 'U').charAt(0).toUpperCase()
+          )}
+        </span>
+        <span
+          className="hidden max-w-40 truncate text-md font-bold text-black lg:inline-block"
+          title={user.name}
+        >
+          {user.name}
+        </span>
+        <svg
+          className={`h-3.5 w-3.5 text-ink-soft transition-transform ${open ? 'rotate-180' : ''}`}
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            fillRule="evenodd"
+            d="M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.39a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-50 mt-2 min-w-44 rounded-lg border border-line bg-white p-1 shadow-popover"
+        >
+          <Link
+            to="/settings"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover"
+          >
+            <Icon name="settings" size={16} className="text-ink-muted" />
+            Update profile
+          </Link>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false)
+              onLogout()
+            }}
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-bold text-danger hover:bg-danger-soft"
+          >
+            <Icon name="log-out" size={16} />
+            Logout
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function TopBar() {
   const { user, loading, logout, streak } = useAuth()
   const { isAdmin } = useAdmin()
@@ -103,7 +183,7 @@ export default function TopBar() {
         { to: '/github', label: 'GitHub' },
         { to: '/resume', label: 'Resume' },
         { to: '/career-compare', label: 'Compare' },
-        { to: '/what-if', label: 'WhatIfSimulator'}
+        { to: '/what-if', label: 'WhatIfSimulator'},
       ],
     },
   ]
@@ -163,65 +243,7 @@ export default function TopBar() {
                 <Icon name="flame" size={16} className="text-accent-orange" />
                 {streak.current} {streak.current === 1 ? 'day' : 'days'} streak
               </span>
-              <div className="group relative">
-                <button
-                  type="button"
-                  className="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-surface-hover"
-                  aria-haspopup="menu"
-                >
-                  <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-accent-purple text-sm font-black text-white">
-                    {avatarUrl(user) ? (
-                      <img
-                        src={avatarUrl(user)}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      (user.name || 'U').charAt(0).toUpperCase()
-                    )}
-                  </span>
-                  <span
-                    className="hidden max-w-40 truncate text-md font-bold text-black lg:inline-block"
-                    title={user.name}
-                  >
-                    {user.name}
-                  </span>
-                  <svg
-                    className="h-3.5 w-3.5 text-ink-soft"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.39a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
-                <div
-                  role="menu"
-                  className="invisible absolute right-0 top-full z-50 mt-2 min-w-44 rounded-lg border border-line bg-white p-1 opacity-0 shadow-popover transition-all group-hover:visible group-hover:opacity-100"
-                >
-                  <Link
-                    to="/settings"
-                    role="menuitem"
-                    className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover"
-                  >
-                    <Icon name="settings" size={16} className="text-ink-muted" />
-                    Update profile
-                  </Link>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={handleLogout}
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-bold text-danger hover:bg-danger-soft"
-                  >
-                    <Icon name="log-out" size={16} />
-                    Logout
-                  </button>
-                </div>
-              </div>
+              <ProfileMenu user={user} onLogout={handleLogout} />
             </>
           ) : (
             <>
