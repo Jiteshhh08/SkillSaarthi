@@ -8,26 +8,112 @@ import { getRoadmaps } from '../../services/roadmaps'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
 
+const TOOL_CARDS = [
+  {
+    icon: '🎯',
+    title: 'Career Match',
+    description: 'See your best career fits, ranked by your profile.',
+    to: '/recommendations',
+    cta: 'View matches',
+    tile: 'bg-brand-soft',
+  },
+  {
+    icon: '🧩',
+    title: 'Skill Gaps',
+    description: 'Find out which skills to learn next for your dream career.',
+    to: '/skill-gaps',
+    cta: 'View skill gaps',
+    tile: 'bg-info-soft',
+  },
+  {
+    icon: '🗺️',
+    title: 'Roadmap',
+    description: 'Follow an ordered learning plan toward your goal.',
+    to: '/roadmaps',
+    cta: 'Open roadmap',
+    tile: 'bg-warning-soft',
+  },
+  {
+    icon: '🐙',
+    title: 'GitHub Analysis',
+    description: 'Turn your code into a career profile in seconds.',
+    to: '/github',
+    cta: 'Analyze GitHub',
+    tile: 'bg-deep',
+  },
+  {
+    icon: '📄',
+    title: 'Resume Analysis',
+    description: 'Upload a resume to surface skills and best matches.',
+    to: '/resume',
+    cta: 'Analyze resume',
+    tile: 'bg-brand-soft',
+  },
+  {
+    icon: '⚖️',
+    title: 'Career Compare',
+    description: 'Weigh careers side by side to find your best fit.',
+    to: '/career-compare',
+    cta: 'Compare careers',
+    tile: 'bg-info-soft',
+  },
+  {
+    icon: '🔮',
+    title: 'What-If Simulator',
+    description: 'Experiment with skills and see matches move — safely.',
+    to: '/what-if',
+    cta: 'Run simulation',
+    tile: 'bg-accent-purple',
+  },
+  {
+    icon: '💼',
+    title: 'Internships',
+    description: 'Discover opportunities ranked just for you.',
+    to: '/internships',
+    cta: 'View matches',
+    tile: 'bg-brand-deep',
+  },
+]
+
+function StatCard({ icon, label, value, sub, loading }) {
+  return (
+    <div className="card relative overflow-hidden">
+      {loading ? (
+        <div className="h-6 w-24 animate-pulse rounded-md bg-surface-soft" />
+      ) : (
+        <>
+          <div className="absolute -right-4 -top-4 grid h-16 w-16 place-items-center rounded-full bg-surface-soft text-2xl">
+            {icon}
+          </div>
+          <p className="text-3xl font-black tracking-tight text-ink">{value}</p>
+          <p className="mt-1 text-sm font-bold text-ink-muted">{label}</p>
+          {sub && <p className="mt-1 text-xs text-ink-soft">{sub}</p>}
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function Dashboard() {
-  const { user, profile } = useAuth()
-  const [skillCount, setSkillCount] = useState(0)
-  const [interestCount, setInterestCount] = useState(0)
+  const { user, profile, streak } = useAuth()
+  const [skills, setSkills] = useState([])
+  const [interests, setInterests] = useState([])
   const [roadmaps, setRoadmaps] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
     Promise.all([getUserSkills(user.$id), getUserInterests(user.$id), getRoadmaps()])
-      .then(([skills, interests, roadmapDocs]) => {
+      .then(([skillsData, interestsData, roadmapDocs]) => {
         if (!mounted) return
-        setSkillCount(skills.length)
-        setInterestCount(interests.length)
+        setSkills(skillsData)
+        setInterests(interestsData)
         setRoadmaps(roadmapDocs || [])
       })
       .catch(() => {
         if (mounted) {
-          setSkillCount(0)
-          setInterestCount(0)
+          setSkills([])
+          setInterests([])
           setRoadmaps([])
         }
       })
@@ -39,8 +125,9 @@ export default function Dashboard() {
     }
   }, [user.$id])
 
+  const skillCount = skills.length
+  const interestCount = interests.length
   const currentRoadmap = roadmaps.find((roadmap) => roadmap.status !== 'completed') || roadmaps[0]
-
   const educationLabel = educationLevelLabel(profile?.education_level)
 
   const checklist = [
@@ -96,35 +183,79 @@ export default function Dashboard() {
 
   const completed = checklist.filter((item) => item.done).length
   const completion = Math.round((completed / checklist.length) * 100)
+  const nextSteps = checklist.filter((item) => !item.done).slice(0, 3)
 
   return (
     <div className="min-h-screen">
       <TopBar />
 
       <main className="mx-auto max-w-7xl px-6 py-10">
-        <p className="text-sm font-bold uppercase tracking-[0.08em]">Your dashboard</p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight">Welcome, {user?.name || 'there'}!</h1>
-        <p className="mt-2 text-lg text-ink-muted">
-          Build your career readiness, one skill at a time.
-        </p>
-
-        <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-brand-soft px-6 py-5">
-            <div className="flex items-center gap-4">
-              <span className="grid h-12 w-12 place-items-center rounded-full bg-accent-purple text-xl font-black text-white">
-                {(user?.name || 'U').charAt(0).toUpperCase()}
+        <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-soft via-white to-warm px-8 py-10 shadow-card-rest">
+          <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-brand/10" />
+          <div className="absolute right-16 top-8 h-20 w-20 rounded-full bg-accent-yellow/20" />
+          <div className="relative">
+            <p className="text-sm font-bold uppercase tracking-[0.08em] text-brand-deep">
+              Your dashboard
+            </p>
+            <h1 className="mt-2 text-3xl font-black tracking-tight md:text-4xl">
+              Welcome back, {(user?.name || 'there').split(' ')[0]} 👋
+            </h1>
+            <p className="mt-2 max-w-2xl text-lg text-ink-muted">
+              {completion === 100
+                ? 'Your profile is fully set up — keep the momentum going.'
+                : `Your profile is ${completion}% complete. A few quick steps to unlock everything.`}
+            </p>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-deep bg-white px-3 py-1.5 text-sm font-bold text-brand-deep">
+                🔥 {streak.current} day{streak.current === 1 ? '' : 's'} streak
               </span>
-              <div>
-                <p className="text-sm font-bold text-ink-muted">Education level</p>
-                <p className="text-xl font-black text-ink">{educationLabel || 'Not set yet'}</p>
-              </div>
+              {educationLabel && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-bold text-ink">
+                  🎓 {educationLabel}
+                </span>
+              )}
+              {profile?.assessment_score > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-bold text-ink">
+                  📊 Assessment {profile.assessment_score}%
+                </span>
+              )}
             </div>
-            <Link to="/onboarding/education-level" className="btn-secondary !h-10 !px-4 !text-sm">
-              Change education level
-            </Link>
           </div>
+        </section>
 
-          <div className="card">
+        <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard
+            icon="🎯"
+            label="Profile setup"
+            value={`${completion}%`}
+            sub={`${completed} of ${checklist.length} steps`}
+            loading={false}
+          />
+          <StatCard
+            icon="🛠️"
+            label="Skills added"
+            value={skillCount}
+            sub="powering your matches"
+            loading={loading}
+          />
+          <StatCard
+            icon="💡"
+            label="Interests"
+            value={interestCount}
+            sub="helping us rank careers"
+            loading={loading}
+          />
+          <StatCard
+            icon="🚀"
+            label="Best streak"
+            value={`${streak.best} days`}
+            sub={streak.current > 0 ? `currently on ${streak.current}` : 'start today'}
+            loading={false}
+          />
+        </section>
+
+        <section className="mt-6 grid gap-6 lg:grid-cols-3">
+          <div className="card lg:col-span-2">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-black">Profile setup</h2>
               <span className="text-sm font-black text-brand-deep">
@@ -139,19 +270,22 @@ export default function Dashboard() {
               </div>
             ) : (
               <>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-strong">
-                  <div className="h-full rounded-full bg-brand" style={{ width: `${completion}%` }} />
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-surface-strong">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-brand to-brand-deep transition-all"
+                    style={{ width: `${completion}%` }}
+                  />
                 </div>
-                <ul className="mt-4 space-y-2">
+                <ul className="mt-4 space-y-1.5">
                   {checklist.map((item) => (
                     <li key={item.label}>
                       <Link
                         to={item.to}
-                        className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-surface-hover"
+                        className="flex items-center justify-between gap-2 rounded-md px-2 py-2 transition-colors hover:bg-surface-hover"
                       >
-                        <span className="flex items-center gap-2 font-bold text-ink">
+                        <span className="flex items-center gap-2.5 font-bold text-ink">
                           <span
-                            className={`grid h-5 w-5 place-items-center rounded-full text-[10px] font-black ${
+                            className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-black ${
                               item.done ? 'bg-brand text-white' : 'bg-line text-white'
                             }`}
                           >
@@ -167,108 +301,101 @@ export default function Dashboard() {
               </>
             )}
           </div>
+
+          <div className="card flex flex-col">
+            <h2 className="text-base font-black">Suggested next</h2>
+            {loading ? (
+              <div className="mt-4 space-y-3">
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="h-20 animate-pulse rounded-lg bg-surface-soft" />
+                ))}
+              </div>
+            ) : nextSteps.length > 0 ? (
+              <div className="mt-4 flex flex-1 flex-col gap-3">
+                {nextSteps.map((step, index) => (
+                  <Link
+                    key={step.label}
+                    to={step.to}
+                    className="flex items-start gap-3 rounded-lg border border-line bg-surface-soft p-3 transition-shadow hover:shadow-card-hover"
+                  >
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand text-xs font-black text-white">
+                      {index + 1}
+                    </span>
+                    <span className="text-sm font-bold text-ink">{step.label}</span>
+                  </Link>
+                ))}
+                <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+                  Completing these unlocks sharper recommendations, skill-gap analysis, and
+                  internship ranking.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 flex flex-1 flex-col items-center justify-center gap-3 text-center">
+                <span className="grid h-14 w-14 place-items-center rounded-full bg-brand-soft text-3xl">
+                  🏆
+                </span>
+                <p className="text-sm font-bold text-ink">You're all set!</p>
+                <p className="text-xs text-ink-muted">
+                  Everything's complete. Time to explore the tools below.
+                </p>
+                {currentRoadmap && (
+                  <Link to="/roadmaps" className="btn-primary !h-10 !px-4 !text-sm">
+                    Continue your roadmap
+                  </Link>
+                )}
+              </div>
+            )}
+
+            {currentRoadmap && (
+              <div className="mt-5 border-t border-line-soft pt-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-bold text-ink-soft">Roadmap progress</span>
+                  <span className="font-black text-brand-deep">
+                    {currentRoadmap.progress_percent}%
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-strong">
+                  <div
+                    className="h-full rounded-full bg-brand transition-all"
+                    style={{ width: `${currentRoadmap.progress_percent || 0}%` }}
+                  />
+                </div>
+                <p className="mt-2 truncate text-xs text-ink-muted">{currentRoadmap.title}</p>
+              </div>
+            )}
+          </div>
         </section>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-3">
-          <div className="card flex flex-col items-start">
-            <div className="grid h-12 w-12 place-items-center rounded-full bg-brand-soft text-2xl">🎯</div>
-            <h3 className="mt-4 text-lg font-bold">Career Match</h3>
-            <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-              See your best career matches, ranked by your skills, interests, and assessment.
-            </p>
-            <Link to="/recommendations" className="btn-primary mt-6 !h-10 !px-4 !text-sm">
-              View matches
-            </Link>
-          </div>
-
-          <div className="card flex flex-col items-start">
-            <div className="grid h-12 w-12 place-items-center rounded-full bg-info-soft text-2xl">🧩</div>
-            <h3 className="mt-4 text-lg font-bold">Skill Gaps</h3>
-            <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-              We compare your skills against target careers to show what's missing.
-            </p>
-            <Link to="/skill-gaps" className="btn-secondary mt-6 !h-10 !px-4 !text-sm">
-              View skill gaps
-            </Link>
-          </div>
-
-          <div className="card flex flex-col items-start">
-            <div className="grid h-12 w-12 place-items-center rounded-full bg-warning-soft text-2xl">🗺️</div>
-            <h3 className="mt-4 text-lg font-bold">Roadmap</h3>
-            <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-              {loading
-                ? 'Loading your roadmaps…'
-                : currentRoadmap
-                  ? `"${currentRoadmap.title}" is ${currentRoadmap.progress_percent}% complete.`
-                  : 'Generate your first personalized learning roadmap.'}
-            </p>
-            <div className="mt-6 w-full">
-              <Link to="/roadmaps" className="btn-primary !h-10 !px-4 !text-sm">
-                {loading
-                  ? 'Loading…'
-                  : currentRoadmap
-                    ? 'Continue roadmap'
-                    : 'Generate roadmap'}
-              </Link>
+        <section className="mt-10">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Career tools</h2>
+              <p className="mt-1 text-sm text-ink-muted">Everything you need to level up, in one place.</p>
             </div>
           </div>
-
-          <div className="card flex flex-col items-start">
-            <div className="grid h-12 w-12 place-items-center rounded-full bg-deep text-xl text-white">GH</div>
-            <h3 className="mt-4 text-lg font-bold">GitHub Analysis</h3>
-            <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-              Connect a public GitHub profile to surface your skills and strongest career matches.
-            </p>
-            <Link to="/github" className="btn-primary mt-6 !h-10 !px-4 !text-sm">
-              Analyze my GitHub
-            </Link>
+          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {TOOL_CARDS.map((tool) => (
+              <Link
+                key={tool.title}
+                to={tool.to}
+                className="card card-hover group flex flex-col transition-shadow hover:shadow-card-hover"
+              >
+                <div
+                  className={`grid h-12 w-12 place-items-center rounded-xl text-2xl transition-transform group-hover:scale-110 ${tool.tile}`}
+                >
+                  {tool.icon}
+                </div>
+                <h3 className="mt-4 text-base font-bold text-ink">{tool.title}</h3>
+                <p className="mt-1 flex-1 text-sm leading-relaxed text-ink-muted">
+                  {tool.description}
+                </p>
+                <span className="mt-4 text-sm font-bold text-brand-deep group-hover:underline">
+                  {tool.cta} →
+                </span>
+              </Link>
+            ))}
           </div>
-
-          <div className="card flex flex-col items-start">
-            <div className="grid h-12 w-12 place-items-center rounded-full bg-brand-soft text-2xl">📄</div>
-            <h3 className="mt-4 text-lg font-bold">Resume Analysis</h3>
-            <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-              Upload your resume to extract your skills, strengths, and best career matches.
-            </p>
-            <Link to="/resume" className="btn-secondary mt-6 !h-10 !px-4 !text-sm">
-              Analyze my resume
-            </Link>
-          </div>
-
-          <div className="card flex flex-col items-start">
-            <div className="grid h-12 w-12 place-items-center rounded-full bg-info-soft text-2xl">⚖️</div>
-            <h3 className="mt-4 text-lg font-bold">Career Comparison</h3>
-            <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-              Compare two or more careers side by side to see which fits you best.
-            </p>
-            <Link to="/career-compare" className="btn-primary mt-6 !h-10 !px-4 !text-sm">
-              Compare careers
-            </Link>
-          </div>
-
-          <div className="card flex flex-col items-start">
-            <div className="grid h-12 w-12 place-items-center rounded-full bg-accent-purple text-xl text-white">🔮</div>
-            <h3 className="mt-4 text-lg font-bold">What-If Simulator</h3>
-            <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-              Hypothetically change your skills and see how your career matches would move — without
-              touching your real profile.
-            </p>
-            <Link to="/what-if" className="btn-primary mt-6 !h-10 !px-4 !text-sm">
-              Run a simulation
-            </Link>
-          </div>
-
-          <div className="card flex flex-col items-start">
-            <div className="grid h-12 w-12 place-items-center rounded-full bg-accent-purple text-xl text-white">💼</div>
-            <h3 className="mt-4 text-lg font-bold">Internships</h3>
-            <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-              Find internship opportunities ranked against your profile and career goals.
-            </p>
-            <Link to="/internships" className="btn-secondary mt-6 !h-10 !px-4 !text-sm">
-              View matches
-            </Link>
-          </div>
-        </div>
+        </section>
 
         <section className="mt-12">
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -287,27 +414,43 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="mt-6">
             {loading ? (
-              <div className="rounded-lg border border-line bg-white px-4 py-8 text-center text-sm text-ink-muted sm:col-span-2">
+              <div className="rounded-lg border border-line bg-white px-4 py-8 text-center text-sm text-ink-muted">
                 Loading your skills…
               </div>
             ) : skillCount === 0 ? (
-              <div className="rounded-lg border border-line bg-white px-4 py-8 text-center text-sm text-ink-muted sm:col-span-2">
-                No skills yet — add a few from the onboarding flow to see recommendations here.
+              <div className="rounded-lg border border-line bg-white px-4 py-8 text-center text-sm text-ink-muted">
+                No skills yet — add a few from the{' '}
+                <Link to="/onboarding" className="font-bold text-brand-deep hover:underline">
+                  onboarding flow
+                </Link>{' '}
+                to see recommendations here.
               </div>
             ) : (
-              <p className="rounded-lg border border-line bg-white px-4 py-3 text-sm text-ink-muted sm:col-span-2">
-                {skillCount} skill(s) saved to your profile — generate{' '}
-                <Link to="/recommendations" className="font-bold text-brand-deep hover:underline">
-                  career matches
-                </Link>{' '}
-                or run a{' '}
-                <Link to="/skill-gaps" className="font-bold text-brand-deep hover:underline">
-                  skill-gap analysis
-                </Link>
-                .
-              </p>
+              <div className="rounded-lg border border-line bg-white p-4">
+                <div className="flex flex-wrap gap-2">
+                  {skills.slice(0, 12).map((entry) => (
+                    <span key={entry.$id} className="chip">
+                      {entry.skill?.name || entry.skill_id}
+                    </span>
+                  ))}
+                  {skillCount > 12 && (
+                    <span className="chip">+{skillCount - 12} more</span>
+                  )}
+                </div>
+                <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                  <Link to="/recommendations" className="font-bold text-brand-deep hover:underline">
+                    View career matches
+                  </Link>
+                  <Link to="/skill-gaps" className="font-bold text-brand-deep hover:underline">
+                    Run a skill-gap analysis
+                  </Link>
+                  <Link to="/what-if" className="font-bold text-brand-deep hover:underline">
+                    Try the What-If simulator
+                  </Link>
+                </div>
+              </div>
             )}
           </div>
         </section>
