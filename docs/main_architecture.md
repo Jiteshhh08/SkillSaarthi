@@ -334,14 +334,39 @@ Primary use case:
 
 ```text
 Resume Upload
+Profile pictures (avatars)
 ```
 
-Possible future use cases:
+Two storage buckets are provisioned by `scripts/setup-appwrite.mjs`:
 
-- Profile pictures
-- Certificates
-- Project files
-- Other user documents
+| Bucket | ID (env) | Allowed extensions | Use |
+|---|---|---|---|
+| `resumes` | `VITE_APPWRITE_RESUME_BUCKET_ID` | `pdf, docx, doc, png, jpg, jpeg, webp, gif` | Resume upload |
+| `avatars` | `VITE_APPWRITE_AVATAR_BUCKET_ID` | `png, jpg, jpeg, webp, gif` | Profile pictures |
+
+> The Appwrite **free plan allows a single storage bucket**, so by default avatars
+> reuse the `resumes` bucket (`VITE_APPWRITE_AVATAR_BUCKET_ID=resumes`); the setup
+> script broadens `resumes` to also accept image files. If the plan is upgraded,
+> set `APPWRITE_AVATAR_BUCKET_ID` (scripts) / `VITE_APPWRITE_AVATAR_BUCKET_ID`
+> (frontend) to a dedicated bucket id and re-run `setup:appwrite` to provision it.
+
+Avatar files are stored client-side in the upload bucket and referenced from the
+Appwrite **account prefs** (`account.updatePrefs({ avatar_file_id })`) rather than a DB
+attribute, so no schema migration is needed. `avatarUrl(user)` in
+`src/services/auth.js` returns `storage.getFilePreview(bucket, fileId, 128, 128)`.
+
+## Profile update flow
+
+```text
+User (TopBar avatar → /settings)
+  ▼
+React (ProfileSettings.jsx)
+  │ account.updateName(name)          ──► Appwrite Auth (account name)
+  │ storage.createFile(resumes, file) ──► Appwrite Storage (image)
+  │ account.updatePrefs({ avatar_file_id })
+  ▼
+refreshUser() → TopBar avatar/name update immediately
+```
 
 ## Resume Upload Flow
 
@@ -1567,6 +1592,18 @@ POST  /api/admin/notifications  (admin — send to one user or broadcast)
   (`default` hero pair, `band` full-width blobs, `card` corner pair) rendered behind
   `relative overflow-hidden` heroes/cards, matching the Dashboard hero pattern.
 
+### Profile settings (`/settings`)
+
+- `src/services/auth.js` — `updateName` (Appwrite `account.updateName`), `uploadAvatar`
+  (client-side upload to the upload bucket + `account.updatePrefs({ avatar_file_id })`),
+  `removeAvatar`, `avatarUrl` (`storage.getFilePreview`).
+- `src/pages/private/ProfileSettings.jsx` — update display name + profile picture (≤ 5 MB
+  image, client-side validated, local preview), email read-only; calls `refreshUser` on save.
+- `src/context/AuthContext.jsx` — `refreshUser` re-fetches the current user so the TopBar
+  avatar/name update immediately after a save.
+- `src/components/layout/TopBar.jsx` — the profile section (avatar + name) is a CSS
+  `group-hover` dropdown exposing "Update profile" → `/settings` and "Logout".
+
 ---
 
 # 33. Complete Request Flow
@@ -2230,6 +2267,8 @@ Appwrite Cloud                      https://skillsaarthi-node.onrender.com
 VITE_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
 VITE_APPWRITE_PROJECT_ID=<project_id>
 VITE_APPWRITE_DATABASE_ID=<database_id>
+VITE_APPWRITE_RESUME_BUCKET_ID=resumes
+VITE_APPWRITE_AVATAR_BUCKET_ID=resumes
 VITE_API_BASE_URL=https://skillsaarthi-node.onrender.com
 ```
 

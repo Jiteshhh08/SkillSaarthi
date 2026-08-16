@@ -170,6 +170,9 @@ Copy `.env.sample` to `.env` and fill values. Never commit real secrets.
 VITE_APPWRITE_ENDPOINT=
 VITE_APPWRITE_PROJECT_ID=
 VITE_APPWRITE_DATABASE_ID=
+VITE_APPWRITE_RESUME_BUCKET_ID=
+# Free plan allows one bucket — reuse the resume bucket (which also accepts images).
+VITE_APPWRITE_AVATAR_BUCKET_ID=resumes
 VITE_API_BASE_URL=
 ```
 

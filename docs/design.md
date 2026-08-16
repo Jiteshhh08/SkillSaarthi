@@ -282,8 +282,12 @@ Base `4px`. Scale: `4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64 / 80 / 96 / 12
   (Explore: Matches / Internships, Growth: Skill Gaps / Roadmap, Tools: GitHub / Resume /
   Compare / What-If) — active item has a mint underline bar under the full clickable area.
 - Right side: notification bell, streak pill (Lucide flame + `{n} day{s} streak`, live from the
-  profile's daily-activity counters), user-name chip, avatar, then Logout / Login / Start learning.
-- Mobile: nav hidden below `md`, only bell + streak + auth buttons remain.
+  profile's daily-activity counters), then a profile menu and the auth buttons.
+- **Profile menu:** the avatar + name form a hover-triggered dropdown (CSS `group-hover`):
+  hovering shows "Update profile" (link to `/settings`) and "Logout" in a white `shadow-popover`
+  panel. The avatar shows the user's uploaded picture (`storage.getFilePreview`, 128×128) when
+  set, otherwise the purple initial-letter circle.
+- Mobile: nav hidden below `md`, only bell + streak + profile menu remain.
 
 **Notification bell**
 - Icon button (40×40, `#5b5e6b`, hover bg `#f7f8fa`) with an `#d23a48` unread-count badge
@@ -384,6 +388,24 @@ Hosts set `relative overflow-hidden`; content sits above via `position: relative
   cards lift on hover.
 - **Your skills section:** heading + "Manage skills" secondary button; skills rendered as chips
   (`rounded-full`, `#d6d8de` border), plus quick links (matches / skill gaps / what-if).
+
+### 6.7 Profile settings (`/settings`)
+
+Protected account page for updating the display name and profile picture.
+
+- Header: "Account" eyebrow + "Update profile" 30px/900 title; email is displayed read-only.
+- **Avatar row:** 80px rounded circle (`ring-2` line) showing the uploaded picture
+  (`storage.getFilePreview`, object-cover) or the initial; a mint camera badge sits at the
+  bottom-right; "Upload picture" / "Change picture" / "Remove" text actions, plus a hidden
+  `<input type="file">` (`image/png,image/jpeg,image/webp,image/gif`, ≤ 5 MB, client-side
+  validation with inline error). A local `URL.createObjectURL` preview shows before saving.
+- **Form:** name `input-base` + disabled email input; footer has "Cancel" (`navigate(-1)`)
+  and "Save changes" (primary). Saving updates the Appwrite account name
+  (`account.updateName`) and uploads the picture to the upload bucket
+  (`account.updatePrefs({ avatar_file_id })`), then refreshes the user so the TopBar
+  avatar/name update immediately.
+- Success/error appear as mint/red banners above the card; a caption notes the picture is
+  shown in the top bar.
 
 ---
 

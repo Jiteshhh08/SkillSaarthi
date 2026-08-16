@@ -1308,8 +1308,14 @@ Create `.env` files based on `.env.sample`.
 VITE_APPWRITE_ENDPOINT=
 VITE_APPWRITE_PROJECT_ID=
 VITE_APPWRITE_DATABASE_ID=
+VITE_APPWRITE_RESUME_BUCKET_ID=resumes
+VITE_APPWRITE_AVATAR_BUCKET_ID=resumes
 VITE_API_BASE_URL=http://localhost:5000
 ```
+
+> The Appwrite free plan allows a single storage bucket, so avatars share the
+> resume bucket (its allowed extensions include images). If you upgrade your
+> plan, you can set `VITE_APPWRITE_AVATAR_BUCKET_ID` to a dedicated bucket.
 
 ## Backend (`server/.env`)
 
@@ -1400,6 +1406,8 @@ Appwrite Cloud                    https://skillsaarthi-node.onrender.com
 VITE_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
 VITE_APPWRITE_PROJECT_ID=<your-project-id>
 VITE_APPWRITE_DATABASE_ID=<your-database-id>
+VITE_APPWRITE_RESUME_BUCKET_ID=resumes
+VITE_APPWRITE_AVATAR_BUCKET_ID=resumes
 VITE_API_BASE_URL=https://skillsaarthi-node.onrender.com
 ```
 
