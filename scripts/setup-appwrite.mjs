@@ -54,6 +54,8 @@ const DATABASE_ID = process.env.APPWRITE_DATABASE_ID || 'Skill Guide'
 const DATABASE_NAME = process.env.APPWRITE_DATABASE_NAME || 'Skill Guide'
 const BUCKET_ID = process.env.APPWRITE_BUCKET_ID || 'resumes'
 const BUCKET_NAME = process.env.APPWRITE_BUCKET_NAME || 'Resumes'
+const AVATAR_BUCKET_ID = process.env.APPWRITE_AVATAR_BUCKET_ID || 'resumes'
+const AVATAR_BUCKET_NAME = process.env.APPWRITE_AVATAR_BUCKET_NAME || 'Avatars'
 
 const client = new Client().setEndpoint(ENDPOINT).setProject(PROJECT_ID).setKey(API_KEY)
 const databases = new Databases(client)
@@ -542,37 +544,76 @@ async function main() {
     await ensureCollection(dbId, collection)
   }
 
-  console.log('\n3) Storage bucket')
-  let resolvedBucketId = BUCKET_ID
-  try {
-    const { buckets } = await storage.listBuckets()
-    if (buckets.length > 0) {
-      console.log(`  = reusing existing bucket ${buckets[0].$id} — ${buckets[0].name}`)
-      resolvedBucketId = buckets[0].$id
-    } else {
-      await storage.createBucket(
-        BUCKET_ID,
-        BUCKET_NAME,
-        [
-          Permission.create(Role.users()),
-          Permission.read(Role.users()),
-          Permission.update(Role.users()),
-          Permission.delete(Role.users()),
-        ],
-        false,
-        true,
-        5 * 1024 * 1024,
-        ['pdf', 'docx', 'doc'],
-        'gzip',
-        false,
-        false,
-        false,
-      )
-      console.log(`  + bucket ${BUCKET_ID}`)
+  console.log('\n3) Storage buckets')
+  const BUCKET_PERMS = [
+    Permission.create(Role.users()),
+    Permission.read(Role.users()),
+    Permission.update(Role.users()),
+    Permission.delete(Role.users()),
+  ]
+
+  const RESUME_EXTENSIONS = ['pdf', 'docx', 'doc']
+  // Images are uploaded into the same upload bucket because the free Appwrite
+  // plan only allows a single storage bucket.
+  const AVATAR_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif']
+
+  async function ensureBucket(id, name, extensions) {
+    try {
+      const { buckets } = await storage.listBuckets()
+      const existing = buckets.find((bucket) => bucket.$id === id)
+      if (existing) {
+        console.log(`  = bucket ${id} already exists (${existing.name})`)
+        return id
+      }
+      await storage.createBucket(id, name, BUCKET_PERMS, false, true, 5 * 1024 * 1024, extensions, 'gzip', false, false, false)
+      console.log(`  + bucket ${id} (${name})`)
+      return id
+    } catch (error) {
+      if (isAlreadyExists(error)) {
+        console.log(`  = bucket ${id} already exists`)
+        return id
+      }
+      throw error
     }
+  }
+
+  // Broaden the upload bucket so it also accepts image files for avatars.
+  const { buckets: allBuckets } = await storage.listBuckets()
+  const uploadBucket = allBuckets.find((b) => b.$id === BUCKET_ID)
+  if (uploadBucket) {
+    const current = (uploadBucket.allowedFileExtensions || []).filter(Boolean)
+    if (!current.some((ext) => AVATAR_EXTENSIONS.includes(ext))) {
+      await storage.updateBucket(
+        BUCKET_ID,
+        uploadBucket.name,
+        uploadBucket.permissions || BUCKET_PERMS,
+        uploadBucket.fileSecurity,
+        uploadBucket.enabled,
+        5 * 1024 * 1024,
+        [...new Set([...current, ...AVATAR_EXTENSIONS])],
+        uploadBucket.compression || 'none',
+        uploadBucket.encryption,
+        uploadBucket.antivirus,
+      )
+      console.log(
+        `  ~ bucket ${BUCKET_ID} now accepts image files for profile avatars`,
+      )
+    } else {
+      console.log(`  = bucket ${BUCKET_ID} already accepts image files`)
+    }
+  }
+
+  const resolvedBucketId = await ensureBucket(BUCKET_ID, BUCKET_NAME, [...new Set([...RESUME_EXTENSIONS, ...AVATAR_EXTENSIONS])])
+
+  let resolvedAvatarBucketId
+  try {
+    resolvedAvatarBucketId = await ensureBucket(AVATAR_BUCKET_ID, AVATAR_BUCKET_NAME, AVATAR_EXTENSIONS)
   } catch (error) {
-    if (isAlreadyExists(error)) {
-      console.log(`  = bucket ${BUCKET_ID} already exists`)
+    if (/maximum number of buckets/i.test(error?.message || '')) {
+      console.log(
+        `  ! plan allows only one storage bucket — reusing ${BUCKET_ID} for avatars`,
+      )
+      resolvedAvatarBucketId = BUCKET_ID
     } else {
       throw error
     }
@@ -583,6 +624,7 @@ async function main() {
   console.log(`VITE_APPWRITE_PROJECT_ID=${PROJECT_ID}`)
   console.log(`VITE_APPWRITE_DATABASE_ID=${dbId}`)
   console.log(`VITE_APPWRITE_RESUME_BUCKET_ID=${resolvedBucketId}`)
+  console.log(`VITE_APPWRITE_AVATAR_BUCKET_ID=${resolvedAvatarBucketId}`)
 
   rl?.close()
 }
