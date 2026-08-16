@@ -47,6 +47,9 @@ export default function TopBar() {
               <Link to="/career-compare" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
                 Compare
               </Link>
+              <Link to="/what-if" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
+                What-If
+              </Link>
               <Link to="/internships" className="rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover">
                 Internships
               </Link>
