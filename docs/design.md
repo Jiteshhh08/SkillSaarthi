@@ -13,8 +13,9 @@ token, and interaction in the app must follow the rules below.
 
 skillsaarthi mirrors Khan Academy's **mission-driven warmth**: a paper-white canvas,
 a confident **mint green** brand accent, Lato sans-serif throughout, 8px-radius cards,
-pill-shaped primary buttons, and progress rendered as **skill mastery** rather than
-percentage-watched. The tone is the encouraging tutor who believes anyone can learn.
+rounded-corner primary buttons (16px radius), and progress rendered as **skill mastery**
+rather than percentage-watched. The tone is the encouraging tutor who believes anyone can
+learn.
 
 **Key characteristics**
 - Paper-white `#ffffff` canvas; alternate bands warm to `#f7f8fa`.
@@ -23,7 +24,7 @@ percentage-watched. The tone is the encouraging tutor who believes anyone can le
 - Deeper green `#0a7d63` for inline links and outlined buttons (AAA contrast on white).
 - Lato humanist sans — one family pulls display through body.
 - 4-stage mastery indicator: Attempted → Familiar → Proficient → Mastered.
-- Energy-points (yellow) and streak (orange) light gamification.
+- Streak (orange) light gamification.
 - Flat, hand-drawn-style custom illustrations — no stock photography.
 - Donate-blue `#1865f2` reserved for the donation-ask style CTA so it never competes
   with the mint learning-action verbs.
@@ -77,7 +78,7 @@ percentage-watched. The tone is the encouraging tutor who believes anyone can le
 | Token | Hex | Usage |
 |---|---|---|
 | `accent-blue` | `#1865f2` | Donate-style CTA, familiar mastery dot, info messages |
-| `accent-yellow` | `#f4cf3e` | Energy-points lightning + pill border |
+| `accent-yellow` | `#f4cf3e` | Tip / ask banner border, callout accents |
 | `accent-orange` | `#e07c2c` | Streak fire + pill border |
 | `accent-purple` | `#9059ff` | Proficient mastery dot, avatar tint |
 | `accent-red` | `#d23a48` | Error / wrong answer |
@@ -131,7 +132,7 @@ Pills for tiers:
 
 - **Primary:** `"Lato", "Lato 2.0", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", Helvetica, Arial, sans-serif` — humanist sans, LOFL-licensed, weights 400 / 700 / 900.
 - **Mono:** `"Source Code Pro", "SF Mono", "Roboto Mono", Menlo, Consolas, monospace` — computing courses and inline code.
-- **OpenType features:** `kern` and `liga` enabled site-wide. `tnum` on energy points, streaks, learner counts, progress percentages, and any tabular data.
+- **OpenType features:** `kern` and `liga` enabled site-wide. `tnum` on streaks, learner counts, progress percentages, and any tabular data.
 
 ### 3.2 Type scale
 
@@ -153,7 +154,7 @@ Pills for tiers:
 | Eyebrow | Lato | 13px | 700 | 1.0 | `0.08em` | Uppercase "GET STARTED" |
 | Caption | Lato | 13px | 400 | 1.4 | 0 | Fine print |
 | Metadata | Lato | 14px | 400 | 1.3 | 0 (`tnum`) | Skill counts, points |
-| Points | Lato | 16px | 700 | 1.0 | 0 (`tnum`) | "2,340" energy points |
+| Streak | Lato | 16px | 700 | 1.0 | 0 (`tnum`) | "7 day streak" pill |
 | Code | Source Code Pro | 14px | 400 | 1.5 | 0 | Code, LaTeX fallback |
 
 ### 3.3 Principles
@@ -187,7 +188,8 @@ Base `4px`. Scale: `4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64 / 80 / 96 / 12
 | md | 6px | Default badge |
 | lg | 8px | Cards, buttons — Khan's friendly default |
 | xl | 12px | Large cards, modals, encouragement callouts |
-| pill | 9999px | Primary button, chips, mastery dots, pills |
+| 2xl | 16px | Primary / secondary / donate buttons (`rounded-2xl`) |
+| pill | 9999px | Chips, mastery dots, pills, pill badges |
 
 ### 4.3 Layout
 
@@ -196,7 +198,7 @@ Base `4px`. Scale: `4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64 / 80 / 96 / 12
 | Page width (max) | 1440px |
 | Content max | 1240px centred |
 | Prose width | 720px |
-| Header height | 64px (sticky) |
+| Header height | 80px (sticky) |
 | Learning-tree sidebar | 280px |
 | Card min / max | 240px / 320px |
 | Hero min-height | 480px |
@@ -217,20 +219,20 @@ Base `4px`. Scale: `4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64 / 80 / 96 / 12
 
 ### 5.1 Buttons
 
-**Primary (mint pill)** — the only saturated action per viewport.
-- bg `#14bf96`, text `#ffffff`, radius `9999px`, padding `12px 24px`, height 48px, Lato 16/700.
+**Primary (mint)** — the only saturated action per viewport.
+- bg `#14bf96`, text `#ffffff`, radius `16px` (`rounded-2xl`), padding `24px` horizontal, height 48px, Lato 16/700.
 - Hover `#0e9a78`; active `#0a7d63`. No shadow lift, no scale.
 - Uses: "Start", "Continue", "Practice this skill", "Get started".
 
 **Secondary (outlined deep green)** — "Learn more", "Sign in".
-- bg `#ffffff`, text `#0a7d63`, border `2px solid #0a7d63`, radius `9999px`, padding `12px 24px`.
+- bg `#ffffff`, text `#0a7d63`, border `1px solid #0a7d63`, radius `16px` (`rounded-2xl`), padding `24px` horizontal.
 - Hover bg `#e3f9f1`.
 
 **Tertiary (text)** — inline actions.
 - transparent bg, text `#0a7d63`, padding `8px 12px`; hover underline.
 
-**Donate-style (blue pill)** — reserved for nonprofit-ask CTA.
-- bg `#1865f2`, text `#ffffff`, radius `9999px`, padding `12px 24px`, height 48px. Hover `#0d4ec7`.
+**Donate-style (blue)** — reserved for nonprofit-ask CTA.
+- bg `#1865f2`, text `#ffffff`, radius `16px` (`rounded-2xl`), padding `24px` horizontal, height 48px. Hover `#0d4ec7`.
 
 **Icon button** — bookmark/share/more.
 - 32×32 transparent, text `#5b5e6b`, radius 4px; hover bg `#f7f8fa`, text `#21242c`.
@@ -261,8 +263,7 @@ Base `4px`. Scale: `4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64 / 80 / 96 / 12
 
 - Mastery tier pills: 9999px radius, padding `4px 12px`, 12/700 (colors in §2.6).
 - **Mastery dot:** 24px circle, progress arc renders current stage; animated fill on correct answers. Colors in §2.6.
-- **Energy-points pill:** bg `#fef9e9`, text `#a06c0a`, border `#f4cf3e`; "⚡ 2,340" with `tnum`.
-- **Streak pill:** bg `#fef0e7`, text `#9d5511`, border `#e07c2c`; "🔥 7 day streak".
+- **Streak pill:** bg `orange-50`, text `orange-800`, border `#e07c2c`, radius 2-4px (`rounded-sm`); "🔥 7 day streak".
 - **Filter chip:** default white + `#d6d8de` border; active bg `#e3f9f1`, text `#0a7d63`, border `#14bf96`.
 
 ### 5.4 Inputs & forms
@@ -275,11 +276,13 @@ Base `4px`. Scale: `4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64 / 80 / 96 / 12
 
 ### 5.5 Navigation
 
-**Top bar (sticky, 64px)**
+**Top bar (sticky, 80px)**
 - bg `#ffffff`, border-bottom `1px solid #d6d8de`.
-- Logo left; primary nav; search centre; "Sign in" + blue donate pill right.
-- Logged in: avatar, energy-points pill, streak pill.
-- Mobile: hamburger + search icon + donate.
+- Logo left; grouped primary nav — direct links (Home, Dashboard) plus dropdowns
+  (Explore: Matches / Internships, Growth: Skill Gaps / Roadmap, Tools: GitHub / Resume /
+  Compare / What-If) — active item has a mint underline bar under the full clickable area.
+- Right side: streak pill, user-name chip, avatar, then Logout / Login / Start learning.
+- Mobile: nav hidden below `md`, only streak + auth buttons remain.
 
 **Learning-tree sidebar (280px)**
 - bg `#ffffff`, padding `24px 16px`, sticky.
@@ -324,8 +327,9 @@ Base `4px`. Scale: `4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64 / 80 / 96 / 12
 
 ### 6.4 Profile
 
-- Avatar circle (purple tint `#9059ff`), display name, education level selector.
-- Energy points + streak pills.
+- Avatar circle (purple tint `#9059ff`), user-name chip (mint border + soft-mint bg),
+  education level selector.
+- Streak pill (energy-points gamification is retired).
 - Skill mastery list and roadmap overview.
 
 ---
