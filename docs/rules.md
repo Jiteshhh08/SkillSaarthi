@@ -317,7 +317,9 @@ manual cleanup.
 - **Read** from the frontend via the Appwrite client SDK (`src/services/notifications.js`):
   `getNotifications`, `markNotificationRead`, `markAllNotificationsRead`, `timeAgo`.
 - System notifications fire when a recommendation or roadmap is generated; admins can
-  broadcast from the admin page (`POST /api/admin/notifications`, `{ title, message, user_id? }`).
+  broadcast from the admin page (`POST /api/admin/notifications`, `{ title, message, email? }` —
+  blank recipient = broadcast; `email` is resolved to the Appwrite account `$id`, which requires
+  the API key to have the `users.read` scope).
 - UI: `src/components/layout/NotificationBell.jsx` in the TopBar — unread badge, dropdown
   inbox, mark-all-read, 45s polling.
 

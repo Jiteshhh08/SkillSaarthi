@@ -317,7 +317,9 @@ User inbox
 ```
 
 Admins can broadcast announcements from the admin panel (`POST /api/admin/notifications`),
-and the system notifies users when new career matches or a roadmap are ready.
+targeting a single user by **email** or all users, and the system notifies users when new career
+matches or a roadmap are ready. (Email lookup uses the Appwrite `Users` service, so the backend
+API key needs the `users.read` scope.)
 
 ## Daily Activity Streak
 

@@ -1550,8 +1550,10 @@ POST  /api/admin/notifications  (admin — send to one user or broadcast)
   `server/src/services/notification.service.js` and run with the Appwrite service key.
 - System notifications are triggered automatically when a recommendation
   (`recommendation.controller.js`) or roadmap (`roadmap.controller.js`) is generated.
-- The admin broadcast (`POST /api/admin/notifications`) accepts `{ title, message, user_id? }`;
-  without `user_id` it pages through all `profiles` and sends one notification per user.
+- The admin broadcast (`POST /api/admin/notifications`) accepts `{ title, message, email? | user_id? }`;
+  without a recipient it pages through all `profiles` and sends one notification per user.
+  `email` is resolved to the account `$id` via `resolveUserIdByEmail` (Appwrite `Users` service),
+  which requires the backend API key to have the **`users.read`** scope.
 
 ### Frontend
 
