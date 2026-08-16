@@ -20,6 +20,7 @@ export const storage = new Storage(appwriteClient)
 
 export const APPWRITE_DATABASE_ID = databaseId
 export const RESUME_BUCKET_ID = import.meta.env.VITE_APPWRITE_RESUME_BUCKET_ID
+export const AVATAR_BUCKET_ID = import.meta.env.VITE_APPWRITE_AVATAR_BUCKET_ID
 
 export const COLLECTIONS = {
   profiles: 'profiles',
