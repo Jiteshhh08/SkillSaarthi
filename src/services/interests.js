@@ -25,23 +25,29 @@ export const FALLBACK_INTERESTS = [
   'Healthcare',
 ]
 
-export async function getInterestCatalog() {
-  try {
-    const { documents } = await databases.listDocuments(
-      APPWRITE_DATABASE_ID,
-      COLLECTIONS.interests,
-      [Query.limit(200)],
-    )
-    if (documents.length > 0) {
-      return documents.map((doc) => ({ $id: doc.$id, name: doc.name }))
+let interestCatalogCache = null
+
+export function getInterestCatalog() {
+  if (interestCatalogCache) return interestCatalogCache
+  interestCatalogCache = (async () => {
+    try {
+      const { documents } = await databases.listDocuments(
+        APPWRITE_DATABASE_ID,
+        COLLECTIONS.interests,
+        [Query.limit(200)],
+      )
+      if (documents.length > 0) {
+        return documents.map((doc) => ({ $id: doc.$id, name: doc.name }))
+      }
+    } catch {
+      // catalog not reachable — fall back below
     }
-  } catch {
-    // catalog not reachable — fall back below
-  }
-  return FALLBACK_INTERESTS.map((name) => ({
-    $id: name.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
-    name,
-  }))
+    return FALLBACK_INTERESTS.map((name) => ({
+      $id: name.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+      name,
+    }))
+  })()
+  return interestCatalogCache
 }
 
 async function findUserInterest(userId, interestId) {

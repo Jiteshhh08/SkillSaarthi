@@ -13,6 +13,7 @@ export default function Dashboard() {
   const [skillCount, setSkillCount] = useState(0)
   const [interestCount, setInterestCount] = useState(0)
   const [roadmaps, setRoadmaps] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
@@ -29,6 +30,9 @@ export default function Dashboard() {
           setInterestCount(0)
           setRoadmaps([])
         }
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
       })
     return () => {
       mounted = false
@@ -123,33 +127,45 @@ export default function Dashboard() {
           <div className="card">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-black">Profile setup</h2>
-              <span className="text-sm font-black text-brand-deep">{completion}%</span>
+              <span className="text-sm font-black text-brand-deep">
+                {loading ? '…' : `${completion}%`}
+              </span>
             </div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-strong">
-              <div className="h-full rounded-full bg-brand" style={{ width: `${completion}%` }} />
-            </div>
-            <ul className="mt-4 space-y-2">
-              {checklist.map((item) => (
-                <li key={item.label}>
-                  <Link
-                    to={item.to}
-                    className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-surface-hover"
-                  >
-                    <span className="flex items-center gap-2 font-bold text-ink">
-                      <span
-                        className={`grid h-5 w-5 place-items-center rounded-full text-[10px] font-black ${
-                          item.done ? 'bg-brand text-white' : 'bg-line text-white'
-                        }`}
+            {loading ? (
+              <div className="mt-4 space-y-3">
+                {[1, 2, 3, 4, 5, 6].map((item) => (
+                  <div key={item} className="h-8 animate-pulse rounded-md bg-surface-soft" />
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-strong">
+                  <div className="h-full rounded-full bg-brand" style={{ width: `${completion}%` }} />
+                </div>
+                <ul className="mt-4 space-y-2">
+                  {checklist.map((item) => (
+                    <li key={item.label}>
+                      <Link
+                        to={item.to}
+                        className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-surface-hover"
                       >
-                        {item.done ? '✓' : ''}
-                      </span>
-                      {item.label}
-                    </span>
-                    <span className="text-xs text-ink-muted">{item.detail}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                        <span className="flex items-center gap-2 font-bold text-ink">
+                          <span
+                            className={`grid h-5 w-5 place-items-center rounded-full text-[10px] font-black ${
+                              item.done ? 'bg-brand text-white' : 'bg-line text-white'
+                            }`}
+                          >
+                            {item.done ? '✓' : ''}
+                          </span>
+                          {item.label}
+                        </span>
+                        <span className="text-xs text-ink-muted">{item.detail}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
         </section>
 
@@ -180,13 +196,19 @@ export default function Dashboard() {
             <div className="grid h-12 w-12 place-items-center rounded-full bg-warning-soft text-2xl">🗺️</div>
             <h3 className="mt-4 text-lg font-bold">Roadmap</h3>
             <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-              {currentRoadmap
-                ? `"${currentRoadmap.title}" is ${currentRoadmap.progress_percent}% complete.`
-                : 'Generate your first personalized learning roadmap.'}
+              {loading
+                ? 'Loading your roadmaps…'
+                : currentRoadmap
+                  ? `"${currentRoadmap.title}" is ${currentRoadmap.progress_percent}% complete.`
+                  : 'Generate your first personalized learning roadmap.'}
             </p>
             <div className="mt-6 w-full">
               <Link to="/roadmaps" className="btn-primary !h-10 !px-4 !text-sm">
-                {currentRoadmap ? 'Continue roadmap' : 'Generate roadmap'}
+                {loading
+                  ? 'Loading…'
+                  : currentRoadmap
+                    ? 'Continue roadmap'
+                    : 'Generate roadmap'}
               </Link>
             </div>
           </div>
@@ -253,9 +275,11 @@ export default function Dashboard() {
             <div>
               <h2 className="text-2xl font-bold tracking-tight">Your skills</h2>
               <p className="mt-1 text-sm text-ink-muted">
-                {skillCount > 0
-                  ? 'These power your career matches and skill-gap analysis.'
-                  : 'Add skills to power your career matches.'}
+                {loading
+                  ? 'Loading your saved skills…'
+                  : skillCount > 0
+                    ? 'These power your career matches and skill-gap analysis.'
+                    : 'Add skills to power your career matches.'}
               </p>
             </div>
             <Link to="/onboarding" className="btn-secondary !h-10 !px-4 !text-sm">
@@ -264,7 +288,11 @@ export default function Dashboard() {
           </div>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {skillCount === 0 ? (
+            {loading ? (
+              <div className="rounded-lg border border-line bg-white px-4 py-8 text-center text-sm text-ink-muted sm:col-span-2">
+                Loading your skills…
+              </div>
+            ) : skillCount === 0 ? (
               <div className="rounded-lg border border-line bg-white px-4 py-8 text-center text-sm text-ink-muted sm:col-span-2">
                 No skills yet — add a few from the onboarding flow to see recommendations here.
               </div>

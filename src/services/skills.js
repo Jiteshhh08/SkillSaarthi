@@ -65,27 +65,33 @@ export const FALLBACK_SKILLS = [
   { name: 'Leadership', category: 'Soft Skills' },
 ]
 
-export async function getSkillCatalog() {
-  try {
-    const { documents } = await databases.listDocuments(
-      APPWRITE_DATABASE_ID,
-      COLLECTIONS.skills,
-      [Query.limit(200)],
-    )
-    if (documents.length > 0) {
-      return documents.map((doc) => ({
-        $id: doc.$id,
-        name: doc.name,
-        category: doc.category || 'General',
-      }))
+let skillCatalogCache = null
+
+export function getSkillCatalog() {
+  if (skillCatalogCache) return skillCatalogCache
+  skillCatalogCache = (async () => {
+    try {
+      const { documents } = await databases.listDocuments(
+        APPWRITE_DATABASE_ID,
+        COLLECTIONS.skills,
+        [Query.limit(200)],
+      )
+      if (documents.length > 0) {
+        return documents.map((doc) => ({
+          $id: doc.$id,
+          name: doc.name,
+          category: doc.category || 'General',
+        }))
+      }
+    } catch {
+      // catalog not reachable — fall back below
     }
-  } catch {
-    // catalog not reachable — fall back below
-  }
-  return FALLBACK_SKILLS.map((skill) => ({
-    $id: skill.name.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
-    ...skill,
-  }))
+    return FALLBACK_SKILLS.map((skill) => ({
+      $id: skill.name.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+      ...skill,
+    }))
+  })()
+  return skillCatalogCache
 }
 
 async function findUserSkill(userId, skillId) {
