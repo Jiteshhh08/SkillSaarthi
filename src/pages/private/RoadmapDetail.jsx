@@ -113,7 +113,16 @@ export default function RoadmapDetail() {
     return (
       <div className="min-h-screen">
         <TopBar />
-        <div className="flex min-h-[60vh] items-center justify-center text-ink-muted">Loading…</div>
+        <main className="mx-auto max-w-7xl px-6 py-10">
+          <Link to="/roadmaps" className="text-sm font-bold text-brand-deep hover:underline">
+            ← All roadmaps
+          </Link>
+          <div className="mt-8 grid gap-4">
+            {[1, 2].map((item) => (
+              <div key={item} className="card h-40 animate-pulse bg-warm" />
+            ))}
+          </div>
+        </main>
         <Footer />
       </div>
     )

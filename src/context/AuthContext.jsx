@@ -12,6 +12,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(true)
 
   const refreshProfile = useCallback(async (userId) => {
     const id = userId || user?.$id
@@ -27,19 +28,25 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true
 
-    getCurrentUser()
-      .then(async (currentUser) => {
+    async function boot() {
+      try {
+        const currentUser = await getCurrentUser()
         if (!mounted) return
         setUser(currentUser)
+        setLoading(false)
         const fetched = await getProfile(currentUser.$id)
         if (mounted) setProfile(fetched)
-      })
-      .catch(() => {
-        if (mounted) setUser(null)
-      })
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
+      } catch {
+        if (mounted) {
+          setUser(null)
+          setLoading(false)
+        }
+      } finally {
+        if (mounted) setProfileLoading(false)
+      }
+    }
+
+    boot()
 
     return () => {
       mounted = false
@@ -71,7 +78,9 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, login, signUp, logout, refreshProfile }}>
+    <AuthContext.Provider
+      value={{ user, profile, profileLoading, loading, login, signUp, logout, refreshProfile }}
+    >
       {children}
     </AuthContext.Provider>
   )
