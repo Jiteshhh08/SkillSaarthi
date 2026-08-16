@@ -212,9 +212,16 @@ export default function Dashboard() {
               Welcome back, {(user?.name || 'there').split(' ')[0]}
             </h1>
             <p className="mt-2 max-w-2xl text-lg text-ink-muted">
-              {completion === 100
-                ? 'Your profile is fully set up — keep the momentum going.'
-                : `Your profile is ${completion}% complete. A few quick steps to unlock everything.`}
+              {loading ? (
+                <>
+                  <span className="inline-block h-5 w-64 animate-pulse rounded bg-surface-soft" />
+                  <span className="mt-1.5 block h-5 w-44 animate-pulse rounded bg-surface-soft" />
+                </>
+              ) : completion === 100 ? (
+                'Your profile is fully set up — keep the momentum going.'
+              ) : (
+                `Your profile is ${completion}% complete. A few quick steps to unlock everything.`
+              )}
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-deep bg-white px-3 py-1.5 text-sm font-bold text-brand-deep">
@@ -312,7 +319,12 @@ export default function Dashboard() {
                           </span>
                           {item.label}
                         </span>
-                        <span className="text-xs text-ink-muted">{item.detail}</span>
+                        {loading &&
+                        (item.label === 'Skills' || item.label === 'Interests') ? (
+                          <span className="h-3.5 w-20 animate-pulse rounded bg-surface-soft" />
+                        ) : (
+                          <span className="text-xs text-ink-muted">{item.detail}</span>
+                        )}
                       </Link>
                     </li>
                   ))}
@@ -437,8 +449,20 @@ export default function Dashboard() {
 
           <div className="mt-6">
             {loading ? (
-              <div className="rounded-lg border border-line bg-white px-4 py-8 text-center text-sm text-ink-muted">
-                Loading your skills…
+              <div className="rounded-lg border border-line bg-white p-4">
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3, 4, 5].map((item) => (
+                    <span
+                      key={item}
+                      className="h-8 w-24 animate-pulse rounded-full bg-surface-soft"
+                    />
+                  ))}
+                </div>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <span className="h-4 w-32 animate-pulse rounded bg-surface-soft" />
+                  <span className="h-4 w-40 animate-pulse rounded bg-surface-soft" />
+                  <span className="h-4 w-36 animate-pulse rounded bg-surface-soft" />
+                </div>
               </div>
             ) : skillCount === 0 ? (
               <div className="rounded-lg border border-line bg-white px-4 py-8 text-center text-sm text-ink-muted">
