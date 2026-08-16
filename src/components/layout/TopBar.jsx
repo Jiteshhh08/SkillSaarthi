@@ -100,6 +100,7 @@ export default function TopBar() {
         { to: '/github', label: 'GitHub' },
         { to: '/resume', label: 'Resume' },
         { to: '/career-compare', label: 'Compare' },
+        { to: '/what-if', label: 'WhatIfSimulator'}
       ],
     },
   ]
@@ -154,7 +155,7 @@ export default function TopBar() {
         <div className="ml-auto flex items-center gap-3">
           {loading ? null : user ? (
             <>
-              <span className="hidden items-center gap-1 py-2 rounded-sm border border-accent-orange bg-orange-50 px-3 py-1 text-sm font-bold text-orange-800 sm:inline-flex">
+              <span className="hidden items-center gap-1 rounded-sm border border-accent-orange bg-orange-50 px-3 py-2 text-sm font-bold text-orange-800 sm:inline-flex">
                 🔥 0 day streak
               </span>
               <span
