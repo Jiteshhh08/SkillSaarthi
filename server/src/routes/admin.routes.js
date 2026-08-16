@@ -2,6 +2,8 @@ import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.middleware.js'
 import { requireAdmin } from '../middleware/admin.middleware.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
+import { ApiError } from '../utils/ApiError.js'
+import { notify, notifyAllUsers } from '../services/notification.service.js'
 import {
   createInternship,
   deleteInternship,
@@ -47,6 +49,24 @@ router.delete(
   asyncHandler(async (req, res) => {
     await deleteInternship(req.params.id)
     res.json({ success: true, data: { deleted: true } })
+  }),
+)
+
+// Admin → sends a notification to a single user (user_id) or broadcasts to all users.
+router.post(
+  '/notifications',
+  asyncHandler(async (req, res) => {
+    const { title, message, user_id } = req.body || {}
+    if (!title || !String(title).trim()) {
+      throw new ApiError(400, 'Notification title is required.', 'VALIDATION_ERROR')
+    }
+    let sent
+    if (user_id && String(user_id).trim()) {
+      sent = (await notify(String(user_id).trim(), String(title).trim(), message)) ? 1 : 0
+    } else {
+      sent = await notifyAllUsers(String(title).trim(), message)
+    }
+    res.status(201).json({ success: true, data: { sent } })
   }),
 )
 

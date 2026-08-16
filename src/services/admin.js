@@ -24,3 +24,8 @@ export async function deleteInternship(id) {
   const { data } = await api.delete(`/api/admin/internships/${id}`)
   return data.data
 }
+
+export async function sendNotification(payload) {
+  const { data } = await api.post('/api/admin/notifications', payload)
+  return data.data
+}

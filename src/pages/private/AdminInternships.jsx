@@ -3,11 +3,109 @@ import {
   createInternship,
   deleteInternship,
   getAdminInternships,
+  sendNotification,
   updateInternship,
 } from '../../services/admin'
 import { useAdmin } from '../../hooks/useAdmin'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
+
+function NotificationForm() {
+  const [open, setOpen] = useState(false)
+  const [form, setForm] = useState({ title: '', message: '', user_id: '' })
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+
+  const update = (key) => (event) => setForm((f) => ({ ...f, [key]: event.target.value }))
+
+  const submit = async (event) => {
+    event.preventDefault()
+    setSending(true)
+    setError('')
+    setNotice('')
+    try {
+      const payload = { title: form.title.trim(), message: form.message.trim() }
+      if (form.user_id.trim()) payload.user_id = form.user_id.trim()
+      const result = await sendNotification(payload)
+      setNotice(
+        form.user_id.trim()
+          ? `Notification sent to that user.`
+          : `Notification broadcast to ${result.sent} user(s).`,
+      )
+      setForm({ title: '', message: '', user_id: '' })
+      setOpen(false)
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Could not send the notification.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="btn-secondary !h-10 !px-4 !text-sm">
+        📢 Send notification
+      </button>
+    )
+  }
+
+  return (
+    <form onSubmit={submit} className="card grid gap-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-black">Send a notification</h2>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="text-sm font-bold text-ink-muted hover:text-ink"
+        >
+          Close
+        </button>
+      </div>
+      <p className="text-sm text-ink-muted">
+        Leave the recipient blank to broadcast to all users, or enter a specific user ID
+        (Appwrite account ID) to notify just one person.
+      </p>
+      <label className="block text-sm font-bold text-ink">
+        Title *
+        <input
+          value={form.title}
+          onChange={update('title')}
+          required
+          maxLength={300}
+          className="input-base mt-1"
+          placeholder="e.g. New internships available"
+        />
+      </label>
+      <label className="block text-sm font-bold text-ink">
+        Message
+        <textarea
+          value={form.message}
+          onChange={update('message')}
+          rows={3}
+          className="input-base mt-1 resize-y"
+          placeholder="Optional short detail…"
+        />
+      </label>
+      <label className="block text-sm font-bold text-ink">
+        Recipient user ID (blank = all users)
+        <input
+          value={form.user_id}
+          onChange={update('user_id')}
+          className="input-base mt-1"
+          placeholder="Optional"
+        />
+      </label>
+      {error && <p className="text-sm font-bold text-danger">{error}</p>}
+      {notice && <p className="text-sm font-bold text-success">{notice}</p>}
+      <div>
+        <button type="submit" disabled={sending} className="btn-primary !h-10 !px-4 !text-sm disabled:opacity-50">
+          {sending ? 'Sending…' : 'Send notification'}
+        </button>
+      </div>
+    </form>
+  )
+}
 
 const STATUS_BADGES = {
   pending: 'bg-warning-soft text-warning',
@@ -312,6 +410,10 @@ function AdminInternships() {
             {error}
           </div>
         )}
+
+        <div className="mt-8">
+          <NotificationForm />
+        </div>
 
         <div className="mt-8 flex flex-wrap items-center gap-2">
           {FILTERS.map((filter) => (
