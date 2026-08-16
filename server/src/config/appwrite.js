@@ -1,4 +1,4 @@
-import { Client, Databases, ID, Permission, Query, Role, Storage } from 'node-appwrite'
+import { Client, Databases, ID, Permission, Query, Role, Storage, Users } from 'node-appwrite'
 import { config } from './environment.js'
 
 const client = new Client()
@@ -11,6 +11,7 @@ if (config.appwrite.apiKey) {
 
 export const databases = new Databases(client)
 export const storage = new Storage(client)
+export const users = new Users(client)
 
 export const COLLECTIONS = {
   profiles: 'profiles',

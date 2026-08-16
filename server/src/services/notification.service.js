@@ -1,5 +1,30 @@
-import { COLLECTIONS, ID, Permission, Query, Role, databases } from '../config/appwrite.js'
+import { COLLECTIONS, ID, Permission, Query, Role, databases, users } from '../config/appwrite.js'
 import { config } from '../config/environment.js'
+import { ApiError } from '../utils/ApiError.js'
+
+/**
+ * Resolves an Appwrite user ID from an email address.
+ * Returns the user's `$id`, or null when no user matches.
+ * Requires the API key to have the `users.read` scope.
+ */
+export async function resolveUserIdByEmail(email) {
+  const normalized = String(email || '').trim().toLowerCase()
+  if (!normalized) return null
+  let result
+  try {
+    result = await users.list([
+      Query.equal('email', normalized),
+      Query.limit(1),
+    ])
+  } catch {
+    throw new ApiError(
+      500,
+      'Could not look up users by email — the Appwrite API key needs the `users.read` scope.',
+      'USERS_SCOPE_MISSING',
+    )
+  }
+  return result?.users?.[0]?.$id || null
+}
 
 /**
  * Creates a notification for a single user.

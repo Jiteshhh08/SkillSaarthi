@@ -12,7 +12,7 @@ import Footer from '../../components/layout/Footer'
 
 function NotificationForm() {
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ title: '', message: '', user_id: '' })
+  const [form, setForm] = useState({ title: '', message: '', email: '' })
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -26,14 +26,14 @@ function NotificationForm() {
     setNotice('')
     try {
       const payload = { title: form.title.trim(), message: form.message.trim() }
-      if (form.user_id.trim()) payload.user_id = form.user_id.trim()
+      if (form.email.trim()) payload.email = form.email.trim()
       const result = await sendNotification(payload)
       setNotice(
-        form.user_id.trim()
-          ? `Notification sent to that user.`
+        form.email.trim()
+          ? `Notification sent to ${form.email.trim()}.`
           : `Notification broadcast to ${result.sent} user(s).`,
       )
-      setForm({ title: '', message: '', user_id: '' })
+      setForm({ title: '', message: '', email: '' })
       setOpen(false)
     } catch (err) {
       setError(err?.response?.data?.message || 'Could not send the notification.')
@@ -63,8 +63,8 @@ function NotificationForm() {
         </button>
       </div>
       <p className="text-sm text-ink-muted">
-        Leave the recipient blank to broadcast to all users, or enter a specific user ID
-        (Appwrite account ID) to notify just one person.
+        Leave the recipient blank to broadcast to all users, or enter a specific user's
+        <strong> email</strong> (e.g. <code>user1@user1.com</code>) to notify just that one person.
       </p>
       <label className="block text-sm font-bold text-ink">
         Title *
@@ -88,12 +88,13 @@ function NotificationForm() {
         />
       </label>
       <label className="block text-sm font-bold text-ink">
-        Recipient user ID (blank = all users)
+        Recipient email (blank = all users)
         <input
-          value={form.user_id}
-          onChange={update('user_id')}
+          value={form.email}
+          onChange={update('email')}
+          type="email"
           className="input-base mt-1"
-          placeholder="Optional"
+          placeholder="user1@user1.com"
         />
       </label>
       {error && <p className="text-sm font-bold text-danger">{error}</p>}

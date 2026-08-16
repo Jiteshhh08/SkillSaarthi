@@ -3,7 +3,7 @@ import { requireAuth } from '../middleware/auth.middleware.js'
 import { requireAdmin } from '../middleware/admin.middleware.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { ApiError } from '../utils/ApiError.js'
-import { notify, notifyAllUsers } from '../services/notification.service.js'
+import { notify, notifyAllUsers, resolveUserIdByEmail } from '../services/notification.service.js'
 import {
   createInternship,
   deleteInternship,
@@ -52,17 +52,24 @@ router.delete(
   }),
 )
 
-// Admin → sends a notification to a single user (user_id) or broadcasts to all users.
+// Admin → sends a notification to a single user (by email or user_id) or broadcasts to all users.
 router.post(
   '/notifications',
   asyncHandler(async (req, res) => {
-    const { title, message, user_id } = req.body || {}
+    const { title, message, user_id, email } = req.body || {}
     if (!title || !String(title).trim()) {
       throw new ApiError(400, 'Notification title is required.', 'VALIDATION_ERROR')
     }
+    let targetUserId = String(user_id || '').trim()
+    if (!targetUserId && email && String(email).trim()) {
+      targetUserId = await resolveUserIdByEmail(email)
+      if (!targetUserId) {
+        throw new ApiError(404, 'No user found with that email address.', 'USER_NOT_FOUND')
+      }
+    }
     let sent
-    if (user_id && String(user_id).trim()) {
-      sent = (await notify(String(user_id).trim(), String(title).trim(), message)) ? 1 : 0
+    if (targetUserId) {
+      sent = (await notify(targetUserId, String(title).trim(), message)) ? 1 : 0
     } else {
       sent = await notifyAllUsers(String(title).trim(), message)
     }
