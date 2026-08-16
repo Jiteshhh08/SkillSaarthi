@@ -9,6 +9,7 @@ import {
 import { useAdmin } from '../../hooks/useAdmin'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
+import Icon from '../../components/common/Icon'
 
 function NotificationForm() {
   const [open, setOpen] = useState(false)
@@ -44,8 +45,9 @@ function NotificationForm() {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="btn-secondary !h-10 !px-4 !text-sm">
-        📢 Send notification
+      <button onClick={() => setOpen(true)} className="btn-secondary !h-10 items-center gap-2 !px-4 !text-sm">
+        <Icon name="megaphone" size={16} className="text-brand-deep" />
+        Send notification
       </button>
     )
   }

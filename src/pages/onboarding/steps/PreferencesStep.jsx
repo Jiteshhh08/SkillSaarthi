@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import FieldError from '../../../components/common/FieldError'
+import Icon from '../../../components/common/Icon'
 import {
   CAREER_ROLES,
   GOAL_TIMEFRAMES,
@@ -206,7 +207,9 @@ export default function PreferencesStep({ initial, saving, onSave, onSkip }) {
                   aria-pressed={active}
                   className={`chip flex-1 justify-center ${active ? 'chip-active' : ''}${errors.work_preference ? ' border-danger text-danger' : ''}`}
                 >
-                  <span className="mr-1.5">{pref.icon}</span>
+                  <span className="mr-1.5 inline-flex items-center text-brand-deep">
+                    <Icon name={pref.icon} size={16} />
+                  </span>
                   {pref.label}
                 </button>
               )

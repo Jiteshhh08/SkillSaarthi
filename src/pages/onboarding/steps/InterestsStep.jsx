@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react'
+import Icon from '../../../components/common/Icon'
 
 const INTEREST_ICONS = {
-  'Web Development': '🌐',
-  'AI/ML': '🤖',
-  Cybersecurity: '🛡️',
-  Cloud: '☁️',
-  Data: '📊',
-  Design: '🎨',
-  Finance: '💰',
-  Research: '🔬',
-  Entrepreneurship: '🚀',
-  Gaming: '🎮',
-  Education: '📚',
-  Healthcare: '🏥',
+  'Web Development': 'globe',
+  'AI/ML': 'brain',
+  Cybersecurity: 'shield-check',
+  Cloud: 'cloud',
+  Data: 'chart',
+  Design: 'palette',
+  Finance: 'wallet',
+  Research: 'flask',
+  Entrepreneurship: 'rocket',
+  Gaming: 'gamepad',
+  Education: 'book-open',
+  Healthcare: 'heart-pulse',
 }
 
 export default function InterestsStep({ catalog, selected, saving, onSave, onSkip }) {
@@ -84,7 +85,9 @@ export default function InterestsStep({ catalog, selected, saving, onSave, onSki
                 active ? 'border-2 border-brand bg-brand-soft' : ''
               }`}
             >
-              <span className="text-2xl">{INTEREST_ICONS[interest.name] || '⭐'}</span>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-soft">
+                <Icon name={INTEREST_ICONS[interest.name] || 'star'} size={18} className="text-brand-deep" />
+              </span>
               <span className="flex-1 text-sm font-bold">{interest.name}</span>
               {active && <span className="text-brand-deep">✓</span>}
             </button>

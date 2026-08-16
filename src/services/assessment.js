@@ -2,12 +2,12 @@ import { APPWRITE_DATABASE_ID, COLLECTIONS, ID, Permission, Role, databases } fr
 import { updateAssessmentScore } from './profile'
 
 export const ASSESSMENT_DIMENSIONS = [
-  { id: 'technical', label: 'Technical inclination', icon: '💻' },
-  { id: 'analytical', label: 'Problem solving & aptitude', icon: '🧩' },
-  { id: 'creative', label: 'Creativity & design', icon: '🎨' },
-  { id: 'communication', label: 'Communication', icon: '💬' },
-  { id: 'people', label: 'Teamwork & leadership', icon: '🤝' },
-  { id: 'business', label: 'Career ambition', icon: '🚀' },
+  { id: 'technical', label: 'Technical inclination', icon: 'code-2' },
+  { id: 'analytical', label: 'Problem solving & aptitude', icon: 'puzzle' },
+  { id: 'creative', label: 'Creativity & design', icon: 'palette' },
+  { id: 'communication', label: 'Communication', icon: 'message' },
+  { id: 'people', label: 'Teamwork & leadership', icon: 'users' },
+  { id: 'business', label: 'Career ambition', icon: 'rocket' },
 ]
 
 export const ASSESSMENT_QUESTIONS = [

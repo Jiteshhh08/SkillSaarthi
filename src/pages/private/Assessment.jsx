@@ -4,6 +4,7 @@ import { submitAssessment } from '../../services/assessment'
 import AssessmentStep from '../onboarding/steps/AssessmentStep'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
+import Icon from '../../components/common/Icon'
 
 export default function Assessment() {
   const { user, profile, refreshProfile } = useAuth()
@@ -32,7 +33,9 @@ export default function Assessment() {
       <main className="mx-auto max-w-4xl px-6 py-12">
         {saved ? (
           <div className="card mx-auto max-w-2xl text-center">
-            <p className="text-4xl">🎉</p>
+            <span className="grid h-16 w-16 place-items-center rounded-full bg-brand-soft">
+              <Icon name="party" size={30} className="text-brand-deep" />
+            </span>
             <h1 className="mt-3 text-2xl font-black">Assessment saved!</h1>
             <p className="mt-2 text-ink-muted">
               Your score is <span className="font-black text-brand-deep">{saved.score}%</span>. We

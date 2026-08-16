@@ -7,88 +7,99 @@ import { getUserInterests } from '../../services/interests'
 import { getRoadmaps } from '../../services/roadmaps'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
+import Icon from '../../components/common/Icon'
+import DecorativeShapes from '../../components/common/DecorativeShapes'
 
 const TOOL_CARDS = [
   {
-    icon: '🎯',
+    icon: 'target',
     title: 'Career Match',
     description: 'See your best career fits, ranked by your profile.',
     to: '/recommendations',
     cta: 'View matches',
     tile: 'bg-brand-soft',
+    iconClass: 'text-brand-deep',
   },
   {
-    icon: '🧩',
+    icon: 'puzzle',
     title: 'Skill Gaps',
     description: 'Find out which skills to learn next for your dream career.',
     to: '/skill-gaps',
     cta: 'View skill gaps',
     tile: 'bg-info-soft',
+    iconClass: 'text-info',
   },
   {
-    icon: '🗺️',
+    icon: 'map',
     title: 'Roadmap',
     description: 'Follow an ordered learning plan toward your goal.',
     to: '/roadmaps',
     cta: 'Open roadmap',
     tile: 'bg-warning-soft',
+    iconClass: 'text-warning',
   },
   {
-    icon: '🐙',
+    icon: 'github',
     title: 'GitHub Analysis',
     description: 'Turn your code into a career profile in seconds.',
     to: '/github',
     cta: 'Analyze GitHub',
     tile: 'bg-deep',
+    iconClass: 'text-white',
   },
   {
-    icon: '📄',
+    icon: 'file-text',
     title: 'Resume Analysis',
     description: 'Upload a resume to surface skills and best matches.',
     to: '/resume',
     cta: 'Analyze resume',
     tile: 'bg-brand-soft',
+    iconClass: 'text-brand-deep',
   },
   {
-    icon: '⚖️',
+    icon: 'scale',
     title: 'Career Compare',
     description: 'Weigh careers side by side to find your best fit.',
     to: '/career-compare',
     cta: 'Compare careers',
     tile: 'bg-info-soft',
+    iconClass: 'text-info',
   },
   {
-    icon: '🔮',
+    icon: 'sparkles',
     title: 'What-If Simulator',
     description: 'Experiment with skills and see matches move — safely.',
     to: '/what-if',
     cta: 'Run simulation',
     tile: 'bg-accent-purple',
+    iconClass: 'text-white',
   },
   {
-    icon: '💼',
+    icon: 'briefcase',
     title: 'Internships',
     description: 'Discover opportunities ranked just for you.',
     to: '/internships',
     cta: 'View matches',
     tile: 'bg-brand-deep',
+    iconClass: 'text-white',
   },
 ]
 
-function StatCard({ icon, label, value, sub, loading }) {
+function StatCard({ icon, label, value, sub, loading, index = 0 }) {
   return (
     <div className="card relative overflow-hidden">
+      <DecorativeShapes variant="card" index={index} />
       {loading ? (
         <div className="h-6 w-24 animate-pulse rounded-md bg-surface-soft" />
       ) : (
-        <>
-          <div className="absolute -right-4 -top-4 grid h-16 w-16 place-items-center rounded-full bg-surface-soft text-2xl">
-            {icon}
+        <div className="relative">
+          <div className="absolute -right-4 -top-4 grid h-16 w-16 place-items-center rounded-full bg-surface-soft">
+            <Icon name={icon} size={26} className="text-brand-deep" />
           </div>
           <p className="text-3xl font-black tracking-tight text-ink">{value}</p>
           <p className="mt-1 text-sm font-bold text-ink-muted">{label}</p>
           {sub && <p className="mt-1 text-xs text-ink-soft">{sub}</p>}
-        </>
+        </div>
       )}
     </div>
   )
@@ -198,7 +209,7 @@ export default function Dashboard() {
               Your dashboard
             </p>
             <h1 className="mt-2 text-3xl font-black tracking-tight md:text-4xl">
-              Welcome back, {(user?.name || 'there').split(' ')[0]} 👋
+              Welcome back, {(user?.name || 'there').split(' ')[0]}
             </h1>
             <p className="mt-2 max-w-2xl text-lg text-ink-muted">
               {completion === 100
@@ -207,16 +218,19 @@ export default function Dashboard() {
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-deep bg-white px-3 py-1.5 text-sm font-bold text-brand-deep">
-                🔥 {streak.current} day{streak.current === 1 ? '' : 's'} streak
+                <Icon name="flame" size={16} className="text-accent-orange" />
+                {streak.current} day{streak.current === 1 ? '' : 's'} streak
               </span>
               {educationLabel && (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-bold text-ink">
-                  🎓 {educationLabel}
+                  <Icon name="graduation-cap" size={16} className="text-brand-deep" />
+                  {educationLabel}
                 </span>
               )}
               {profile?.assessment_score > 0 && (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-bold text-ink">
-                  📊 Assessment {profile.assessment_score}%
+                  <Icon name="chart" size={16} className="text-brand-deep" />
+                  Assessment {profile.assessment_score}%
                 </span>
               )}
             </div>
@@ -225,37 +239,42 @@ export default function Dashboard() {
 
         <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard
-            icon="🎯"
+            icon="target"
             label="Profile setup"
             value={`${completion}%`}
             sub={`${completed} of ${checklist.length} steps`}
             loading={false}
+            index={1}
           />
           <StatCard
-            icon="🛠️"
+            icon="wrench"
             label="Skills added"
             value={skillCount}
             sub="powering your matches"
             loading={loading}
+            index={4}
           />
           <StatCard
-            icon="💡"
+            icon="lightbulb"
             label="Interests"
             value={interestCount}
             sub="helping us rank careers"
             loading={loading}
+            index={7}
           />
           <StatCard
-            icon="🚀"
+            icon="flame"
             label="Best streak"
             value={`${streak.best} days`}
             sub={streak.current > 0 ? `currently on ${streak.current}` : 'start today'}
             loading={false}
+            index={9}
           />
         </section>
 
         <section className="mt-6 grid gap-6 lg:grid-cols-3">
-          <div className="card lg:col-span-2">
+          <div className="card relative overflow-hidden lg:col-span-2">
+            <DecorativeShapes variant="card" index={2} />
             <div className="flex items-center justify-between">
               <h2 className="text-base font-black">Profile setup</h2>
               <span className="text-sm font-black text-brand-deep">
@@ -302,7 +321,8 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="card flex flex-col">
+          <div className="card relative flex flex-col overflow-hidden">
+            <DecorativeShapes variant="card" index={6} />
             <h2 className="text-base font-black">Suggested next</h2>
             {loading ? (
               <div className="mt-4 space-y-3">
@@ -331,8 +351,8 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="mt-4 flex flex-1 flex-col items-center justify-center gap-3 text-center">
-                <span className="grid h-14 w-14 place-items-center rounded-full bg-brand-soft text-3xl">
-                  🏆
+                <span className="grid h-14 w-14 place-items-center rounded-full bg-brand-soft">
+                  <Icon name="trophy" size={28} className="text-brand-deep" />
                 </span>
                 <p className="text-sm font-bold text-ink">You're all set!</p>
                 <p className="text-xs text-ink-muted">
@@ -374,16 +394,17 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {TOOL_CARDS.map((tool) => (
+            {TOOL_CARDS.map((tool, index) => (
               <Link
                 key={tool.title}
                 to={tool.to}
-                className="card card-hover group flex flex-col transition-shadow hover:shadow-card-hover"
+                className="card card-hover group relative flex flex-col overflow-hidden transition-shadow hover:shadow-card-hover"
               >
+                <DecorativeShapes variant="card" index={index} />
                 <div
-                  className={`grid h-12 w-12 place-items-center rounded-xl text-2xl transition-transform group-hover:scale-110 ${tool.tile}`}
+                  className={`grid h-12 w-12 place-items-center rounded-xl transition-transform group-hover:scale-110 ${tool.tile}`}
                 >
-                  {tool.icon}
+                  <Icon name={tool.icon} size={24} className={tool.iconClass} />
                 </div>
                 <h3 className="mt-4 text-base font-bold text-ink">{tool.title}</h3>
                 <p className="mt-1 flex-1 text-sm leading-relaxed text-ink-muted">

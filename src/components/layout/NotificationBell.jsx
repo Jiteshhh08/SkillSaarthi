@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
+import Icon from '../common/Icon'
 import {
   getNotifications,
   markAllNotificationsRead,
@@ -99,7 +100,10 @@ export default function NotificationBell() {
           </div>
 
           {notifications.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-ink-muted">You're all caught up 🎉</p>
+            <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+              <Icon name="party" size={24} className="text-brand-deep" />
+              <p className="text-sm text-ink-muted">You&apos;re all caught up</p>
+            </div>
           ) : (
             <ul className="max-h-96 overflow-y-auto">
               {notifications.map((item) => (

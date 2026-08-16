@@ -4,6 +4,8 @@ import { useAuth } from '../../hooks/useAuth'
 import { EDUCATION_LEVELS, updateEducationLevel } from '../../services/profile'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
+import Icon from '../../components/common/Icon'
+import DecorativeShapes from '../../components/common/DecorativeShapes'
 
 export default function EducationLevel() {
   const { user, profile, refreshProfile } = useAuth()
@@ -51,16 +53,17 @@ export default function EducationLevel() {
         )}
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {EDUCATION_LEVELS.map((level) => (
+          {EDUCATION_LEVELS.map((level, index) => (
             <button
               key={level.value}
               type="button"
               onClick={() => handleSelect(level.value)}
               disabled={saving}
-              className="card card-hover group flex flex-col items-start text-left disabled:opacity-60"
+              className="card card-hover group relative flex flex-col items-start overflow-hidden text-left disabled:opacity-60"
             >
-              <span className="grid h-14 w-14 place-items-center rounded-full bg-brand-soft text-3xl">
-                {level.icon}
+              <DecorativeShapes variant="card" index={index} />
+              <span className="grid h-14 w-14 place-items-center rounded-full bg-brand-soft">
+                <Icon name={level.icon} size={26} className="text-brand-deep" />
               </span>
               <h3 className="mt-5 text-xl font-bold">{level.label}</h3>
               <p className="mt-2 flex-1 text-sm leading-relaxed text-ink-muted">{level.description}</p>

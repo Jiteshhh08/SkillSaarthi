@@ -11,7 +11,7 @@ import { ApiError } from '../utils/ApiError.js'
 export const generateRecommendationsHandler = asyncHandler(async (req, res) => {
   const topN = req.body?.top_n ? Number(req.body.top_n) : 6
   const recommendations = await generateRecommendations(req.user.$id, topN)
-  await notify(req.user.$id, 'Career matches ready ✨', 'Your latest career recommendations are ready to review.')
+  await notify(req.user.$id, 'Career matches ready', 'Your latest career recommendations are ready to review.')
   res.json({ success: true, data: { recommendations } })
 })
 

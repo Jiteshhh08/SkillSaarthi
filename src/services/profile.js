@@ -6,28 +6,28 @@ export const EDUCATION_LEVELS = [
     label: 'High School Student',
     description:
       'Exploring subjects, interests, and possible career directions before higher education.',
-    icon: '🎒',
+    icon: 'backpack',
   },
   {
     value: 'college',
     label: 'College Student',
     description:
       'Building skills and projects while preparing for internships, jobs, and graduation.',
-    icon: '🎓',
+    icon: 'graduation-cap',
   },
   {
     value: 'job_seeker',
     label: 'Job Seeker',
     description:
       'Looking for a first job, reskilling, or transitioning into a new career path.',
-    icon: '💼',
+    icon: 'briefcase',
   },
 ]
 
 export const WORK_PREFERENCES = [
-  { value: 'onsite', label: 'On-site', icon: '🏢' },
-  { value: 'hybrid', label: 'Hybrid', icon: '🌗' },
-  { value: 'remote', label: 'Remote', icon: '🏠' },
+  { value: 'onsite', label: 'On-site', icon: 'building-2' },
+  { value: 'hybrid', label: 'Hybrid', icon: 'laptop' },
+  { value: 'remote', label: 'Remote', icon: 'home' },
 ]
 
 export const PREFERRED_INDUSTRIES = [

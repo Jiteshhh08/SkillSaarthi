@@ -1561,6 +1561,11 @@ POST  /api/admin/notifications  (admin — send to one user or broadcast)
   `markAllNotificationsRead`, `timeAgo` (Appwrite client SDK).
 - `src/components/layout/NotificationBell.jsx` — bell icon with unread badge, dropdown
   inbox, mark-all-read, marked read on click, and 45s polling; mounted in `TopBar`.
+- `src/components/common/Icon.jsx` — shared semantic icon component (Lucide `lucide-react`)
+  plus a real GitHub brand SVG for the GitHub-analysis tiles; no emoji anywhere in the UI.
+- `src/components/common/DecorativeShapes.jsx` — low-opacity decorative circles
+  (`default` hero pair, `band` full-width blobs, `card` corner pair) rendered behind
+  `relative overflow-hidden` heroes/cards, matching the Dashboard hero pattern.
 
 ---
 
@@ -1961,7 +1966,7 @@ Roadmap generator       ✓   roadmap.service.js — buildSkillTasks + milestone
 Roadmap tasks           ✓   /api/roadmaps/:id/tasks — add, start/pause/complete, batch reorder, delete
 Progress tracking       ✓   completed / total × 100, recomputed on every write; completed→active auto-revert
 Roadmap management      ✓   rename, pause, mark completed (auto-completes tasks), delete (cascade)
-Dashboard wiring        ✓   /roadmaps pages + Home "Jump back in" card + Dashboard "Current roadmap" card
+Dashboard wiring        ✓   /roadmaps pages + Dashboard "Current roadmap" card
 ```
 
 ### Data model (already deployed)
@@ -2046,7 +2051,7 @@ src/services/roadmaps.js                       frontend API calls
 src/pages/private/Roadmaps.jsx                 list + "Generate roadmap from career" + progress bars
 src/pages/private/RoadmapDetail.jsx            task start/pause/complete, reorder, add custom task, rename, delete
 src/routes/AppRoutes.jsx + TopBar.jsx           /roadmaps + /roadmaps/:id (behind ProfileCompleteRoute), nav link
-Home.jsx + Dashboard.jsx                        "Jump back in" card + "Current roadmap" card with progress
+Home.jsx + Dashboard.jsx                        Home hero + Dashboard "Current roadmap" card with progress
 ```
 
 Static milestone templates live in `roadmap.service.js`; the catalog stays user-data-free.
@@ -2094,7 +2099,7 @@ Databases (per-user document permissions):
   `last_active_date`.
 - `touchStreak(userId)` in `src/services/streak.js` — no change if already visited
   today, `+1` if last visit was yesterday, otherwise reset to `1`.
-- Wired into `AuthContext` on mount; shown as a `🔥 {n} day streak` pill in the
+- Wired into `AuthContext` on mount; shown as a Lucide-flame `{n} day streak` pill in the
   TopBar and in the Dashboard hero/stat cards.
 
 ---

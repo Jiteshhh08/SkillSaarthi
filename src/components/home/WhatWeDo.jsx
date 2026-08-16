@@ -1,48 +1,50 @@
 import { Link } from 'react-router-dom'
+import Icon from '../common/Icon'
+import DecorativeShapes from '../common/DecorativeShapes'
 
 const FEATURES = [
   {
-    icon: '🎯',
+    icon: 'target',
     name: 'Career recommendations',
     description: 'Careers ranked against your profile, with a clear reason for every match.',
   },
   {
-    icon: '🧩',
+    icon: 'puzzle',
     name: 'Skill-gap analysis',
     description: 'See which skills you already have and exactly which ones to develop next.',
   },
   {
-    icon: '🗺️',
+    icon: 'map',
     name: 'Personalized roadmap',
     description: 'An actionable learning path that turns your gaps into step-by-step progress.',
   },
   {
-    icon: '🔮',
+    icon: 'sparkles',
     name: 'What-if simulator',
     description: 'Experiment with new skills and watch your career options shift.',
   },
   {
-    icon: '📄',
+    icon: 'file-text',
     name: 'Resume analysis',
     description: 'Understand how your resume lines up with the roles you want.',
   },
   {
-    icon: '🐙',
+    icon: 'github',
     name: 'GitHub analysis',
     description: 'Turn your public GitHub activity into a technical career profile.',
   },
   {
-    icon: '🎓',
+    icon: 'graduation-cap',
     name: 'Course recommendations',
     description: 'Learning resources picked to close your specific skill gaps.',
   },
   {
-    icon: '💼',
+    icon: 'briefcase',
     name: 'Internship matches',
     description: 'Internships ranked against your skills, goals, and preferences.',
   },
   {
-    icon: '🤖',
+    icon: 'robot',
     name: 'AI career assistant',
     description: 'Conversational guidance grounded in your personal career context.',
   },
@@ -77,13 +79,14 @@ export default function WhatWeDo({ mode = 'guest' }) {
         </div>
 
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((feature) => (
+          {FEATURES.map((feature, index) => (
             <div
               key={feature.name}
-              className="card flex flex-col transition-shadow hover:shadow-card-hover"
+              className="card relative flex flex-col overflow-hidden transition-shadow hover:shadow-card-hover"
             >
-              <div className="grid h-12 w-12 place-items-center rounded-full bg-brand-soft text-2xl">
-                {feature.icon}
+              <DecorativeShapes variant="card" index={index} />
+              <div className="grid h-12 w-12 place-items-center rounded-full bg-brand-soft">
+                <Icon name={feature.icon} size={22} className="text-brand-deep" />
               </div>
               <h3 className="mt-4 text-lg font-bold">{feature.name}</h3>
               <p className="mt-1 text-sm leading-relaxed text-ink-muted">{feature.description}</p>
@@ -92,8 +95,9 @@ export default function WhatWeDo({ mode = 'guest' }) {
         </div>
       </section>
 
-      <section className="bg-warm">
-        <div className="mx-auto max-w-7xl px-6 py-16">
+      <section className="relative overflow-hidden bg-warm">
+        <DecorativeShapes variant="band" />
+        <div className="relative mx-auto max-w-7xl px-6 py-16">
           <h2 className="text-3xl font-bold tracking-tight">How it works</h2>
           <p className="mt-2 text-lg text-ink-muted">
             Five steps between you and a clearer career path.
@@ -111,7 +115,8 @@ export default function WhatWeDo({ mode = 'guest' }) {
             ))}
           </ol>
 
-          <div className="mt-12 flex flex-wrap items-center justify-between gap-6 rounded-xl bg-cream px-8 py-8">
+          <div className="relative mt-12 flex flex-wrap items-center justify-between gap-6 overflow-hidden rounded-xl bg-cream px-8 py-8">
+            <DecorativeShapes variant="card" index={3} />
             <div>
               <h3 className="text-2xl font-bold tracking-tight">
                 {authenticated ? 'Ready to continue?' : 'Ready to find your path?'}

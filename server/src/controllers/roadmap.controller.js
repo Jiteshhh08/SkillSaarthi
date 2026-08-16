@@ -19,7 +19,7 @@ export const generateRoadmapHandler = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'career_id is required', 'VALIDATION_ERROR')
   }
   const result = await generateRoadmap(req.user.$id, { careerId, title: req.body?.title })
-  await notify(req.user.$id, 'Roadmap ready 🗺️', 'Your personalized learning roadmap has been generated.')
+  await notify(req.user.$id, 'Roadmap ready', 'Your personalized learning roadmap has been generated.')
   res.status(201).json({ success: true, data: result })
 })
 

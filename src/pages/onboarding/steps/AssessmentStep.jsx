@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Icon from '../../../components/common/Icon'
 import {
   ASSESSMENT_DIMENSIONS,
   ASSESSMENT_QUESTIONS,
@@ -56,8 +57,9 @@ export default function AssessmentStep({ saving, onComplete, onSkip }) {
           {result.dimensions.map((dim) => (
             <div key={dim.id} className="card !p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-bold">
-                  {dim.icon} {dim.label}
+                <span className="flex items-center gap-2 text-sm font-bold">
+                  <Icon name={dim.icon} size={18} className="text-brand-deep" />
+                  {dim.label}
                 </span>
                 <span className="text-sm font-black text-brand-deep">{dim.score}%</span>
               </div>

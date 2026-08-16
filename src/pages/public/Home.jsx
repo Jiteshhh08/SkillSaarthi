@@ -2,37 +2,39 @@ import { Link } from 'react-router-dom'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
 import WhatWeDo from '../../components/home/WhatWeDo'
+import Icon from '../../components/common/Icon'
+import DecorativeShapes from '../../components/common/DecorativeShapes'
 
 const SUBJECTS = [
   {
     name: 'Software & Technology',
     description: 'Full Stack, Backend, Frontend, Mobile, and Software Engineering paths.',
-    icon: '💻',
+    icon: 'code-2',
   },
   {
     name: 'AI & Data',
     description: 'Data Analyst, Data Scientist, ML Engineer, and AI Engineer careers.',
-    icon: '🤖',
+    icon: 'brain',
   },
   {
     name: 'Cloud',
     description: 'Cloud Engineer and DevOps Engineer cloud-infrastructure skills.',
-    icon: '☁️',
+    icon: 'cloud',
   },
   {
     name: 'Cybersecurity',
     description: 'Security Analyst and Security Engineer defensive skill paths.',
-    icon: '🔒',
+    icon: 'shield-check',
   },
   {
     name: 'Programming Foundations',
     description: 'JavaScript, Python, Java, C++, SQL, and HTML/CSS core skills.',
-    icon: '⚙️',
+    icon: 'gear',
   },
   {
     name: 'Soft Skills',
     description: 'Communication, problem solving, teamwork, and leadership.',
-    icon: '🤝',
+    icon: 'handshake',
   },
 ]
 
@@ -42,8 +44,9 @@ export default function Home() {
       <TopBar />
 
       {/* Hero */}
-      <section className="bg-warm">
-        <div className="mx-auto flex max-w-7xl flex-col items-center px-6 py-20 text-center">
+      <section className="relative overflow-hidden bg-warm">
+        <DecorativeShapes variant="band" />
+        <div className="relative mx-auto flex max-w-7xl flex-col items-center px-6 py-20 text-center">
           <p className="text-sm font-bold uppercase tracking-[0.08em]">Your career journey starts here</p>
           <h1 className="mt-6 max-w-3xl text-5xl font-black leading-tight tracking-tight text-ink-strong md:text-6xl">
             For every student, every skill, real career results.
@@ -67,14 +70,15 @@ export default function Home() {
         <p className="mt-2 text-lg text-ink-muted">Pick an area to explore career-ready skills.</p>
 
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {SUBJECTS.map((subject) => (
+          {SUBJECTS.map((subject, index) => (
             <Link
               key={subject.name}
               to="/signup"
-              className="card card-hover group flex flex-col transition-shadow hover:shadow-lg"
+              className="card card-hover group relative flex flex-col overflow-hidden transition-shadow hover:shadow-lg"
             >
-              <div className="grid h-24 w-full place-items-center rounded-md bg-promo text-5xl">
-                {subject.icon}
+              <DecorativeShapes variant="card" index={index} />
+              <div className="grid h-24 w-full place-items-center rounded-md bg-promo">
+                <Icon name={subject.icon} size={40} className="text-brand-deep" />
               </div>
               <h3 className="mt-4 text-lg font-bold">{subject.name}</h3>
               <p className="mt-1 text-sm leading-relaxed text-ink-muted">{subject.description}</p>
@@ -85,9 +89,10 @@ export default function Home() {
       </section>
 
       {/* Encouragement band */}
-      <section className="bg-promo">
-        <div className="mx-auto flex max-w-7xl flex-col items-start gap-6 px-6 py-14 md:flex-row md:items-center">
-          <span className="text-5xl">🌱</span>
+      <section className="relative overflow-hidden bg-promo">
+        <DecorativeShapes variant="band" />
+        <div className="relative mx-auto flex max-w-7xl flex-col items-start gap-6 px-6 py-14 md:flex-row md:items-center">
+          <Icon name="sprout" size={48} className="text-brand-deep" />
           <div>
             <h2 className="text-2xl font-bold">Every journey starts with one skill.</h2>
             <p className="mt-2 max-w-2xl text-base leading-relaxed text-ink-muted">

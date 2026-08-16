@@ -3,6 +3,8 @@ import { useAuth } from '../../hooks/useAuth'
 import { analyzeResume, errorMessage } from '../../services/resume'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
+import Icon from '../../components/common/Icon'
+import DecorativeShapes from '../../components/common/DecorativeShapes'
 
 const ACCEPTED = '.pdf,.doc,.docx'
 
@@ -113,7 +115,13 @@ export default function ResumeAnalysis() {
               dragging ? 'border-brand bg-brand-soft' : 'border-line bg-surface-soft hover:border-brand'
             }`}
           >
-            <p className="text-3xl">{dragging ? '📥' : '📄'}</p>
+            <p className="grid h-14 w-14 place-items-center rounded-full bg-brand-soft">
+              <Icon
+                name={dragging ? 'download' : 'file-text'}
+                size={26}
+                className="text-brand-deep"
+              />
+            </p>
             <p className="mt-2 text-sm font-bold text-ink">
               {file ? file.name : 'Drag & drop your resume here'}
             </p>
@@ -181,9 +189,10 @@ export default function ResumeAnalysis() {
             )}
 
             <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
-              <div className="card flex items-center gap-5">
-                <span className="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-brand-soft text-2xl">
-                  📄
+              <div className="card relative flex items-center gap-5 overflow-hidden">
+                <DecorativeShapes variant="card" index={5} />
+                <span className="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-brand-soft">
+                  <Icon name="file-text" size={30} className="text-brand-deep" />
                 </span>
                 <div className="min-w-0">
                   <h2 className="truncate text-xl font-black text-ink">

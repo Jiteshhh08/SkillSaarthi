@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useAdmin } from '../../hooks/useAdmin'
 import NotificationBell from './NotificationBell'
+import Icon from '../common/Icon'
 import logo from '../../assets/skillsaarthi_logo.jpeg'
 
 function NavDropdown({ label, items, active }) {
@@ -158,7 +159,8 @@ export default function TopBar() {
             <>
               <NotificationBell />
               <span className="hidden items-center gap-1 rounded-sm border border-accent-orange bg-orange-50 px-3 py-2 text-sm font-bold text-orange-800 sm:inline-flex">
-                🔥 {streak.current} {streak.current === 1 ? 'day' : 'days'} streak
+                <Icon name="flame" size={16} className="text-accent-orange" />
+                {streak.current} {streak.current === 1 ? 'day' : 'days'} streak
               </span>
               <span
                 className="hidden max-w-40 truncate rounded-sm px-3 py-2 text-md font-bold text-black lg:inline-block"
