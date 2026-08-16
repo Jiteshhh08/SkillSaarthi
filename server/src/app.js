@@ -17,6 +17,14 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
+// Lightweight root + health routes for uptime monitoring (cron-job.org).
+app.get('/', (_req, res) => {
+  res.json({ status: 'ok', service: 'skillsaarthi-node' })
+})
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', service: 'skillsaarthi-node' })
+})
+
 app.use('/api', healthRoutes)
 app.use('/api/careers', careerRoutes)
 app.use('/api/careers', comparisonRoutes)

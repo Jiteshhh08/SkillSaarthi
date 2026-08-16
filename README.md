@@ -1468,10 +1468,13 @@ LLM_API_KEY=<optional>
 ## Production notes
 
 * Render free tier services sleep after ~15 minutes of inactivity. Two **cron-job.org** cron jobs
-  (every 5 minutes) ping the backend and AI service to keep them awake:
-  `https://skillsaarthi-node.onrender.com` and `https://skillsaarthi-f14x.onrender.com`. Warm them
-  up manually before a demo as a backup.
-* The backend intentionally has no route at `/` (it returns a 404); all API routes live under `/api/*`.
+  (every 5 minutes) ping the backend and AI service to keep them awake. Point them at the
+  lightweight health endpoints (not the bare root):
+  `https://skillsaarthi-node.onrender.com/health` and `https://skillsaarthi-f14x.onrender.com/health`.
+  Warm them up manually before a demo as a backup.
+* The backend exposes lightweight root `/` and `/health` routes for uptime monitoring (both return a
+  small JSON body); all data API routes live under `/api/*` (e.g. `/api/health`). Cron checks must
+  call `/health` on each service — never a heavy data endpoint.
 * Secrets (Appwrite API key, GitHub token, LLM key) live only in the hosting dashboards — `.env`
   files are gitignored and never committed.
 * All user data persists in Appwrite Cloud, so the stateless Node/Python services can be
