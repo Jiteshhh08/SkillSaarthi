@@ -500,7 +500,7 @@ skillsaarthi/
 ├── ai-service/               # Python AI/ML service
 │   ├── app/
 │   │   ├── recommendation/   # careers.py (dataset), scoring.py (engine)
-│   │   └── main.py           # /health, /ai/careers, /ai/recommend-careers, /ai/skill-gaps
+│   │   └── main.py           # /health, /ai/careers, /ai/recommend-careers, /ai/skill-gaps, /ai/compare-careers, /ai/what-if/simulate
 │   ├── models/
 │   ├── data/
 │   └── requirements.txt
@@ -650,6 +650,8 @@ GET  /health                     service health
 GET  /ai/careers                 scoring catalog (13 careers)
 POST /ai/recommend-careers       ranked recommendations + explanations
 POST /ai/skill-gaps              strong vs needs-improvement for one career
+POST /ai/compare-careers         compare careers side by side for a profile
+POST /ai/what-if/simulate        baseline vs simulated career scores for hypothetical changes
 ```
 
 > **Windows note:** PowerShell 5.1 does not support `&&` (use `;` to chain commands). If you prefer to activate the venv explicitly, run `Set-ExecutionPolicy -Scope Process RemoteSigned` once, then activate with `.\venv\Scripts\Activate.ps1`.
@@ -911,7 +913,7 @@ the Phase 3 engine against failure.
 | Endpoints | `GET /health`, `GET /ai/careers`, `POST /ai/recommend-careers`, `POST /ai/skill-gaps`, `POST /ai/github/analyze` |
 | Skill matching + ranking | `ai-service/app/recommendation/scoring.py` (`score_careers`, hybrid weights from §23) |
 | Skill-gap analysis | `ai-service/app/recommendation/scoring.py` (`analyze_skill_gaps`, strong vs needs_improvement) |
-| Tests | `ai-service/tests/` (pytest) — 39 tests: ranking, explainability, validation, alias normalization, resume, comparison |
+| Tests | `ai-service/tests/` (pytest) — 44 tests: ranking, explainability, validation, alias normalization, resume, comparison, what-if |
 | Fallback scorer | `server/src/services/recommendation.service.js` — rule-based estimates when the AI service is down |
 
 ## Fallback behavior
@@ -930,7 +932,7 @@ career documents by name.
 
 ```bash
 cd ai-service
-python -m pytest        # 39 passed
+python -m pytest        # 44 passed
 ```
 
 ---
@@ -1108,6 +1110,54 @@ Results rendered side by side on /career-compare
 Like the other AI features, comparison is **stateless**: it scores the selected
 careers on demand and does not persist anything. If the AI service is down, the
 backend returns the built-in skills-based fallback with `source: "fallback"`.
+
+---
+
+# 🔮 What-If Simulator
+
+A safe, read-only tool that lets a user answer questions like *"What happens if
+I learn Python?"* before investing real time. It runs the recommendation engine
+against a **temporary copy** of the user's profile — the real profile is never
+modified (docs `main_architecture.md` §26 / PRD §17).
+
+Each simulated change is a skill with a target proficiency (1–5), e.g. "Python
+at level 4". The engine re-scores the whole catalog and returns the current
+(baseline) and hypothetical (simulated) rankings side by side, with per-career
+score deltas and a plain-language summary of the biggest movers. All scores are
+labelled as **estimated**, not guaranteed outcomes.
+
+## User flow
+
+```text
+User opens /what-if and adds hypothetical skill changes (skill + target level)
+    ↓
+Node backend builds the real user profile (skills, interests, goals, assessment, experience)
+    ↓
+Python AI service /ai/what-if/simulate applies the changes to an in-memory copy
+    ├── baseline ranking  (real profile)
+    ├── simulated ranking (modified profile)
+    └── delta per career + summary
+    ↓
+Backend maps careers back to Appwrite career ids and returns them
+    ↓
+Results rendered on /what-if (biggest movers, ranking shift, unchanged careers)
+```
+
+## What was built
+
+| Sub-part | Where |
+|---|---|
+| Frontend page | `src/pages/private/WhatIfSimulator.jsx` at `/what-if` (skill+level builder, biggest-movers cards, baseline vs simulated ranking shift) |
+| API client | `src/services/whatif.js` |
+| Node service | `server/src/services/whatif.service.js` — builds the user profile, normalizes + validates changes, orchestrates the AI call, maps results to catalog ids, fallback when AI is down |
+| Node routes | `server/src/routes/whatif.routes.js` — `POST /api/what-if/simulate` (requires ≥ 1 change; skill proficiency 1–5) |
+| Python simulator | `ai-service/app/recommendation/scoring.py` `simulate_what_if(...)` + `_apply_what_if_changes(...)` + `POST /ai/what-if/simulate` |
+| Tests | `ai-service/tests/test_scoring.py` — skill change raises matching careers, original profile never mutated, delta math, top-n truncation, interest changes |
+| Navigation | Top-bar "What-If" link + Dashboard "What-If Simulator" card |
+
+Like comparison and recommendations, the simulator is **stateless** — nothing is
+persisted. If the AI service is down, the backend returns a skills-only
+estimate with `source: "fallback"`.
 
 ---
 
@@ -1494,7 +1544,7 @@ For complete development rules:
 
 * [x] GitHub analysis
 * [x] Resume analysis
-* [ ] What-If simulator
+* [x] What-If simulator
 * [x] Career comparison
 * [ ] AI career assistant
 
