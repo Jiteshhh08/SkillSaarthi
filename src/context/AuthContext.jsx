@@ -6,6 +6,7 @@ import {
   signUp as signUpApi,
 } from '../services/auth'
 import { getProfile } from '../services/profile'
+import { touchStreak } from '../services/streak'
 import { AuthContext } from './authContext'
 
 export function AuthProvider({ children }) {
@@ -13,6 +14,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(true)
+  const [streak, setStreak] = useState({ current: 0, best: 0 })
 
   const refreshProfile = useCallback(async (userId) => {
     const id = userId || user?.$id
@@ -75,11 +77,35 @@ export function AuthProvider({ children }) {
     await logoutApi()
     setUser(null)
     setProfile(null)
+    setStreak({ current: 0, best: 0 })
   }, [])
+
+  useEffect(() => {
+    let active = true
+    if (user) {
+      setStreak({ current: 0, best: 0 })
+      touchStreak(user.$id).then((result) => {
+        if (active) setStreak(result)
+      })
+    }
+    return () => {
+      active = false
+    }
+  }, [user])
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, profileLoading, loading, login, signUp, logout, refreshProfile }}
+      value={{
+        user,
+        profile,
+        profileLoading,
+        loading,
+        streak,
+        login,
+        signUp,
+        logout,
+        refreshProfile,
+      }}
     >
       {children}
     </AuthContext.Provider>
