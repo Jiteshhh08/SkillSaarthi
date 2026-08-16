@@ -127,6 +127,24 @@
     box-shadow: 0 0 0 3px rgba(20, 191, 150, 0.4);
   }
 
+  .input-base.input-invalid {
+    @apply border-danger focus:border-danger;
+    box-shadow: 0 0 0 3px rgba(210, 58, 72, 0.12);
+  }
+
+  .input-base.input-invalid:focus {
+    box-shadow: 0 0 0 3px rgba(210, 58, 72, 0.2);
+  }
+
+  .field-error {
+    @apply mt-1.5 flex items-center gap-1.5 text-sm font-bold text-danger;
+  }
+
+  .field-error::before {
+    content: "";
+    @apply inline-block h-1.5 w-1.5 rounded-full bg-danger;
+  }
+
   .dot {
     @apply inline-block h-6 w-6 rounded-full;
   }

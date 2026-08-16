@@ -4,6 +4,7 @@ import { PROFICIENCY_LEVELS, proficiencyLabel } from '../../../services/skills'
 export default function SkillsStep({ catalog, selected, saving, onSave, onSkip }) {
   const [current, setCurrent] = useState(selected)
   const [query, setQuery] = useState('')
+  const [error, setError] = useState('')
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -21,6 +22,7 @@ export default function SkillsStep({ catalog, selected, saving, onSave, onSkip }
   const currentIds = useMemo(() => new Set(Object.keys(current)), [current])
 
   const toggleSkill = (skillId) => {
+    setError('')
     setCurrent((prev) => {
       const next = { ...prev }
       if (next[skillId]) {
@@ -37,6 +39,11 @@ export default function SkillsStep({ catalog, selected, saving, onSave, onSkip }
   }
 
   const handleSave = () => {
+    if (selectedSkills.length === 0) {
+      setError('Select at least one skill so we can match you to relevant careers.')
+      return
+    }
+    setError('')
     const removed = [...originalIds].filter((id) => !currentIds.has(id))
     onSave({ updated: current, removed })
   }
@@ -143,9 +150,16 @@ export default function SkillsStep({ catalog, selected, saving, onSave, onSkip }
         <button type="button" onClick={onSkip} disabled={saving} className="btn-text">
           Skip for now
         </button>
-        <button type="button" onClick={handleSave} disabled={saving} className="btn-primary disabled:opacity-50">
-          {saving ? 'Saving…' : 'Save & continue'}
-        </button>
+        <div className="text-right">
+          {error && (
+            <p role="alert" className="mb-2 text-sm font-bold text-danger">
+              {error}
+            </p>
+          )}
+          <button type="button" onClick={handleSave} disabled={saving} className="btn-primary disabled:opacity-50">
+            {saving ? 'Saving…' : 'Save & continue'}
+          </button>
+        </div>
       </div>
     </div>
   )
