@@ -9,6 +9,7 @@ import resumeRoutes from './routes/resume.routes.js'
 import internshipRoutes from './routes/internship.routes.js'
 import adminRoutes from './routes/admin.routes.js'
 import roadmapRoutes from './routes/roadmap.routes.js'
+import whatifRoutes from './routes/whatif.routes.js'
 import { errorHandler, notFound } from './middleware/error.middleware.js'
 
 const app = express()
@@ -25,6 +26,7 @@ app.use('/api/resume', resumeRoutes)
 app.use('/api/internships', internshipRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/roadmaps', roadmapRoutes)
+app.use('/api/what-if', whatifRoutes)
 
 app.use(notFound)
 app.use(errorHandler)
