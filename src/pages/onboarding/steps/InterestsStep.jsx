@@ -18,6 +18,7 @@ const INTEREST_ICONS = {
 export default function InterestsStep({ catalog, selected, saving, onSave, onSkip }) {
   const [current, setCurrent] = useState(selected)
   const [query, setQuery] = useState('')
+  const [error, setError] = useState('')
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -29,6 +30,7 @@ export default function InterestsStep({ catalog, selected, saving, onSave, onSki
   const currentIds = useMemo(() => new Set(Object.keys(current)), [current])
 
   const toggle = (interestId) => {
+    setError('')
     setCurrent((prev) => {
       const next = { ...prev }
       if (next[interestId]) {
@@ -41,6 +43,11 @@ export default function InterestsStep({ catalog, selected, saving, onSave, onSki
   }
 
   const handleSave = () => {
+    if (selectedNames.length === 0) {
+      setError('Select at least one interest so we can personalise your matches.')
+      return
+    }
+    setError('')
     const removed = [...originalIds].filter((id) => !currentIds.has(id))
     const added = [...currentIds].filter((id) => !originalIds.has(id))
     onSave({ added, removed })
@@ -95,9 +102,16 @@ export default function InterestsStep({ catalog, selected, saving, onSave, onSki
         <button type="button" onClick={onSkip} disabled={saving} className="btn-text">
           Skip for now
         </button>
-        <button type="button" onClick={handleSave} disabled={saving} className="btn-primary disabled:opacity-50">
-          {saving ? 'Saving…' : 'Save & continue'}
-        </button>
+        <div className="text-right">
+          {error && (
+            <p role="alert" className="mb-2 text-sm font-bold text-danger">
+              {error}
+            </p>
+          )}
+          <button type="button" onClick={handleSave} disabled={saving} className="btn-primary disabled:opacity-50">
+            {saving ? 'Saving…' : 'Save & continue'}
+          </button>
+        </div>
       </div>
     </div>
   )

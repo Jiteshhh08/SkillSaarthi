@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import {
+  ACADEMIC_STRENGTHS,
+  ACADEMIC_SUBJECTS,
   completeOnboarding,
   updateAcademicInfo,
   updateCareerPreferences,
@@ -151,6 +153,7 @@ export default function Onboarding() {
       setSaving(true)
       try {
         await updateEducationLevel(user.$id, value)
+        setEducationLevel(value)
         await refreshProfile(user.$id)
         advance()
       } catch (err) {
@@ -167,6 +170,33 @@ export default function Onboarding() {
       setSaving(true)
       try {
         await updateAcademicInfo(user.$id, data)
+        const skillNameById = new Map(skillCatalog.map((skill) => [skill.name, skill.$id]))
+        const mappedNames = [
+          ...ACADEMIC_SUBJECTS.filter((subject) => (data.subjects || '').includes(subject.name)).flatMap(
+            (subject) => subject.skills,
+          ),
+          ...ACADEMIC_STRENGTHS.filter((strength) => (data.academic_strengths || '').includes(strength.name)).flatMap(
+            (strength) => strength.skills,
+          ),
+        ]
+        const alreadyOwned = new Set(Object.keys(userSkills))
+        const addedIds = []
+        for (const skillName of mappedNames) {
+          const skillId = skillNameById.get(skillName)
+          if (skillId && !alreadyOwned.has(skillId)) {
+            await setSkillProficiency(user.$id, skillId, 2)
+            addedIds.push(skillId)
+          }
+        }
+        if (addedIds.length > 0) {
+          setUserSkills((current) => {
+            const next = { ...current }
+            addedIds.forEach((skillId) => {
+              next[skillId] = 2
+            })
+            return next
+          })
+        }
         await refreshProfile(user.$id)
         advance()
       } catch (err) {
@@ -175,7 +205,7 @@ export default function Onboarding() {
         setSaving(false)
       }
     },
-    [advance, handleError, refreshProfile, user.$id],
+    [advance, handleError, refreshProfile, skillCatalog, user.$id, userSkills],
   )
 
   const saveSkills = useCallback(
@@ -190,6 +220,14 @@ export default function Onboarding() {
             setSkillProficiency(user.$id, skillId, proficiency),
           ),
         )
+        setUserSkills((current) => {
+          const next = { ...current }
+          skills.removed.forEach((skillId) => delete next[skillId])
+          Object.entries(skills.updated).forEach(([skillId, proficiency]) => {
+            next[skillId] = proficiency
+          })
+          return next
+        })
         advance()
       } catch (err) {
         handleError(err)
@@ -208,6 +246,14 @@ export default function Onboarding() {
           interests.removed.map((interestId) => removeInterest(user.$id, interestId)),
         )
         await Promise.all(interests.added.map((interestId) => addInterest(user.$id, interestId)))
+        setUserInterests((current) => {
+          const next = { ...current }
+          interests.removed.forEach((interestId) => delete next[interestId])
+          interests.added.forEach((interestId) => {
+            next[interestId] = true
+          })
+          return next
+        })
         advance()
       } catch (err) {
         handleError(err)
@@ -261,6 +307,29 @@ export default function Onboarding() {
       setSaving(false)
     }
   }, [handleError, navigate, refreshProfile, user.$id])
+
+  const stepComplete = useMemo(() => {
+    const skillsDone = Object.keys(userSkills).length > 0
+    const interestsDone = Object.keys(userInterests).length > 0
+    return STEPS.map((item) => {
+      switch (item.id) {
+        case 'education':
+          return Boolean(educationLevel)
+        case 'academic':
+          return academicComplete(educationLevel, profile)
+        case 'skills':
+          return skillsDone
+        case 'interests':
+          return interestsDone
+        case 'preferences':
+          return preferencesComplete(profile)
+        case 'assessment':
+          return Boolean(profile?.assessment_score > 0)
+        default:
+          return false
+      }
+    })
+  }, [profile, educationLevel, userSkills, userInterests])
 
   const stepContent = useMemo(() => {
     switch (STEPS[step].id) {
@@ -349,38 +418,47 @@ export default function Onboarding() {
         {ready && (
           <>
             <ol className="mx-auto mt-8 flex max-w-2xl items-center gap-2">
-              {STEPS.map((item, index) => (
-                <li key={item.id} className="flex flex-1 items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep(index)}
-                    className="flex flex-1 items-center gap-2 text-left"
-                    aria-label={`Go to ${item.label} step`}
-                  >
-                    <span
-                      className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black ${
-                        index < step
-                          ? 'bg-brand text-white'
-                          : index === step
-                            ? 'border-2 border-brand bg-brand-soft text-brand-deep'
-                            : 'border border-line bg-white text-ink-soft'
-                      }`}
+              {STEPS.map((item, index) => {
+                const done = stepComplete[index]
+                const active = index === step
+                return (
+                  <li key={item.id} className="flex flex-1 items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setStep(index)}
+                      className="flex flex-1 items-center gap-2 text-left"
+                      aria-label={`Go to ${item.label} step`}
+                      aria-current={active ? 'step' : undefined}
                     >
-                      {index + 1}
-                    </span>
-                    <span
-                      className={`hidden text-xs font-bold sm:block ${
-                        index <= step ? 'text-ink' : 'text-ink-soft'
-                      }`}
-                    >
-                      {item.label}
-                    </span>
-                  </button>
-                  {index < STEPS.length - 1 && (
-                    <span className={`h-0.5 flex-1 ${index < step ? 'bg-brand' : 'bg-line'}`} />
-                  )}
-                </li>
-              ))}
+                      <span
+                        className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black ${
+                          done
+                            ? 'bg-brand text-white'
+                            : active
+                              ? 'border-2 border-brand bg-brand-soft text-brand-deep'
+                              : 'border border-line bg-white text-ink-soft'
+                        }`}
+                      >
+                        {done ? '✓' : index + 1}
+                      </span>
+                      <span
+                        className={`hidden text-xs font-bold sm:block ${
+                          done || active ? 'text-ink' : 'text-ink-soft'
+                        }`}
+                      >
+                        {item.label}
+                      </span>
+                    </button>
+                    {index < STEPS.length - 1 && (
+                      <span
+                        className={`h-0.5 flex-1 ${
+                          stepComplete[index] ? 'bg-brand' : 'bg-line'
+                        }`}
+                      />
+                    )}
+                  </li>
+                )
+              })}
             </ol>
 
             {error && (
