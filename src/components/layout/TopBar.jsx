@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useAdmin } from '../../hooks/useAdmin'
+import NotificationBell from './NotificationBell'
 import logo from '../../assets/skillsaarthi_logo.jpeg'
 
 function NavDropdown({ label, items, active }) {
@@ -65,7 +66,7 @@ function NavDropdown({ label, items, active }) {
 }
 
 export default function TopBar() {
-  const { user, loading, logout } = useAuth()
+  const { user, loading, logout, streak } = useAuth()
   const { isAdmin } = useAdmin()
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -155,8 +156,9 @@ export default function TopBar() {
         <div className="ml-auto flex items-center gap-3">
           {loading ? null : user ? (
             <>
+              <NotificationBell />
               <span className="hidden items-center gap-1 rounded-sm border border-accent-orange bg-orange-50 px-3 py-2 text-sm font-bold text-orange-800 sm:inline-flex">
-                🔥 0 day streak
+                🔥 {streak.current} {streak.current === 1 ? 'day' : 'days'} streak
               </span>
               <span
                 className="hidden max-w-40 truncate rounded-sm px-3 py-2 text-md font-bold text-black lg:inline-block"
