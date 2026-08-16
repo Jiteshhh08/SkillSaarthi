@@ -27,6 +27,12 @@ export function AuthProvider({ children }) {
     return fetched
   }, [user?.$id])
 
+  const refreshUser = useCallback(async () => {
+    const currentUser = await getCurrentUser()
+    setUser(currentUser)
+    return currentUser
+  }, [])
+
   useEffect(() => {
     let mounted = true
 
@@ -105,6 +111,7 @@ export function AuthProvider({ children }) {
         signUp,
         logout,
         refreshProfile,
+        refreshUser,
       }}
     >
       {children}

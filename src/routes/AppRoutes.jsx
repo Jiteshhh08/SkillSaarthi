@@ -13,6 +13,7 @@ import SkillGaps from '../pages/private/SkillGaps'
 import Roadmaps from '../pages/private/Roadmaps'
 import RoadmapDetail from '../pages/private/RoadmapDetail'
 import AdminInternships from '../pages/private/AdminInternships'
+import ProfileSettings from '../pages/private/ProfileSettings'
 import Onboarding from '../pages/onboarding/Onboarding'
 import Login from '../pages/auth/Login'
 import Signup from '../pages/auth/Signup'
@@ -187,6 +188,15 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <AdminInternships />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <ProfileSettings />
           </ProtectedRoute>
         }
       />
