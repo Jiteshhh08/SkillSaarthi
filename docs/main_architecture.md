@@ -148,6 +148,8 @@ The frontend is responsible for:
 - Displaying AI recommendations
 - Roadmap visualization
 - Progress tracking
+- In-app notification inbox (Appwrite client SDK reads + mark-read)
+- Daily-activity streak tracking (`touchStreak`) and display
 
 ---
 
@@ -478,11 +480,13 @@ server/
 │   │   ├── github.routes.js
 │   │   ├── course.routes.js
 │   │   ├── internship.routes.js
+│   │   ├── admin.routes.js
 │   │   └── assistant.routes.js
 │   │
 │   ├── controllers/
 │   │   ├── career.controller.js
-│   │   └── recommendation.controller.js
+│   │   ├── recommendation.controller.js
+│   │   └── roadmap.controller.js
 │   │
 │   ├── services/
 │   │   ├── recommendation.service.js
@@ -491,6 +495,7 @@ server/
 │   │   ├── ai.service.js
 │   │   ├── roadmap.service.js
 │   │   ├── github.service.js
+│   │   ├── notification.service.js
 │   │   └── ...
 │   │
 │   ├── middleware/
@@ -542,7 +547,7 @@ Appwrite Databases is the primary data store. It is a NoSQL document database or
 
 | Collection | Purpose | Key attributes |
 |---|---|---|
-| `profiles` | One document per user | `user_id`, `education_level`, `degree`, `branch`, `study_year`, `cgpa`, `subjects`, `academic_strengths`, `career_goal`, `preferred_industry`, `preferred_role`, `preferred_location`, `work_preference`, `experience_years`, `assessment_score`, `onboarding_completed`, `github_username` |
+| `profiles` | One document per user | `user_id`, `education_level`, `degree`, `branch`, `study_year`, `cgpa`, `subjects`, `academic_strengths`, `career_goal`, `preferred_industry`, `preferred_role`, `preferred_location`, `work_preference`, `experience_years`, `assessment_score`, `onboarding_completed`, `github_username`, `current_streak`, `best_streak`, `last_active_date` |
 | `skills` | Global skill catalog | `name`, `category` |
 | `user_skills` | User ↔ skill proficiency | `user_id`, `skill_id`, `proficiency` |
 | `interests` | Global interest catalog | `name` |
@@ -589,6 +594,9 @@ erDiagram
         float assessment_score
         boolean onboarding_completed
         string github_username
+        int current_streak
+        int best_streak
+        string last_active_date
         datetime created_at
         datetime updated_at
     }
@@ -1504,7 +1512,7 @@ GET /api/internships              (implemented)
 GET /api/internships/recommended  (implemented)
 ```
 
-## Admin (internships)
+## Admin (internships + notifications)
 
 ```text
 GET    /api/admin/me              (implemented)
@@ -1512,6 +1520,7 @@ GET    /api/admin/internships     (implemented)
 POST   /api/admin/internships     (implemented)
 PATCH  /api/admin/internships/:id (implemented)
 DELETE /api/admin/internships/:id (implemented)
+POST   /api/admin/notifications   (implemented — send to one user or broadcast)
 ```
 
 Admin endpoints require `requireAuth` + `requireAdmin` (`ADMIN_EMAILS` in the
@@ -1526,10 +1535,30 @@ POST /api/assistant/chat
 
 ## Notifications
 
+In-app notifications live in the `notifications` collection, one document per
+recipient, with per-document permissions scoped to that user. The frontend reads
+and marks them via the Appwrite client SDK; the backend and admins create them
+server-side.
+
 ```text
-GET /api/notifications
-PUT /api/notifications/:id/read
+GET   /api/notifications        (implemented — frontend reads via Appwrite client)
+PUT   /api/notifications/:id/read (implemented — frontend marks via Appwrite client)
+POST  /api/admin/notifications  (admin — send to one user or broadcast)
 ```
+
+- `notify(userId, title, message)` and `notifyAllUsers(title, message)` live in
+  `server/src/services/notification.service.js` and run with the Appwrite service key.
+- System notifications are triggered automatically when a recommendation
+  (`recommendation.controller.js`) or roadmap (`roadmap.controller.js`) is generated.
+- The admin broadcast (`POST /api/admin/notifications`) accepts `{ title, message, user_id? }`;
+  without `user_id` it pages through all `profiles` and sends one notification per user.
+
+### Frontend
+
+- `src/services/notifications.js` — `getNotifications`, `markNotificationRead`,
+  `markAllNotificationsRead`, `timeAgo` (Appwrite client SDK).
+- `src/components/layout/NotificationBell.jsx` — bell icon with unread badge, dropdown
+  inbox, mark-all-read, marked read on click, and 45s polling; mounted in `TopBar`.
 
 ---
 
@@ -2039,8 +2068,32 @@ Implement:
 ```text
 Courses
 Internships (implemented)
-Notifications
+Notifications (implemented)
 ```
+
+### Notifications (implemented)
+
+In-app notification inbox backed by the `notifications` collection in Appwrite
+Databases (per-user document permissions):
+
+- **Creation** — `notify(userId, title, message)` + `notifyAllUsers(title, message)`
+  in `server/src/services/notification.service.js`; system triggers fire when a
+  recommendation or roadmap is generated (`recommendation.controller.js`,
+  `roadmap.controller.js`); admins broadcast from the admin page.
+- **Delivery** — the frontend reads its own documents via the Appwrite client SDK
+  (`src/services/notifications.js`) and shows them in a bell dropdown
+  (`src/components/layout/NotificationBell.jsx`, 45s polling).
+- **Admin route** — `POST /api/admin/notifications` (`{ title, message, user_id? }`,
+  broadcast when `user_id` is omitted).
+
+### Streak tracking (implemented)
+
+- Daily activity streak stored on `profiles`: `current_streak`, `best_streak`,
+  `last_active_date`.
+- `touchStreak(userId)` in `src/services/streak.js` — no change if already visited
+  today, `+1` if last visit was yesterday, otherwise reset to `1`.
+- Wired into `AuthContext` on mount; shown as a `🔥 {n} day streak` pill in the
+  TopBar and in the Dashboard hero/stat cards.
 
 ---
 
@@ -2132,7 +2185,7 @@ This separation keeps the system understandable, maintainable, and scalable whil
 | --- | --- | --- | --- |
 | Frontend (React + Vite) | Vercel | `https://skillsaarthi.vercel.app` | — |
 | Backend (Node.js + Express) | Render (web service) | `https://skillsaarthi-node.onrender.com` | `/api/health` |
-| AI service (Python + FastAPI) | Render (web service) | `https://skillsaarthi-ai.onrender.com` | `/health` |
+| AI service (Python + FastAPI) | Render (web service) | `https://skillsaarthi-f14x.onrender.com` | `/health` |
 | Infrastructure & data | Appwrite Cloud | `https://cloud.appwrite.io` | — |
 
 ## 47.2 Production Topology
@@ -2150,7 +2203,7 @@ Appwrite Cloud                      https://skillsaarthi-node.onrender.com
 (cloud.appwrite.io)                 (Render — Node.js backend)
                                                  │
                                                  ▼
-                                          https://skillsaarthi-ai.onrender.com
+                                          https://skillsaarthi-f14x.onrender.com
                                           (Render — Python FastAPI AI service)
 ```
 
@@ -2181,7 +2234,7 @@ APPWRITE_PROJECT_ID=<project_id>
 APPWRITE_DATABASE_ID=<database_id>
 APPWRITE_RESUME_BUCKET_ID=resumes
 APPWRITE_API_KEY=<api_key>
-AI_SERVICE_URL=https://skillsaarthi-ai.onrender.com
+AI_SERVICE_URL=https://skillsaarthi-f14x.onrender.com
 GITHUB_TOKEN=<optional>
 LLM_API_KEY=<optional>
 ADMIN_EMAILS=admin@skillguide.com
@@ -2222,7 +2275,7 @@ LLM_API_KEY=<optional>
 
 ## 47.7 Deployment Order
 
-1. Deploy the **AI service** first; copy `https://skillsaarthi-ai.onrender.com`.
+1. Deploy the **AI service** first; copy `https://skillsaarthi-f14x.onrender.com`.
 2. Deploy the **backend** with `AI_SERVICE_URL` pointing at the AI service URL.
 3. Deploy the **frontend** with `VITE_API_BASE_URL` pointing at the backend URL.
 4. Add `https://skillsaarthi.vercel.app` to **Appwrite → Settings → Platforms** (Web App) so

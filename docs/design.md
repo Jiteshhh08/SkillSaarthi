@@ -263,7 +263,7 @@ Base `4px`. Scale: `4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64 / 80 / 96 / 12
 
 - Mastery tier pills: 9999px radius, padding `4px 12px`, 12/700 (colors in §2.6).
 - **Mastery dot:** 24px circle, progress arc renders current stage; animated fill on correct answers. Colors in §2.6.
-- **Streak pill:** bg `orange-50`, text `orange-800`, border `#e07c2c`, radius 2-4px (`rounded-sm`); "🔥 7 day streak".
+- **Streak pill:** bg `#e3f9f1`, text `#0a7d63`, border `#0a7d63`, radius 9999px (`rounded-full`), 14px/700; `🔥 {n} day{s} streak` with live daily counters (tnum).
 - **Filter chip:** default white + `#d6d8de` border; active bg `#e3f9f1`, text `#0a7d63`, border `#14bf96`.
 
 ### 5.4 Inputs & forms
@@ -281,8 +281,17 @@ Base `4px`. Scale: `4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64 / 80 / 96 / 12
 - Logo left; grouped primary nav — direct links (Home, Dashboard) plus dropdowns
   (Explore: Matches / Internships, Growth: Skill Gaps / Roadmap, Tools: GitHub / Resume /
   Compare / What-If) — active item has a mint underline bar under the full clickable area.
-- Right side: streak pill, user-name chip, avatar, then Logout / Login / Start learning.
-- Mobile: nav hidden below `md`, only streak + auth buttons remain.
+- Right side: notification bell, streak pill (`🔥 {n} day{s} streak`, live from the
+  profile's daily-activity counters), user-name chip, avatar, then Logout / Login / Start learning.
+- Mobile: nav hidden below `md`, only bell + streak + auth buttons remain.
+
+**Notification bell**
+- Icon button (40×40, `#5b5e6b`, hover bg `#f7f8fa`) with an `#d23a48` unread-count badge
+  (top-right, 16px pill, white 10px/900).
+- Dropdown panel 320px wide, `shadow-popover`, white; header "Notifications" + "Mark all read"
+  (deep-green text link); rows are 14px/700 title + 12px message + right-aligned relative time
+  (`10px`, `#797d8a`); unread rows show a 8px mint dot; read rows `opacity 60%`.
+- Polls the inbox every 45s while mounted; clicking a row marks it read.
 
 **Learning-tree sidebar (280px)**
 - bg `#ffffff`, padding `24px 16px`, sticky.
@@ -331,6 +340,29 @@ Base `4px`. Scale: `4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64 / 80 / 96 / 12
   education level selector.
 - Streak pill (energy-points gamification is retired).
 - Skill mastery list and roadmap overview.
+
+### 6.5 Dashboard
+
+The dashboard is the post-login command center, gated behind a completed profile.
+It keeps a single `loading` flag and renders **skeleton placeholders** until the
+profile/skills/interests/roadmap data resolves.
+
+- **Hero banner:** rounded-2xl gradient band (`#e3f9f1 → #ffffff → #f7f8fa`) with eyebrow,
+  30–36px/900 greeting ("Welcome back, {first name} 👋"), profile-completion line, and pills
+  for streak / education level / assessment score.
+- **Stat tiles:** 4-across (2-across on mobile) — Profile setup %, skills added, interests,
+  best streak; each shows a large number, label, and muted caption with a soft circular icon.
+- **Profile setup card:** completion % header + full-width mint progress bar, then the checklist
+  rows (Education, Academic info, Skills, Interests, Career preferences, Assessment) with
+  20px check circles (mint `#14bf96` when done) and detail text; on hover, row bg `#f7f8fa`.
+- **Suggested next card:** up to 3 numbered deep-green circles linking to the first incomplete
+  steps; when complete, an all-set state ("You're all set! 🏆") with a roadmap CTA; a thin
+  roadmap-progress bar with `progress_percent` appears when a roadmap exists.
+- **Career tools grid:** 8 tool cards (4-across ≥1200px), each a white card with a 48px rounded
+  icon tile (mint/blue/amber/purple/deep-green tints), 16px/700 title, muted description, and a
+  deep-green "→" link that underlines on hover; cards lift on hover.
+- **Your skills section:** heading + "Manage skills" secondary button; skills rendered as chips
+  (`rounded-full`, `#d6d8de` border), plus quick links (matches / skill gaps / what-if).
 
 ---
 

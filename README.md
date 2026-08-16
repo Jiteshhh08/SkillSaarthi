@@ -293,20 +293,38 @@ Their progress is reflected on the dashboard.
 | 🎓 Course Recommendations     | Discover relevant learning resources |
 | 💼 Internship Recommendations | Discover relevant internships        |
 | 🤖 AI Career Assistant        | Conversational career guidance       |
-| 🔔 Personalized Notifications | Progress and recommendation updates  |
+| 🔔 Personalized Notifications | In-app inbox + admin broadcasts       |
+| 🔥 Daily Activity Streak      | Consecutive-day engagement counter   |
 | 📈 Progress Tracking          | Track roadmap completion             |
 | 🧭 Career Explorer            | Explore different career paths       |
 
 
 ## Notifications
 
-Roadmap task due
-       ↓
-Node Backend
-       ↓
-Appwrite Messaging
-       ↓
-User notification
+In-app notifications are stored in the `notifications` collection (one document per
+recipient, user-scoped permissions) and shown in a bell dropdown in the top bar:
+
+```text
+Recommendation / roadmap generated (or admin announcement)
+        ↓
+Node Backend  (server/src/services/notification.service.js — notify / notifyAllUsers)
+        ↓
+Appwrite Databases  (notifications collection)
+        ↓
+Notification Bell  (NotificationBell.jsx — reads via Appwrite client SDK, 45s polling)
+        ↓
+User inbox
+```
+
+Admins can broadcast announcements from the admin panel (`POST /api/admin/notifications`),
+and the system notifies users when new career matches or a roadmap are ready.
+
+## Daily Activity Streak
+
+The top bar shows a `🔥 {n} day streak` pill backed by real daily-activity counters on
+the user profile (`current_streak`, `best_streak`, `last_active_date`). `touchStreak`
+records one visit per day — consecutive days grow the streak, gaps reset it — and the
+dashboard surfaces both current and best streaks.
 
 ## Resume Analysis
 
@@ -479,7 +497,7 @@ skillsaarthi/
 │   │   ├── auth/
 │   │   ├── private/           # Dashboard, Assessment, EducationLevel
 │   │   └── onboarding/        # Multi-step profile wizard
-│   ├── services/             # appwrite.js, api.js, auth.js, profile.js, skills.js, interests.js, assessment.js, careers.js, recommendations.js
+│   ├── services/             # appwrite.js, api.js, auth.js, profile.js, skills.js, interests.js, assessment.js, careers.js, recommendations.js, roadmaps.js, streak.js, notifications.js
 │   ├── hooks/
 │   ├── context/
 │   ├── routes/
@@ -780,6 +798,7 @@ The `profiles` document (document ID = the Appwrite user `$id`) stores:
 | `career_goal`, `preferred_role`, `preferred_industry`, `preferred_location`, `work_preference` | Career preferences |
 | `assessment_score` | Latest career assessment score (0–100) |
 | `onboarding_completed` | Flags a complete profile; gates `/dashboard` |
+| `current_streak`, `best_streak`, `last_active_date` | Daily-activity streak counters (`touchStreak` in `src/services/streak.js`) |
 
 Skills, interests, and assessment attempts live in their own collections:
 
@@ -1349,7 +1368,7 @@ platforms with free tiers; all data/auth stays on Appwrite Cloud.
 | --- | --- | --- | --- |
 | Frontend (React + Vite) | Vercel | `https://skillsaarthi.vercel.app` | — |
 | Backend (Node.js + Express) | Render | `https://skillsaarthi-node.onrender.com` | `/api/health` |
-| AI service (Python + FastAPI) | Render | `https://skillsaarthi-ai.onrender.com` | `/health` |
+| AI service (Python + FastAPI) | Render | `https://skillsaarthi-f14x.onrender.com` | `/health` |
 | Appwrite | Appwrite Cloud | `https://cloud.appwrite.io` | — |
 
 ## Production topology
@@ -1367,7 +1386,7 @@ Appwrite Cloud                    https://skillsaarthi-node.onrender.com
 (cloud.appwrite.io)               (Render — Node.js backend)
                                              │
                                              ▼
-                                      https://skillsaarthi-ai.onrender.com
+                                      https://skillsaarthi-f14x.onrender.com
                                       (Render — Python FastAPI AI service)
 ```
 
@@ -1390,7 +1409,7 @@ APPWRITE_PROJECT_ID=<your-project-id>
 APPWRITE_DATABASE_ID=<your-database-id>
 APPWRITE_RESUME_BUCKET_ID=resumes
 APPWRITE_API_KEY=<your-api-key>
-AI_SERVICE_URL=https://skillsaarthi-ai.onrender.com
+AI_SERVICE_URL=https://skillsaarthi-f14x.onrender.com
 GITHUB_TOKEN=<optional>
 LLM_API_KEY=<optional>
 ADMIN_EMAILS=admin@skillguide.com

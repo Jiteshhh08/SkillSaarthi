@@ -249,9 +249,9 @@ Key routes (full list in `main_architecture.md` section 32):
 /api/what-if
 /api/courses
 /api/internships
-/api/admin
+/api/admin            (incl. POST /api/admin/notifications — single user or broadcast)
 /api/assistant
-/api/notifications
+/api/notifications    (inbox read via the Appwrite client SDK; server/admin create via notification.service.js)
 ```
 
 ## Hybrid Internship Catalog (workflow)
@@ -301,6 +301,33 @@ authorized email, then open `/admin/internships` to approve (`active`), reject
 **3. Auto-expire** — the public `GET /api/internships` returns only `active`
 rows whose `expires_at` has not passed, so stale listings drop out without
 manual cleanup.
+
+---
+
+## Notifications & Streaks
+
+### Notifications
+
+- In-app notifications live in the `notifications` collection, **one document per
+  recipient**, each with `Permission.read/update/delete(Role.user(userId))` so users
+  only ever see their own inbox.
+- **Create** server-side or admin-side only (`server/src/services/notification.service.js`):
+  `notify(userId, title, message)` for one user, `notifyAllUsers(title, message)` to broadcast
+  (pages through `profiles` with `Query.limit(100)`/`offset`).
+- **Read** from the frontend via the Appwrite client SDK (`src/services/notifications.js`):
+  `getNotifications`, `markNotificationRead`, `markAllNotificationsRead`, `timeAgo`.
+- System notifications fire when a recommendation or roadmap is generated; admins can
+  broadcast from the admin page (`POST /api/admin/notifications`, `{ title, message, user_id? }`).
+- UI: `src/components/layout/NotificationBell.jsx` in the TopBar — unread badge, dropdown
+  inbox, mark-all-read, 45s polling.
+
+### Streaks
+
+- Daily-activity counters live on `profiles`: `current_streak`, `best_streak`, `last_active_date` (`YYYY-MM-DD`).
+- `touchStreak(userId)` (`src/services/streak.js`) — no change if already visited today,
+  `+1` if last visit was yesterday, otherwise reset to `1`; `best` is always `max(best, current)`.
+- `AuthContext` touches the streak once per mount and exposes `{ current, best }` to the
+  TopBar pill and Dashboard; log out resets the in-memory streak to `{ 0, 0 }`.
 
 ---
 
@@ -424,7 +451,7 @@ cd ai-service && python -m pytest     # 44 tests: scoring, skill-gaps, resume, c
 | 4 — AI (complete) | Python/FastAPI skill matching, ranking, skill-gap (pytest suite + Node fallback scorer) |
 | 5 — Roadmap (complete) | Roadmap generator from skill gaps, tasks, progress tracking, dashboard wiring |
 | 6 — Advanced | Resume analysis (implemented), GitHub analysis (implemented), career comparison (implemented), what-if simulator (implemented), AI assistant |
-| 7 — Integrations | Courses, internships (implemented), notifications |
+| 7 — Integrations | Courses, internships (implemented), notifications (implemented) |
 
 ---
 
@@ -457,7 +484,7 @@ Every feature must strengthen the central product loop. Do not build isolated fe
 | --- | --- | --- |
 | Frontend | Vercel | `https://skillsaarthi.vercel.app` |
 | Backend | Render | `https://skillsaarthi-node.onrender.com` |
-| AI service | Render | `https://skillsaarthi-ai.onrender.com` |
+| AI service | Render | `https://skillsaarthi-f14x.onrender.com` |
 | Appwrite | Appwrite Cloud | `https://cloud.appwrite.io` |
 
 ## Hosting rules
@@ -468,7 +495,7 @@ Every feature must strengthen the central product loop. Do not build isolated fe
 - Backend start command: `npm start` (root directory `server`).
 - AI start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT` (root directory `ai-service`).
 - `PORT` is injected by the platform — never hardcode 5000/8000 in production environment settings.
-- The AI service is reached by the backend through `AI_SERVICE_URL=https://skillsaarthi-ai.onrender.com`.
+- The AI service is reached by the backend through `AI_SERVICE_URL=https://skillsaarthi-f14x.onrender.com`.
 - The frontend calls the backend through `VITE_API_BASE_URL=https://skillsaarthi-node.onrender.com`.
 - The frontend origin must be added under **Appwrite → Settings → Platforms** (Web App),
   otherwise email/password auth breaks in production.
