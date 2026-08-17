@@ -29,6 +29,7 @@ export default function Footer() {
                 <li><Link to="/assessment" className="hover:text-white">Retake assessment</Link></li>
                 <li><Link to="/github" className="hover:text-white">GitHub analysis</Link></li>
                 <li><Link to="/internships" className="hover:text-white">Internships</Link></li>
+                <li><Link to="/community" className="hover:text-white">Community</Link></li>
               </>
             ) : (
               <>

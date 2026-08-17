@@ -13,6 +13,11 @@ import SkillGaps from '../pages/private/SkillGaps'
 import Roadmaps from '../pages/private/Roadmaps'
 import RoadmapDetail from '../pages/private/RoadmapDetail'
 import AdminInternships from '../pages/private/AdminInternships'
+import Community from '../pages/private/Community'
+import CommunityDrafts from '../pages/private/CommunityDrafts'
+import CommunityPostDetail from '../pages/private/CommunityPostDetail'
+import CommunitySaved from '../pages/private/CommunitySaved'
+import CommunityUserProfile from '../pages/private/CommunityUserProfile'
 import ProfileSettings from '../pages/private/ProfileSettings'
 import Onboarding from '../pages/onboarding/Onboarding'
 import Login from '../pages/auth/Login'
@@ -189,6 +194,47 @@ export default function AppRoutes() {
           <ProtectedRoute>
             <AdminInternships />
           </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/community"
+        element={
+          <ProfileCompleteRoute>
+            <Community />
+          </ProfileCompleteRoute>
+        }
+      />
+      <Route
+        path="/community/saved"
+        element={
+          <ProfileCompleteRoute>
+            <CommunitySaved />
+          </ProfileCompleteRoute>
+        }
+      />
+      <Route
+        path="/community/drafts"
+        element={
+          <ProfileCompleteRoute>
+            <CommunityDrafts />
+          </ProfileCompleteRoute>
+        }
+      />
+      <Route
+        path="/community/posts/:id"
+        element={
+          <ProfileCompleteRoute>
+            <CommunityPostDetail />
+          </ProfileCompleteRoute>
+        }
+      />
+      <Route
+        path="/community/users/:userId"
+        element={
+          <ProfileCompleteRoute>
+            <CommunityUserProfile />
+          </ProfileCompleteRoute>
         }
       />
 
