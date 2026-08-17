@@ -592,6 +592,11 @@ Appwrite Databases is the primary data store. It is a NoSQL document database or
 | `resume_analyses` | Resume analysis metadata | `user_id`, `appwrite_file_id`, `file_name`, `analysis_result` |
 | `github_analyses` | GitHub analysis metadata | `user_id`, `github_username`, `analysis_result` |
 | `notifications` | In-app notifications | `user_id`, `title`, `message`, `is_read` |
+| `community_profiles` | Community bio + meta per user | `user_id`, `bio`, `location`, `role`, `interests` |
+| `community_posts` | Community posts | `user_id`, `title`, `content`, `category`, `tags` (CSV), `status` (draft/published), `likes_count`, `comments_count` |
+| `community_comments` | Comments on posts | `user_id`, `post_id`, `content` |
+| `post_likes` | Like edges (unique per user+post) | `user_id`, `post_id` |
+| `post_bookmarks` | Bookmark edges (unique per user+post) | `user_id`, `post_id` |
 
 > **Security note:** Appwrite permissions are configured per collection. Most collections are `user` scoped (a user can only read/write their own documents). Global catalogs (`skills`, `careers`, `courses`, `internships`) are read-only for authenticated users.
 
@@ -778,6 +783,51 @@ erDiagram
         datetime created_at
     }
 
+    COMMUNITY_PROFILES {
+        string id PK
+        string user_id FK UK
+        text bio
+        string location
+        string role
+        string interests
+        datetime updated_at
+    }
+
+    COMMUNITY_POSTS {
+        string id PK
+        string user_id FK
+        string title
+        text content
+        enum   category        // Career Guidance | Skill Building | Internship | Success Story | Resource | General
+        string tags
+        enum   status          // draft | published
+        int likes_count
+        int comments_count
+        datetime created_at
+        datetime updated_at
+    }
+
+    COMMUNITY_COMMENTS {
+        string id PK
+        string user_id FK
+        string post_id FK
+        text content
+        datetime created_at
+        datetime updated_at
+    }
+
+    POST_LIKES {
+        string id PK
+        string user_id FK
+        string post_id FK
+    }
+
+    POST_BOOKMARKS {
+        string id PK
+        string user_id FK
+        string post_id FK
+    }
+
     PROFILES ||--o{ USER_SKILLS : has
     SKILLS ||--o{ USER_SKILLS : contains
 
@@ -809,6 +859,15 @@ erDiagram
     PROFILES ||--o{ GITHUB_ANALYSES : creates
 
     PROFILES ||--o{ NOTIFICATIONS : receives
+
+    PROFILES ||--o{ COMMUNITY_PROFILES : expands
+    PROFILES ||--o{ COMMUNITY_POSTS : authors
+    COMMUNITY_POSTS ||--o{ COMMUNITY_COMMENTS : receives
+    PROFILES ||--o{ COMMUNITY_COMMENTS : writes
+    PROFILES ||--o{ POST_LIKES : gives
+    COMMUNITY_POSTS ||--o{ POST_LIKES : receives
+    PROFILES ||--o{ POST_BOOKMARKS : saves
+    COMMUNITY_POSTS ||--o{ POST_BOOKMARKS : saved_in
 ```
 
 ---
@@ -1538,6 +1597,34 @@ GET /api/courses/recommended
 GET /api/internships              (implemented)
 GET /api/internships/recommended  (implemented)
 ```
+
+## Community
+
+All community routes require `requireAuth`; post/comment writes verify document
+ownership (`req.user.$id` = `user_id`). Draft posts are only visible to their
+author; other users get `404` on a private draft.
+
+```text
+GET    /api/community/posts               (implemented — ?category&sort=newest|popular&search&scope=published|mine|drafts)
+POST   /api/community/posts               (implemented — { title, content, category?, tags?, status? })
+GET    /api/community/posts/:id           (implemented)
+PUT    /api/community/posts/:id           (implemented — owner only)
+DELETE /api/community/posts/:id           (implemented — owner only; cascades comments/likes/bookmarks)
+POST   /api/community/posts/:id/like      (implemented — toggles like)
+POST   /api/community/posts/:id/bookmark  (implemented — toggles bookmark)
+GET    /api/community/posts/:id/comments  (implemented)
+POST   /api/community/posts/:id/comments  (implemented)
+PUT    /api/community/comments/:commentId        (implemented — owner only)
+DELETE /api/community/comments/:commentId        (implemented — owner only)
+GET    /api/community/saved               (implemented — my bookmarks)
+GET    /api/community/profile             (implemented — my profile + account identity)
+PUT    /api/community/profile             (implemented — upsert bio/location/role/interests)
+GET    /api/community/users/:userId       (implemented — public profile + up to 20 published posts)
+```
+
+Author display name/avatar are resolved live from the Appwrite account
+(`Users.get`) with a 120s in-memory cache; the backend API key needs the
+`users.read` scope (already required for admin notifications).
 
 ## Admin (internships + notifications)
 
