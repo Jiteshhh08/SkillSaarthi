@@ -79,7 +79,19 @@ async function resolveDatabase() {
 const DEFAULT_FEED = path.resolve(__dirname, 'feeds', 'internships.json')
 
 async function fetchRemotive() {
-  const searches = ['intern', 'internship', 'graduate']
+  const searches = [
+    'intern',
+    'internship',
+    'student',
+    'graduate',
+    'junior',
+    'entry level',
+    'fresher',
+    'associate',
+    'trainee',
+  ]
+  const titlePattern = /\b(intern|internship|trainee|apprentice|graduate|student|junior|fresher|associate|early[ -]?career|entry[ -]?level)\b/
+  const tagPattern = /intern|internship|trainee|apprentice|graduate|student|junior|fresher|associate|entry[ -]?level|early[ -]?career/i
   const seen = new Map()
   for (const term of searches) {
     const url = `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(term)}&limit=${MAX_OPENINGS}`
@@ -99,10 +111,8 @@ async function fetchRemotive() {
     const body = await response.json()
     for (const job of body.jobs || []) {
       const title = String(job.title || '').toLowerCase()
-      const titleMatch = /\b(intern|trainee|apprentice|graduate)\b/.test(title.replace(/[^a-z0-9 ]/g, ' '))
-      const tagMatch = Array.isArray(job.tags)
-        ? job.tags.some((tag) => /intern|trainee|entry/i.test(String(tag)))
-        : false
+      const titleMatch = titlePattern.test(title.replace(/[^a-z0-9 ]/g, ' '))
+      const tagMatch = Array.isArray(job.tags) ? job.tags.some((tag) => tagPattern.test(String(tag))) : false
       if (titleMatch || tagMatch) {
         seen.set(job.id || job.url, job)
       }
@@ -175,6 +185,9 @@ async function main() {
 
   const openings = await getSource()
   console.log(`Fetched ${openings.length} opening(s).`)
+  for (const opening of openings) {
+    console.log(`  - ${opening.title} @ ${opening.company} [${opening.skills.join(', ') || 'no skills'}]`)
+  }
   if (openings.length === 0) {
     console.warn(
       `No openings from source "${sourceName}". If this is unexpected, check ` +
