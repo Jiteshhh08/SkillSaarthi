@@ -1,4 +1,4 @@
-import { Client, Databases, Query } from 'node-appwrite'
+import { Client, Databases, Query, Users } from 'node-appwrite'
 import { config } from '../config/environment.js'
 
 const client = new Client()
@@ -7,6 +7,7 @@ const client = new Client()
   .setKey(config.appwrite.apiKey)
 
 export const databases = new Databases(client)
+export const users = new Users(client)
 
 export const COLLECTIONS = {
   profiles: 'profiles',
@@ -20,6 +21,11 @@ export const COLLECTIONS = {
   careerRecommendations: 'career_recommendations',
   roadmaps: 'roadmaps',
   roadmapTasks: 'roadmap_tasks',
+  communityProfiles: 'community_profiles',
+  communityPosts: 'community_posts',
+  communityComments: 'community_comments',
+  postLikes: 'post_likes',
+  postBookmarks: 'post_bookmarks',
 }
 
 async function listAll(collectionId, queries = []) {
@@ -221,4 +227,196 @@ export async function updateRoadmapTask(taskId, data) {
 
 export async function deleteRoadmapTask(taskId) {
   await databases.deleteDocument(config.appwrite.databaseId, COLLECTIONS.roadmapTasks, taskId)
+}
+
+export async function getCommunityProfile(userId) {
+  if (!userId) return null
+  try {
+    return await databases.getDocument(
+      config.appwrite.databaseId,
+      COLLECTIONS.communityProfiles,
+      userId,
+    )
+  } catch {
+    return null
+  }
+}
+
+export async function upsertCommunityProfile(userId, data) {
+  const existing = await getCommunityProfile(userId)
+  const now = new Date().toISOString()
+  if (existing) {
+    return databases.updateDocument(
+      config.appwrite.databaseId,
+      COLLECTIONS.communityProfiles,
+      userId,
+      { ...data, updated_at: now },
+    )
+  }
+  return databases.createDocument(
+    config.appwrite.databaseId,
+    COLLECTIONS.communityProfiles,
+    userId,
+    { user_id: userId, ...data, created_at: now, updated_at: now },
+  )
+}
+
+export async function listCommunityPosts(queries = []) {
+  try {
+    return await listAll(COLLECTIONS.communityPosts, queries)
+  } catch {
+    return []
+  }
+}
+
+export async function getCommunityPost(postId) {
+  try {
+    return await databases.getDocument(
+      config.appwrite.databaseId,
+      COLLECTIONS.communityPosts,
+      postId,
+    )
+  } catch {
+    return null
+  }
+}
+
+export async function createCommunityPost(userId, data) {
+  const now = new Date().toISOString()
+  return databases.createDocument(
+    config.appwrite.databaseId,
+    COLLECTIONS.communityPosts,
+    'unique()',
+    {
+      user_id: userId,
+      ...data,
+      likes_count: 0,
+      comments_count: 0,
+      created_at: now,
+      updated_at: now,
+    },
+  )
+}
+
+export async function updateCommunityPost(postId, data) {
+  return databases.updateDocument(
+    config.appwrite.databaseId,
+    COLLECTIONS.communityPosts,
+    postId,
+    { ...data, updated_at: new Date().toISOString() },
+  )
+}
+
+export async function deleteCommunityPost(postId) {
+  await databases.deleteDocument(config.appwrite.databaseId, COLLECTIONS.communityPosts, postId)
+}
+
+export async function listCommunityComments(postId) {
+  try {
+    return await listAll(COLLECTIONS.communityComments, [
+      Query.equal('post_id', postId),
+    ])
+  } catch {
+    return []
+  }
+}
+
+export async function getCommunityComment(commentId) {
+  try {
+    return await databases.getDocument(
+      config.appwrite.databaseId,
+      COLLECTIONS.communityComments,
+      commentId,
+    )
+  } catch {
+    return null
+  }
+}
+
+export async function createCommunityComment(userId, postId, content) {
+  return databases.createDocument(
+    config.appwrite.databaseId,
+    COLLECTIONS.communityComments,
+    'unique()',
+    {
+      user_id: userId,
+      post_id: postId,
+      content,
+      created_at: new Date().toISOString(),
+    },
+  )
+}
+
+export async function updateCommunityComment(commentId, content) {
+  return databases.updateDocument(
+    config.appwrite.databaseId,
+    COLLECTIONS.communityComments,
+    commentId,
+    { content },
+  )
+}
+
+export async function deleteCommunityComment(commentId) {
+  await databases.deleteDocument(
+    config.appwrite.databaseId,
+    COLLECTIONS.communityComments,
+    commentId,
+  )
+}
+
+export async function listCommunityLikes(queries = []) {
+  try {
+    return await listAll(COLLECTIONS.postLikes, queries)
+  } catch {
+    return []
+  }
+}
+
+export async function createCommunityLike(userId, postId) {
+  return databases.createDocument(config.appwrite.databaseId, COLLECTIONS.postLikes, 'unique()', {
+    user_id: userId,
+    post_id: postId,
+    created_at: new Date().toISOString(),
+  })
+}
+
+export async function deleteCommunityLike(likeId) {
+  await databases.deleteDocument(config.appwrite.databaseId, COLLECTIONS.postLikes, likeId)
+}
+
+export async function listCommunityBookmarks(queries = []) {
+  try {
+    return await listAll(COLLECTIONS.postBookmarks, queries)
+  } catch {
+    return []
+  }
+}
+
+export async function createCommunityBookmark(userId, postId) {
+  return databases.createDocument(
+    config.appwrite.databaseId,
+    COLLECTIONS.postBookmarks,
+    'unique()',
+    {
+      user_id: userId,
+      post_id: postId,
+      created_at: new Date().toISOString(),
+    },
+  )
+}
+
+export async function deleteCommunityBookmark(bookmarkId) {
+  await databases.deleteDocument(
+    config.appwrite.databaseId,
+    COLLECTIONS.postBookmarks,
+    bookmarkId,
+  )
+}
+
+export async function getAppwriteUser(userId) {
+  try {
+    return await users.get(userId)
+  } catch {
+    return null
+  }
 }
