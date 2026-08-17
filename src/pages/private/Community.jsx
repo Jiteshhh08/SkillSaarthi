@@ -1,0 +1,213 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import TopBar from '../../components/layout/TopBar'
+import Footer from '../../components/layout/Footer'
+import PostCard from '../../components/community/PostCard'
+import PostComposer from '../../components/community/PostComposer'
+import Icon from '../../components/common/Icon'
+import { useAuth } from '../../hooks/useAuth'
+import {
+  POST_CATEGORIES,
+  deletePost,
+  getPosts,
+  toggleBookmark,
+  toggleLike,
+} from '../../services/community'
+
+function Community() {
+  const { user } = useAuth()
+  const [posts, setPosts] = useState([])
+  const [total, setTotal] = useState(0)
+  const [category, setCategory] = useState('')
+  const [sort, setSort] = useState('newest')
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [composerOpen, setComposerOpen] = useState(false)
+
+  const load = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const result = await getPosts({ category, sort, search })
+      setPosts(result.posts || [])
+      setTotal(result.total || 0)
+    } catch {
+      setPosts([])
+      setTotal(0)
+      setError('Could not load the community feed. Please try again shortly.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    const handle = setTimeout(load, search ? 300 : 0)
+    return () => clearTimeout(handle)
+  }, [category, sort, search]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleCreated = async () => {
+    setComposerOpen(false)
+    await load()
+  }
+
+  const handleLike = async (post) => {
+    const result = await toggleLike(post.$id)
+    setPosts((prev) =>
+      prev.map((item) =>
+        item.$id === post.$id ? { ...item, liked_by_me: result.liked, likes_count: result.likes_count } : item,
+      ),
+    )
+  }
+
+  const handleBookmark = async (post) => {
+    const result = await toggleBookmark(post.$id)
+    setPosts((prev) =>
+      prev.map((item) =>
+        item.$id === post.$id ? { ...item, bookmarked_by_me: result.bookmarked } : item,
+      ),
+    )
+  }
+
+  const handleDelete = async (post) => {
+    if (!window.confirm('Delete this post? This cannot be undone.')) return
+    await deletePost(post.$id)
+    setPosts((prev) => prev.filter((item) => item.$id !== post.$id))
+    setTotal((prev) => Math.max(0, prev - 1))
+  }
+
+  return (
+    <div className="min-h-screen">
+      <TopBar />
+
+      <main className="mx-auto max-w-7xl px-6 py-10">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.08em]">Community</p>
+            <h1 className="mt-2 text-3xl font-black tracking-tight">Learn together</h1>
+            <p className="mt-2 max-w-2xl text-lg text-ink-muted">
+              Share questions, resources, successes, and advice with fellow learners.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link to="/community/saved" className="btn-secondary !h-10 !px-4 !text-sm">
+              Saved posts
+            </Link>
+            <Link
+              to={`/community/users/${user.$id}`}
+              className="btn-secondary !h-10 !px-4 !text-sm"
+            >
+              My profile
+            </Link>
+            <button onClick={() => setComposerOpen((open) => !open)} className="btn-primary !h-10 !px-4 !text-sm">
+              {composerOpen ? 'Cancel' : 'New post'}
+            </button>
+          </div>
+        </div>
+
+        {composerOpen && (
+          <div className="mt-6">
+            <PostComposer onCreated={handleCreated} onCancelled={() => setComposerOpen(false)} />
+          </div>
+        )}
+
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search posts, tags, categories…"
+            className="input-base w-full sm:w-80"
+          />
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setCategory('')}
+              className={`chip !px-3 !py-1.5 !text-xs ${category === '' ? 'chip-active' : ''}`}
+            >
+              All
+            </button>
+            {POST_CATEGORIES.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setCategory(category === item ? '' : item)}
+                className={`chip !px-3 !py-1.5 !text-xs ${category === item ? 'chip-active' : ''}`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setSort('newest')}
+              className={`chip !px-3 !py-1.5 !text-xs ${sort === 'newest' ? 'chip-active' : ''}`}
+            >
+              Newest
+            </button>
+            <button
+              type="button"
+              onClick={() => setSort('popular')}
+              className={`chip !px-3 !py-1.5 !text-xs ${sort === 'popular' ? 'chip-active' : ''}`}
+            >
+              Popular
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mt-6 rounded-lg border border-danger-soft bg-danger-soft px-4 py-3 text-sm font-bold text-danger">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
+            {[1, 2, 3, 4].map((item) => (
+              <div key={item} className="card h-56 animate-pulse bg-warm" />
+            ))}
+          </div>
+        ) : posts.length === 0 ? (
+          <div className="mt-8 rounded-xl border border-accent-yellow bg-cream px-6 py-12 text-center">
+            <Icon name="message" size={40} className="mx-auto text-brand-deep" />
+            <p className="mt-4 text-2xl font-black tracking-tight">No posts yet</p>
+            <p className="mt-2 mx-auto max-w-md text-sm text-ink-muted">
+              {search || category
+                ? 'No posts match your filters yet. Try widening your search.'
+                : 'Start the conversation — share a question, resource, or success story with the community.'}
+            </p>
+            <button onClick={() => setComposerOpen(true)} className="btn-primary mt-6 !h-10 !px-4 !text-sm">
+              Write the first post
+            </button>
+          </div>
+        ) : (
+          <div className="mt-6 flex items-center justify-between">
+            <p className="text-sm text-ink-muted">
+              {total} post{total === 1 ? '' : 's'}
+            </p>
+            <button onClick={load} disabled={loading} className="btn-text !text-sm">
+              Refresh
+            </button>
+          </div>
+        )}
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          {posts.map((post) => (
+            <PostCard
+              key={post.$id}
+              post={post}
+              onLike={handleLike}
+              onBookmark={handleBookmark}
+              onDelete={post.user_id === user.$id ? handleDelete : undefined}
+            />
+          ))}
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  )
+}
+
+export default Community
