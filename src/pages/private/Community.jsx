@@ -4,6 +4,7 @@ import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
 import PostCard from '../../components/community/PostCard'
 import PostComposer from '../../components/community/PostComposer'
+import PressSection from '../../components/community/PressSection'
 import Icon from '../../components/common/Icon'
 import { useAuth } from '../../hooks/useAuth'
 import {
@@ -105,13 +106,21 @@ function Community() {
           </div>
         </div>
 
+        <PressSection />
+
         {composerOpen && (
           <div className="mt-6">
             <PostComposer onCreated={handleCreated} onCancelled={() => setComposerOpen(false)} />
           </div>
         )}
 
-        <div className="mt-8 flex flex-wrap items-center gap-3">
+        <section className="mt-10">
+          <div className="flex flex-wrap items-center gap-2">
+            <Icon name="message" size={18} className="text-brand-deep" />
+            <h2 className="text-xl font-black tracking-tight">Posts</h2>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
           <input
             type="search"
             value={search}
@@ -203,6 +212,7 @@ function Community() {
             />
           ))}
         </div>
+        </section>
       </main>
 
       <Footer />
