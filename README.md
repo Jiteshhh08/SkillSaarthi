@@ -1314,9 +1314,9 @@ no new services**.
 | Backend service | `server/src/services/community.service.js` — posts (draft/published), comments, like/bookmark toggles, saved posts, community profiles, search/filter/sort, live author identity |
 | Backend API | `server/src/routes/community.routes.js` + `server/src/controllers/community.controller.js` under `/api/community` (all `requireAuth`) |
 | Frontend service | `src/services/community.js` |
-| Reusable components | `src/components/community/` — `Avatar`, `PostCard`, `PostComposer`, `CommentSection`, `ProfileEditor` |
+| Reusable components | `src/components/community/` — `Avatar`, `PostCard`, `PostComposer`, `CommentSection`, `ProfileEditor`, `PressSection` (news carousel) |
 | Frontend pages | `src/pages/private/Community*.jsx` routed behind `ProfileCompleteRoute` |
-| Navigation | Top-bar "Explore → Community" link + footer link |
+| Navigation | Floating Community button (`src/components/layout/CommunityFab.jsx`) — a sticky bottom-right green square that expands into a shareable "Community" pill on hover (replaced the top-bar Explore entry) + footer link |
 
 ## Posts
 
@@ -1331,6 +1331,28 @@ no new services**.
   and avatar from the Appwrite account (`Users.get`, reused from the existing
   User model) with a 120s in-memory cache. The backend API key needs the
   `users.read` scope (already required by admin notifications).
+
+## In The Press
+
+The `/community` page is split into two sections. Above the posts, an
+**In The Press** strip (`src/components/community/PressSection.jsx`) shows a
+curated **auto-advancing carousel** of tech news — it slides on a timer, pauses
+on hover, and has prev/next arrows + dot navigation.
+
+- **Prototype:** the news is hardcoded in `PressSection.jsx` for now — no API or
+  collection yet, so it always renders.
+- **Planned:** news items will come from an admin-approved/rejected feed (its own
+  collection with a `status` of `approved`/`rejected`), with admins reviewing
+  submissions in the admin area.
+
+## Like notifications
+
+When someone likes a post, the post author gets **one** in-app notification
+(`"New like on your post"`), no matter how many times that same user likes,
+unlikes, and re-likes. The `notifications` collection gained two marker
+attributes (`actor_id`, `post_id`) and a `user_actor_post_idx` index; the
+community service checks for an existing marker before sending, and a failed
+notification never blocks the like itself.
 
 ## API endpoints
 
@@ -1358,7 +1380,7 @@ All routes require `Authorization: Bearer <jwt>` (Appwrite session token).
 
 | Page | Route | What it does |
 |---|---|---|
-| `src/pages/private/Community.jsx` | `/community` | Feed with search, category chips, newest/popular sort, composer, inline delete |
+| `src/pages/private/Community.jsx` | `/community` | Two sections: "In The Press" news carousel on top, "Posts" feed below (search, category chips, newest/popular sort, composer, inline delete) |
 | `src/pages/private/CommunityPostDetail.jsx` | `/community/posts/:id` | Full post, like/bookmark, edit/delete (owner), comment section |
 | `src/pages/private/CommunitySaved.jsx` | `/community/saved` | Bookmarked posts |
 | `src/pages/private/CommunityDrafts.jsx` | `/community/drafts` | My unpublished drafts (edit / publish / delete) |
@@ -1368,7 +1390,9 @@ All routes require `Authorization: Bearer <jwt>` (Appwrite session token).
 
 The Community feature adds 5 collections (`community_profiles`, `community_posts`,
 `community_comments`, `post_likes`, `post_bookmarks`) with their attributes and
-indexes. The setup script is idempotent — apply the schema by re-running:
+indexes. One-shot like notifications also extend the `notifications` collection
+with `actor_id` + `post_id` attributes and a `user_actor_post_idx` compound index.
+The setup script is idempotent — apply the schema by re-running:
 
 ```bash
 npm run setup:appwrite
