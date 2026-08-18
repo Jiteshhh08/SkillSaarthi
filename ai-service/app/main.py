@@ -7,14 +7,21 @@ Serves AI/ML endpoints consumed by the Node backend:
   POST /ai/skill-gaps
   POST /ai/compare-careers
   POST /ai/github/analyze
-  POST /ai/resume/analyze
+  POST /ai/resume/analyze-legacy   (rule-based analyzer, kept for compatibility)
+  POST /ai/resume/extract          (LLM extraction -> structured Resume JSON)
+  POST /ai/resume/analyze          (LLM semantic analysis + deterministic scoring)
+  POST /ai/resume/match            (LLM job-description matching)
+  POST /ai/resume/optimize         (LLM wording optimization)
+  POST /ai/resume/generate         (Jake LaTeX render + optional PDF compile)
 
 The service does not handle authentication.
 """
 
+import base64
 import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from .recommendation.careers import get_all_careers
@@ -25,13 +32,52 @@ from .recommendation.scoring import (
     score_careers,
     simulate_what_if,
 )
-from .resume.analyzer import analyze as analyze_resume
+from .resume.analyzer import analyze as analyze_resume_legacy
+from .ai.client import (
+    AIConfigurationError,
+    AIGatewayError,
+    AIJSONError,
+    AIResponseError,
+    AIUnavailableError,
+    ANALYSIS_PROMPT_VERSION,
+    EXTRACTION_PROMPT_VERSION,
+    MATCH_PROMPT_VERSION,
+    OPTIMIZATION_PROMPT_VERSION,
+)
+from .resume.ingest import detect_kind, extract_raw_text
+from .resume.pipeline import (
+    analyze_resume as ai_analyze_resume,
+    extract_resume,
+    match_job,
+    optimize_resume,
+)
+from .resume.latex.renderer import RENDERER_VERSION, render_resume
+from .resume.latex.compile import compile_pdf
 
 app = FastAPI(
     title="skillsaarthi AI Service",
     version="0.2.0",
     description="AI/ML layer: skill matching, recommendation, and skill-gap analysis.",
 )
+
+
+@app.exception_handler(AIGatewayError)
+async def ai_gateway_error_handler(request: Request, exc: AIGatewayError):
+    """Map gateway failures to controlled HTTP errors for the Node backend."""
+    if isinstance(exc, AIConfigurationError):
+        status = 503
+    elif isinstance(exc, AIUnavailableError):
+        status = 503
+    elif isinstance(exc, AIResponseError):
+        status = exc.status or 502
+    elif isinstance(exc, AIJSONError):
+        status = 502
+    else:
+        status = 500
+    return JSONResponse(
+        status_code=status,
+        content={"success": False, "code": exc.code, "message": str(exc)},
+    )
 
 
 class Skill(BaseModel):
@@ -227,6 +273,66 @@ class ResumeAnalyzeResponse(BaseModel):
     analysis: dict
 
 
+class ResumeExtractRequest(BaseModel):
+    text: str | None = None
+    pdf: str | None = None
+    file_name: str | None = None
+    mime_type: str | None = None
+
+
+class ResumeExtractResponse(BaseModel):
+    file_name: str | None = None
+    source_type: str
+    raw_text: str
+    resume_json: dict
+    prompt_version: str
+
+
+class ResumeAnalyzeLLMRequest(BaseModel):
+    resume_json: dict
+    raw_text: str | None = None
+    job_description: str | None = None
+
+
+class ResumeAnalyzeLLMResponse(BaseModel):
+    analysis: dict
+
+
+class ResumeMatchRequest(BaseModel):
+    resume_json: dict
+    job_description: str = Field(min_length=1)
+
+
+class ResumeMatchResponse(BaseModel):
+    job_match: dict
+
+
+class ResumeOptimizeRequest(BaseModel):
+    resume_json: dict
+    analysis: dict | None = None
+    job_description: str | None = None
+
+
+class ResumeOptimizeResponse(BaseModel):
+    optimized_resume_json: dict
+    prompt_version: str
+
+
+class ResumeGenerateRequest(BaseModel):
+    resume_json: dict
+    compile_pdf: bool = True
+
+
+class ResumeGenerateResponse(BaseModel):
+    latex: str
+    renderer_version: str
+    compiled: bool
+    compiler: str | None = None
+    error: str | None = None
+    log: str | None = None
+    pdf_base64: str | None = None
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "ai-service", "version": app.version}
@@ -304,16 +410,113 @@ def github_analyze(request: GitHubAnalyzeRequest):
     return GitHubAnalyzeResponse(username=request.username, source="full", analysis=analysis)
 
 
-@app.post("/ai/resume/analyze", response_model=ResumeAnalyzeResponse)
-def resume_analyze(request: ResumeAnalyzeRequest):
-    """Extract skills, experience, and career matches from a resume (docs §27).
+@app.post("/ai/resume/analyze-legacy", response_model=ResumeAnalyzeResponse)
+def resume_analyze_legacy(request: ResumeAnalyzeRequest):
+    """Legacy rule-based resume read (docs §27).
 
-    Accepts either pre-extracted text or base64-encoded PDF bytes.
+    Kept for compatibility with the older Node flow. The LLM pipeline is the
+    primary resume intelligence; this deterministic path only backs the old
+    endpoint and is reported as `source: "legacy"`.
     """
-    analysis = analyze_resume(request.model_dump())
+    analysis = analyze_resume_legacy(request.model_dump())
     return ResumeAnalyzeResponse(
-        file_name=request.file_name, source="full", analysis=analysis
+        file_name=request.file_name, source="legacy", analysis=analysis
     )
+
+
+@app.post("/ai/resume/extract", response_model=ResumeExtractResponse)
+def resume_extract(request: ResumeExtractRequest):
+    """Ingest a resume and convert it into structured Resume JSON (LLM).
+
+    Accepts pre-extracted text or base64-encoded PDF/DOCX bytes. Returns the
+    source type, the raw text, and the structured Resume JSON.
+    """
+    raw = request.text if request.text is not None else ""
+    if request.text is not None:
+        source_type = "text"
+    else:
+        data = None
+        if request.pdf:
+            try:
+                data = base64.b64decode(request.pdf)
+            except Exception as error:  # noqa: BLE001
+                raise HTTPException(
+                    status_code=400,
+                    detail="The uploaded resume bytes were not valid base64.",
+                ) from error
+        raw = extract_raw_text(data=data, text=None, mime_type=request.mime_type)
+        source_type = detect_kind(data or b"", request.mime_type)
+
+    resume = extract_resume(raw)
+    return ResumeExtractResponse(
+        file_name=request.file_name,
+        source_type=source_type,
+        raw_text=raw,
+        resume_json=resume,
+        prompt_version=EXTRACTION_PROMPT_VERSION,
+    )
+
+
+@app.post("/ai/resume/analyze", response_model=ResumeAnalyzeLLMResponse)
+def resume_analyze_llm(request: ResumeAnalyzeLLMRequest):
+    """Semantic resume analysis + deterministic component scoring."""
+    analysis = ai_analyze_resume(
+        request.resume_json,
+        raw_text=request.raw_text,
+        job_description=request.job_description,
+    )
+    return ResumeAnalyzeLLMResponse(analysis=analysis)
+
+
+@app.post("/ai/resume/match", response_model=ResumeMatchResponse)
+def resume_match(request: ResumeMatchRequest):
+    """Semantic job-description matching against the structured resume."""
+    job_match = match_job(request.resume_json, request.job_description)
+    return ResumeMatchResponse(job_match=job_match)
+
+
+@app.post("/ai/resume/optimize", response_model=ResumeOptimizeResponse)
+def resume_optimize(request: ResumeOptimizeRequest):
+    """Improve resume wording without inventing facts."""
+    optimized = optimize_resume(
+        request.resume_json,
+        analysis_json=request.analysis,
+        job_description=request.job_description,
+    )
+    return ResumeOptimizeResponse(
+        optimized_resume_json=optimized,
+        prompt_version=OPTIMIZATION_PROMPT_VERSION,
+    )
+
+
+@app.post("/ai/resume/generate", response_model=ResumeGenerateResponse)
+def resume_generate(request: ResumeGenerateRequest):
+    """Render structured Resume JSON into Jake-style LaTeX (deterministic).
+
+    Optional server-side PDF compilation; when no LaTeX compiler is available
+    the endpoint still returns the .tex source with `compiled: false`.
+    """
+    latex = render_resume(request.resume_json)
+    result = {
+        "latex": latex,
+        "renderer_version": RENDERER_VERSION,
+        "compiled": False,
+        "compiler": None,
+        "error": None,
+        "log": None,
+        "pdf_base64": None,
+    }
+    if request.compile_pdf:
+        compiled = compile_pdf(latex)
+        result["compiled"] = compiled["ok"]
+        result["compiler"] = compiled["compiler"]
+        result["log"] = compiled.get("log")
+        if compiled["ok"]:
+            result["pdf_base64"] = base64.b64encode(compiled["pdf_bytes"]).decode("ascii")
+        else:
+            result["error"] = compiled["error"]
+            result["log"] = compiled.get("log")
+    return ResumeGenerateResponse(**result)
 
 
 if __name__ == "__main__":

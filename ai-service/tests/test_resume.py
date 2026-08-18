@@ -116,12 +116,12 @@ def test_extract_text_garbage_bytes_ok():
 
 def test_api_resume_analyze_text():
     res = client.post(
-        "/ai/resume/analyze",
+        "/ai/resume/analyze-legacy",
         json={"text": RESUME_TEXT, "file_name": "jane.pdf"},
     )
     assert res.status_code == 200
     body = res.json()
-    assert body["source"] == "full"
+    assert body["source"] == "legacy"
     assert body["file_name"] == "jane.pdf"
     assert body["analysis"]["experience_years"] == 3
     assert body["analysis"]["skills"]
@@ -129,7 +129,7 @@ def test_api_resume_analyze_text():
 
 
 def test_api_resume_analyze_empty():
-    res = client.post("/ai/resume/analyze", json={"text": ""})
+    res = client.post("/ai/resume/analyze-legacy", json={"text": ""})
     assert res.status_code == 200
     assert res.json()["analysis"]["skills"] == []
 
