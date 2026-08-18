@@ -113,6 +113,23 @@ def test_normalize_analysis_requires_object():
         normalize_analysis("nope")
 
 
+def test_normalize_analysis_removes_parsing_boilerplate():
+    result = normalize_analysis(
+        {
+            "ats_issues": [
+                "Ensure the final document format is standard text-based PDF to avoid parsing errors.",
+                "Missing keywords for the role.",
+            ],
+            "recommendations": [
+                "Save the final document as a standard text-based PDF.",
+                "Add more quantified impact.",
+            ],
+        }
+    )
+    assert result["ats_issues"] == ["Missing keywords for the role."]
+    assert result["recommendations"] == ["Add more quantified impact."]
+
+
 def test_normalize_match_distinguishes_skill_types():
     result = normalize_match(
         {

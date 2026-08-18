@@ -284,6 +284,29 @@ def _skill_classified_list(value, detail_key):
     return result
 
 
+def _is_boilerplate_issue(item):
+    """True for generic/self-referential LLM filler that never applies.
+
+    Flagged phrases reference the parsing/document step itself — which is
+    irrelevant because the resume already parsed successfully before analysis
+    runs. Everything else we keep for human review.
+    """
+    text = item.lower()
+    return any(
+        phrase in text
+        for phrase in (
+            "text-based pdf",
+            "standard pdf",
+            "parsing errors",
+            "word processor",
+            "save as pdf",
+            "export as pdf",
+            "convert to pdf",
+            "open in a text",
+        )
+    )
+
+
 def normalize_analysis(data):
     """Normalize the LLM's resume-analysis output into a usable structure."""
     if not isinstance(data, dict):
@@ -308,8 +331,16 @@ def normalize_analysis(data):
         "strengths": _list_of_strings(data.get("strengths"), 600, 12),
         "weaknesses": _list_of_strings(data.get("weaknesses"), 600, 12),
         "missing_sections": _list_of_strings(data.get("missing_sections"), 300, 10),
-        "ats_issues": _list_of_strings(data.get("ats_issues"), 600, 12),
-        "recommendations": _list_of_strings(data.get("recommendations"), 700, 12),
+        "ats_issues": [
+            item
+            for item in _list_of_strings(data.get("ats_issues"), 600, 12)
+            if not _is_boilerplate_issue(item)
+        ],
+        "recommendations": [
+            item
+            for item in _list_of_strings(data.get("recommendations"), 700, 12)
+            if not _is_boilerplate_issue(item)
+        ],
         "evidence": _list_of_strings(data.get("evidence"), 500, 20),
     }
 

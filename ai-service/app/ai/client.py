@@ -41,7 +41,7 @@ AI_MAX_RETRIES = int(os.getenv("AI_MAX_RETRIES", "2"))
 # Prompt versions: bump any of these whenever its prompt/schema changes so
 # results stay interpretable across deployments.
 EXTRACTION_PROMPT_VERSION = "v1"
-ANALYSIS_PROMPT_VERSION = "v1"
+ANALYSIS_PROMPT_VERSION = "v2"
 MATCH_PROMPT_VERSION = "v1"
 OPTIMIZATION_PROMPT_VERSION = "v1"
 

@@ -77,6 +77,85 @@ def minimal_resume():
     }
 
 
+def strong_resume():
+    """A genuinely strong, well-rounded resume (should score high on ATS)."""
+    return {
+        "personal": {
+            "name": "Jane Doe",
+            "title": "Senior Frontend Developer",
+            "email": "jane.doe@example.com",
+            "phone": "+91 98765 43210",
+            "location": "Bengaluru, India",
+            "linkedin": "https://linkedin.com/in/janedoe",
+            "github": "https://github.com/janedoe",
+            "portfolio": "https://janedoe.dev",
+        },
+        "summary": "Senior frontend developer with 6+ years building React and TypeScript "
+        "apps. Reduced dashboard load times by 40%.",
+        "education": [
+            {
+                "institution": "Acme College",
+                "degree": "B.Tech",
+                "field": "Computer Science",
+                "location": "Mumbai",
+                "start_date": "2019",
+                "end_date": "2023",
+                "gpa": "8.5",
+                "bullets": ["Built a campus project with 4 teammates."],
+            }
+        ],
+        "experience": [
+            {
+                "company": "Acme Corp",
+                "title": "Senior Software Engineer",
+                "location": "Bengaluru",
+                "start_date": "2021",
+                "end_date": "2023",
+                "technologies": ["React", "TypeScript", "Node.js"],
+                "bullets": [
+                    "Reduced dashboard load time by 40%.",
+                    "Led a team of 5 developers to ship 3 releases.",
+                    "Increased test coverage from 60% to 90%.",
+                ],
+            },
+            {
+                "company": "Beta Labs",
+                "title": "Software Engineer",
+                "location": "Pune",
+                "start_date": "2019",
+                "end_date": "2021",
+                "technologies": ["JavaScript", "React"],
+                "bullets": [
+                    "Built 10+ UI features for the analytics product.",
+                    "Improved API response times by 25%.",
+                ],
+            },
+        ],
+        "projects": [
+            {
+                "name": "Analytics Dashboard",
+                "link": "https://github.com/janedoe/dashboard",
+                "description": "Realtime analytics dashboard with 2k users.",
+                "technologies": ["React", "TypeScript"],
+                "bullets": ["Designed and built the dashboard.", "Cut query time by 30%."],
+            }
+        ],
+        "skills": {
+            "languages": [{"name": "JavaScript", "evidence": "Used for dashboard"}],
+            "frameworks": [{"name": "React", "evidence": "Built a React dashboard"}],
+            "libraries": [{"name": "Redux", "evidence": None}],
+            "databases": [{"name": "SQL", "evidence": None}],
+            "tools": [{"name": "Git", "evidence": None}, {"name": "Docker", "evidence": None}],
+            "cloud": [{"name": "AWS", "evidence": None}],
+            "other": [],
+        },
+        "certifications": [{"name": "AWS Certified Developer", "issuer": "AWS", "date": "2022"}],
+        "achievements": ["Winner, hackathon 2023"],
+        "coursework": ["Data Structures", "System Design"],
+        "extracurriculars": [],
+    }
+
+
 def llm_analysis():
     return {
         "section_assessment": {

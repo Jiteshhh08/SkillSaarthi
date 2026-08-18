@@ -468,6 +468,22 @@ export default function ResumeAnalysis() {
               </div>
             )}
 
+            {analysis.section_scores?.ats?.issues?.length > 0 && (
+              <div className="rounded-lg border border-warning-soft bg-warning-soft px-4 py-3">
+                <p className="text-sm font-black uppercase tracking-wide text-warning">
+                  ATS content check
+                </p>
+                <ul className="mt-2 space-y-1 text-sm text-ink">
+                  {analysis.section_scores.ats.issues.map((issue) => (
+                    <li key={issue} className="flex items-start gap-2">
+                      <span className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-warning" />
+                      {issue}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <MiniList title="Recommended next steps" items={analysis.recommendations} dotClass="bg-brand" />
             <MiniList title="Explainer notes" items={analysis.evidence} dotClass="bg-ink-soft" />
 
