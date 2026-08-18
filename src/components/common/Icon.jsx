@@ -1,4 +1,6 @@
 import {
+  ArrowDown,
+  ArrowUp,
   Backpack,
   BookOpen,
   Bot,
@@ -17,6 +19,7 @@ import {
   Globe,
   GraduationCap,
   Handshake,
+  Heart,
   HeartPulse,
   Home,
   Laptop,
@@ -39,6 +42,7 @@ import {
   Target,
   Trophy,
   Users,
+  Trash2,
   Wallet,
   Wrench,
 } from 'lucide-react'
@@ -75,6 +79,9 @@ const ICONS = {
   gamepad: Gamepad2,
   'book-open': BookOpen,
   'heart-pulse': HeartPulse,
+  heart: Heart,
+  'arrow-up': ArrowUp,
+  'arrow-down': ArrowDown,
   globe: Globe,
   lock: Lock,
   sprout: Sprout,
@@ -87,6 +94,7 @@ const ICONS = {
   rocket: Rocket,
   lightbulb: Lightbulb,
   wrench: Wrench,
+  trash: Trash2,
 }
 
 export function GithubIcon({ size = 24, className = '' }) {
@@ -104,7 +112,7 @@ export function GithubIcon({ size = 24, className = '' }) {
   )
 }
 
-export default function Icon({ name, size = 24, className = '', strokeWidth = 2 }) {
+export default function Icon({ name, size = 24, className = '', strokeWidth = 2, fill = false }) {
   if (name === 'github') return <GithubIcon size={size} className={className} />
   const Component = ICONS[name]
   if (!Component) return null
@@ -113,6 +121,7 @@ export default function Icon({ name, size = 24, className = '', strokeWidth = 2 
       size={size}
       strokeWidth={strokeWidth}
       className={className}
+      fill={fill ? 'currentColor' : 'none'}
       aria-hidden="true"
     />
   )

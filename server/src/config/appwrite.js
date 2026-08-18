@@ -32,6 +32,11 @@ export const COLLECTIONS = {
   resumeAnalyses: 'resume_analyses',
   githubAnalyses: 'github_analyses',
   notifications: 'notifications',
+  communityProfiles: 'community_profiles',
+  communityPosts: 'community_posts',
+  communityComments: 'community_comments',
+  postLikes: 'post_likes',
+  postBookmarks: 'post_bookmarks',
 }
 
 export { ID, Permission, Query, Role }

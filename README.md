@@ -293,6 +293,7 @@ Their progress is reflected on the dashboard.
 | 🎓 Course Recommendations     | Discover relevant learning resources |
 | 💼 Internship Recommendations | Discover relevant internships        |
 | 🤖 AI Career Assistant        | Conversational career guidance       |
+| 👥 Community Hub              | Posts, comments, likes, bookmarks    |
 | 🔔 Personalized Notifications | In-app inbox + admin broadcasts       |
 | 🔥 Daily Activity Streak      | Consecutive-day engagement counter   |
 | 📈 Progress Tracking          | Track roadmap completion             |
@@ -433,6 +434,7 @@ This approach allows the MVP to work reliably even without a large machine-learn
 * Courses
 * Internships
 * Assessments
+* Community posts, comments, likes, and bookmarks
 
 ## AI / ML
 
@@ -1295,6 +1297,86 @@ then refresh the internship catalog:
 npm run setup:appwrite
 npm run seed:catalog
 ```
+
+---
+
+# 👥 Community
+
+A lightweight community hub where learners share questions, resources, success
+stories, and advice. Purely frontend + Node backend + Appwrite — **no AI features,
+no new services**.
+
+## What was built
+
+| Sub-part | Where |
+|---|---|
+| Data model | 5 new Appwrite collections (`community_profiles`, `community_posts`, `community_comments`, `post_likes`, `post_bookmarks`) |
+| Backend service | `server/src/services/community.service.js` — posts (draft/published), comments, like/bookmark toggles, saved posts, community profiles, search/filter/sort, live author identity |
+| Backend API | `server/src/routes/community.routes.js` + `server/src/controllers/community.controller.js` under `/api/community` (all `requireAuth`) |
+| Frontend service | `src/services/community.js` |
+| Reusable components | `src/components/community/` — `Avatar`, `PostCard`, `PostComposer`, `CommentSection`, `ProfileEditor` |
+| Frontend pages | `src/pages/private/Community*.jsx` routed behind `ProfileCompleteRoute` |
+| Navigation | Top-bar "Explore → Community" link + footer link |
+
+## Posts
+
+- Posts have a `title`, `content`, `category` (one of Career Guidance / Skill
+  Building / Internship / Success Story / Resource / General), up to 8 `tags`,
+  and a `status` of `draft` or `published`.
+- **Drafts** are private: authors see them via the drafts scope, other users get
+  `404` on a private draft, and the feed only ever shows published posts.
+- Counters (`likes_count`, `comments_count`) are stored denormalized on the post
+  so the feed can sort by popularity without joins.
+- **Author identity is live** — the backend resolves each author's display name
+  and avatar from the Appwrite account (`Users.get`, reused from the existing
+  User model) with a 120s in-memory cache. The backend API key needs the
+  `users.read` scope (already required by admin notifications).
+
+## API endpoints
+
+All routes require `Authorization: Bearer <jwt>` (Appwrite session token).
+
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/api/community/posts` | Published feed — `query: { category?, sort (newest\|popular), search?, scope (published\|mine\|drafts), offset?, limit? }` |
+| `POST` | `/api/community/posts` | Create a post (`body: { title, content, category?, tags?, status? }`) |
+| `GET` | `/api/community/posts/:id` | Post detail (owner can see draft; others get 404 for drafts) |
+| `PUT` | `/api/community/posts/:id` | Update post (owner only) |
+| `DELETE` | `/api/community/posts/:id` | Delete post + its comments/likes/bookmarks (owner only) |
+| `POST` | `/api/community/posts/:id/like` | Toggle like (`{ liked, likes_count }`) |
+| `POST` | `/api/community/posts/:id/bookmark` | Toggle bookmark (`{ bookmarked }`) |
+| `GET` | `/api/community/posts/:id/comments` | List comments (oldest first, with author) |
+| `POST` | `/api/community/posts/:id/comments` | Add a comment |
+| `PUT` | `/api/community/comments/:commentId` | Update comment (owner only) |
+| `DELETE` | `/api/community/comments/:commentId` | Delete comment (owner only) |
+| `GET` | `/api/community/saved` | Posts you bookmarked |
+| `GET` | `/api/community/profile` | Your community profile + account name/avatar |
+| `PUT` | `/api/community/profile` | Upsert your community profile (`bio`, `location`, `role`, `interests`) |
+| `GET` | `/api/community/users/:userId` | Public profile + up to 20 published posts |
+
+## Frontend pages
+
+| Page | Route | What it does |
+|---|---|---|
+| `src/pages/private/Community.jsx` | `/community` | Feed with search, category chips, newest/popular sort, composer, inline delete |
+| `src/pages/private/CommunityPostDetail.jsx` | `/community/posts/:id` | Full post, like/bookmark, edit/delete (owner), comment section |
+| `src/pages/private/CommunitySaved.jsx` | `/community/saved` | Bookmarked posts |
+| `src/pages/private/CommunityDrafts.jsx` | `/community/drafts` | My unpublished drafts (edit / publish / delete) |
+| `src/pages/private/CommunityUserProfile.jsx` | `/community/users/:userId` | Public profile view + community profile editor (own) |
+
+## Upgrading an existing Appwrite setup
+
+The Community feature adds 5 collections (`community_profiles`, `community_posts`,
+`community_comments`, `post_likes`, `post_bookmarks`) with their attributes and
+indexes. The setup script is idempotent — apply the schema by re-running:
+
+```bash
+npm run setup:appwrite
+```
+
+> The `users.read` API-key scope is required so the feed can resolve author names
+> and avatars live from the Appwrite account (the scope is already documented for
+> admin notifications).
 
 ---
 

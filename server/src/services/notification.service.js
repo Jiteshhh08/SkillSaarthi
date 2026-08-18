@@ -34,20 +34,23 @@ export async function resolveUserIdByEmail(email) {
  * read/update it. Senders are either the system (backend — e.g. "your matches
  * are ready") or an admin (via the admin API).
  */
-export async function notify(userId, title, message) {
+export async function notify(userId, title, message, meta = {}) {
   if (!userId || !title || !String(title).trim()) return null
+  const data = {
+    user_id: userId,
+    title: String(title).trim(),
+    message: message || '',
+    is_read: false,
+    created_at: new Date().toISOString(),
+  }
+  if (meta.actor_id) data.actor_id = String(meta.actor_id)
+  if (meta.post_id) data.post_id = String(meta.post_id)
   try {
     return await databases.createDocument(
       config.appwrite.databaseId,
       COLLECTIONS.notifications,
       ID.unique(),
-      {
-        user_id: userId,
-        title: String(title).trim(),
-        message: message || '',
-        is_read: false,
-        created_at: new Date().toISOString(),
-      },
+      data,
       [
         Permission.read(Role.user(userId)),
         Permission.update(Role.user(userId)),
@@ -56,6 +59,29 @@ export async function notify(userId, title, message) {
     )
   } catch {
     return null
+  }
+}
+
+/**
+ * Returns true when a notification matching the given recipient and optional
+ * actor/post marker already exists. Used to avoid duplicate notifications, e.g.
+ * a community post author should only be notified once per liking user even if
+ * that user likes, unlikes, then likes again.
+ */
+export async function hasNotification(userId, meta = {}) {
+  const queries = [Query.equal('user_id', userId)]
+  if (meta.actor_id) queries.push(Query.equal('actor_id', String(meta.actor_id)))
+  if (meta.post_id) queries.push(Query.equal('post_id', String(meta.post_id)))
+  queries.push(Query.limit(1))
+  try {
+    const result = await databases.listDocuments(
+      config.appwrite.databaseId,
+      COLLECTIONS.notifications,
+      queries,
+    )
+    return (result?.total || 0) > 0
+  } catch {
+    return false
   }
 }
 
