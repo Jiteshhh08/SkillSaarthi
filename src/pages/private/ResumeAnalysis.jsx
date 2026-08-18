@@ -317,7 +317,7 @@ export default function ResumeAnalysis() {
                 dragging ? 'border-brand bg-brand-soft' : 'border-line bg-surface-soft hover:border-brand'
               }`}
             >
-              <p className="grid h-14 w-14 place-items-center rounded-full bg-brand-soft">
+              <p className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-brand-soft">
                 <Icon
                   name={dragging ? 'download' : 'file-text'}
                   size={26}
