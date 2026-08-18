@@ -147,11 +147,147 @@ function ProfileMenu({ user, onLogout }) {
   )
 }
 
+function MobileMenu({ user, navItems, isAdmin, isActive, open, onNavigate, onClose, onLogout }) {
+  const avatarSrc = useAvatarUrl(user)
+
+  useEffect(() => {
+    if (!open) return
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    function onKeyDown(e) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.body.style.overflow = original
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open, onClose])
+
+  if (!open) return null
+
+  const handleLogout = async () => {
+    onNavigate()
+    await onLogout()
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-40 overflow-y-auto bg-white min-[1070px]:hidden"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <nav className="mx-auto max-w-7xl space-y-4 px-6 pb-10 pt-24">
+        {user ? (
+          <>
+            <div className="flex items-center gap-3 border-b border-line pb-4">
+              <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-accent-purple text-sm font-black text-white">
+                {avatarSrc ? (
+                  <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  (user.name || 'U').charAt(0).toUpperCase()
+                )}
+              </span>
+              <span className="min-w-0 truncate text-md font-bold text-black">{user.name}</span>
+            </div>
+
+            {navItems.map((item) =>
+              item.items ? (
+                <div key={item.label}>
+                  <p className="text-xs font-black uppercase tracking-wide text-ink-muted">
+                    {item.label}
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {item.items.map((sub) => (
+                      <li key={sub.to}>
+                        <Link
+                          to={sub.to}
+                          onClick={onNavigate}
+                          className={`block rounded-md px-3 py-2 text-sm font-bold ${
+                            isActive(sub.to)
+                              ? 'bg-brand-soft text-brand-deep'
+                              : 'text-ink hover:bg-surface-hover'
+                          }`}
+                        >
+                          {sub.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  onClick={onNavigate}
+                  className={`block rounded-md px-3 py-2 text-sm font-bold ${
+                    isActive(item.to)
+                      ? 'bg-brand-soft text-brand-deep'
+                      : 'text-ink hover:bg-surface-hover'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ),
+            )}
+
+            {isAdmin && (
+              <Link
+                to="/admin/internships"
+                onClick={onNavigate}
+                className={`block rounded-md px-3 py-2 text-sm font-bold ${
+                  isActive('/admin') ? 'bg-brand-soft text-brand-deep' : 'text-ink hover:bg-surface-hover'
+                }`}
+              >
+                Admin
+              </Link>
+            )}
+
+            <div className="border-t border-line pt-4">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-bold text-danger hover:bg-danger-soft"
+              >
+                <Icon name="log-out" size={16} />
+                Logout
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <Link
+              to="/login"
+              onClick={onNavigate}
+              className="block rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover"
+            >
+              Login
+            </Link>
+            <Link
+              to="/signup"
+              onClick={onNavigate}
+              className="block rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover"
+            >
+              Start learning
+            </Link>
+          </>
+        )}
+      </nav>
+    </div>
+  )
+}
+
 export default function TopBar() {
   const { user, loading, logout, streak } = useAuth()
   const { isAdmin } = useAdmin()
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [pathname])
 
   const handleLogout = async () => {
     await logout()
@@ -189,13 +325,14 @@ export default function TopBar() {
   ]
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line bg-white">
-      <div className="mx-auto flex h-20 max-w-7xl items-center gap-6 px-6">
+    <>
+      <header className="sticky top-0 z-50 border-b border-line bg-white">
+        <div className="relative z-50 mx-auto flex h-20 max-w-7xl items-center gap-6 px-6">
         <Link to={user ? '/home' : '/'} className="flex items-center gap-2">
           <img src={logo} alt="skillsaarthi logo" className="h-16 w-48 shrink-0 object-cover" />
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-1 min-[1070px]:flex">
           {user &&
             navItems.map((item) =>
               item.items ? (
@@ -235,7 +372,7 @@ export default function TopBar() {
           )}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2 pl-2 sm:gap-3">
           {loading ? null : user ? (
             <>
               <NotificationBell />
@@ -247,16 +384,58 @@ export default function TopBar() {
             </>
           ) : (
             <>
-              <Link to="/login" className="btn-secondary !h-10 !px-4 !text-sm">
+              <Link to="/login" className="hidden btn-secondary !h-10 !px-4 !text-sm sm:inline-flex">
                 Login
               </Link>
-              <Link to="/signup" className="btn-primary !h-10 !px-4 !text-sm">
+              <Link to="/signup" className="hidden btn-primary !h-10 !px-4 !text-sm sm:inline-flex">
                 Start learning
               </Link>
             </>
           )}
+          <button
+            type="button"
+            onClick={() => setMobileOpen((o) => !o)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileOpen}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-md text-ink transition-colors hover:bg-surface-hover min-[1070px]:hidden"
+          >
+            <svg
+              className="h-6 w-6"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              {mobileOpen ? (
+                <>
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </>
+              ) : (
+                <>
+                  <line x1="4" y1="7" x2="20" y2="7" />
+                  <line x1="4" y1="12" x2="20" y2="12" />
+                  <line x1="4" y1="17" x2="20" y2="17" />
+                </>
+              )}
+            </svg>
+          </button>
         </div>
       </div>
-    </header>
+      </header>
+      <MobileMenu
+        user={user}
+        navItems={navItems}
+        isAdmin={isAdmin}
+        isActive={isActive}
+        open={mobileOpen}
+        onNavigate={() => setMobileOpen(false)}
+        onClose={() => setMobileOpen(false)}
+        onLogout={handleLogout}
+      />
+    </>
   )
 }
