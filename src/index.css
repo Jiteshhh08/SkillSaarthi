@@ -69,12 +69,14 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    overflow-x: clip;
   }
 
   body {
     @apply bg-canvas font-sans text-ink;
     font-kerning: normal;
     font-feature-settings: "kern", "liga";
+    overflow-x: clip;
   }
 
   :focus-visible {
