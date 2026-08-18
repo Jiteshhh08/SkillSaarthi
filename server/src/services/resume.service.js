@@ -3,9 +3,20 @@ import { config } from '../config/environment.js'
 import { ApiError } from '../utils/ApiError.js'
 import { applyDetectedSkills } from './github.service.js'
 
-const AI_TIMEOUT_MS = 25000
+const AI_TIMEOUT_MS = 30000
 const MAX_EXTRACTED_LENGTH = 2000
 const MAX_ANALYSIS_LENGTH = 6000
+// Pipeline blobs are stored as JSON files in Appwrite Storage, not as
+// collection columns (the collection would exceed Appwrite's row-size cap).
+// These are sanity caps so a single blob file never grows unbounded.
+const MAX_LATEX_LENGTH = 20000
+const MAX_JOB_DESCRIPTION_LENGTH = 6000
+const MAX_PIPELINE_BLOB_CHARS = 60000
+
+// ============================================================================
+// Legacy rule-based analyzer (used only by POST /api/resume/analyze-legacy and
+// as an honest `source: "fallback"` when the AI service is unreachable).
+// ============================================================================
 
 // Skill lexicon for the Node fallback analyzer (mirrors ai-service/app/resume/analyzer.py).
 const SKILL_SYNONYMS = {
@@ -233,12 +244,26 @@ function computeFallbackAnalysis(text) {
   }
 }
 
+// ============================================================================
+// Shared pipeline helpers
+// ============================================================================
+
 async function toBuffer(value) {
   if (Buffer.isBuffer(value)) return value
   if (value instanceof ArrayBuffer) return Buffer.from(value)
   if (ArrayBuffer.isView(value)) return Buffer.from(value.buffer, value.byteOffset, value.byteLength)
   if (value && typeof value.arrayBuffer === 'function') {
     return Buffer.from(await value.arrayBuffer())
+  }
+  if (value && typeof value.getReader === 'function') {
+    const chunks = []
+    const reader = value.getReader()
+    for (;;) {
+      const { done, value: chunk } = await reader.read()
+      if (done) break
+      chunks.push(Buffer.from(chunk))
+    }
+    return Buffer.concat(chunks)
   }
   if (value && typeof value === 'object' && typeof value.data !== 'undefined' && value.data !== null) {
     return toBuffer(value.data)
@@ -257,24 +282,132 @@ async function fetchFileBytes(fileId) {
   }
 }
 
-async function requestAiAnalysis(payload) {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS)
+// ----------------------------------------------------------------------------
+// Pipeline blob storage (resume_json / analysis_json / job_match_json /
+// optimized_resume_json / latex_source) — a single JSON file per analysis.
+// ----------------------------------------------------------------------------
+
+async function getPipelineData(userId, analysisId) {
+  const doc = await getOwnedAnalysisDoc(userId, analysisId)
+  if (!doc.data_file_id) return {}
   try {
-    const response = await fetch(`${config.aiServiceUrl}/ai/resume/analyze`, {
+    const raw = await storage.getFileDownload(config.appwrite.resumeBucketId, doc.data_file_id)
+    let parsed = null
+    if (
+      raw &&
+      typeof raw === 'object' &&
+      !Buffer.isBuffer(raw) &&
+      !(raw instanceof ArrayBuffer) &&
+      !ArrayBuffer.isView(raw) &&
+      typeof raw.getReader !== 'function'
+    ) {
+      // node-appwrite returns the parsed body for application/json files.
+      parsed = raw
+    } else {
+      const bytes = await toBuffer(raw)
+      parsed = JSON.parse(bytes.toString('utf8'))
+    }
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+async function updatePipelineData(userId, analysisId, patch) {
+  const doc = await getOwnedAnalysisDoc(userId, analysisId)
+  const existing = doc.data_file_id ? await getPipelineData(userId, analysisId) : {}
+  const next = { ...existing }
+  for (const [key, value] of Object.entries(patch || {})) {
+    if (value === undefined || value === null) continue
+    next[key] = value
+  }
+  const text = JSON.stringify(next)
+  if (text.length > MAX_PIPELINE_BLOB_CHARS) {
+    throw new ApiError(413, 'Resume data is too large to store.', 'RESUME_DATA_TOO_LARGE')
+  }
+  const file = new File([Buffer.from(text, 'utf8')], `pipeline-${Date.now()}.json`, {
+    type: 'application/json',
+  })
+  let created
+  try {
+    created = await storage.createFile(config.appwrite.resumeBucketId, ID.unique(), file, [
+      Permission.read(Role.user(userId)),
+      Permission.update(Role.user(userId)),
+      Permission.delete(Role.user(userId)),
+    ])
+  } catch {
+    throw new ApiError(
+      500,
+      'Could not store this resume stage. Please try again.',
+      'RESUME_DATA_STORE_FAILED',
+    )
+  }
+  await databases.updateDocument(config.appwrite.databaseId, COLLECTIONS.resumeAnalyses, analysisId, {
+    data_file_id: created.$id,
+    updated_at: new Date().toISOString(),
+  })
+  if (doc.data_file_id) {
+    try {
+      await storage.deleteFile(config.appwrite.resumeBucketId, doc.data_file_id)
+    } catch {
+      // best-effort cleanup of the superseded blob
+    }
+  }
+}
+
+function parseStoredJson(value, fallback = null) {
+  if (!value) return fallback
+  try {
+    return JSON.parse(value)
+  } catch {
+    return fallback
+  }
+}
+
+async function requestPipeline(payload, path, { timeout = AI_TIMEOUT_MS } = {}) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeout)
+  try {
+    const response = await fetch(`${config.aiServiceUrl}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
       signal: controller.signal,
     })
-    if (!response.ok) return null
-    const body = await response.json()
-    return body?.analysis || null
-  } catch {
-    return null
+    let body = null
+    try {
+      body = await response.json()
+    } catch {
+      body = null
+    }
+    if (!response.ok) {
+      const code = body?.code || 'AI_SERVICE_ERROR'
+      const message = body?.message || `The AI service returned ${response.status}.`
+      throw new ApiError(response.status, message, code)
+    }
+    return body
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    if (error?.name === 'AbortError') {
+      throw new ApiError(504, 'The AI service timed out. Try again in a moment.', 'AI_TIMEOUT')
+    }
+    throw new ApiError(503, 'The AI service is unavailable. Try again shortly.', 'AI_SERVICE_UNAVAILABLE')
   } finally {
     clearTimeout(timer)
   }
+}
+
+async function getOwnedAnalysisDoc(userId, analysisId) {
+  let doc = null
+  try {
+    doc = await databases.getDocument(config.appwrite.databaseId, COLLECTIONS.resumeAnalyses, analysisId)
+  } catch {
+    doc = null
+  }
+  if (!doc || doc.user_id !== userId) {
+    throw new ApiError(404, 'Resume analysis not found', 'RESUME_ANALYSIS_NOT_FOUND')
+  }
+  return doc
 }
 
 async function saveResumeAnalysis(userId, fileId, fileName, text, analysis) {
@@ -288,7 +421,7 @@ async function saveResumeAnalysis(userId, fileId, fileName, text, analysis) {
     appwrite_file_id: fileId,
     file_name: String(fileName || '').slice(0, 500),
     extracted_data: String(text || '').slice(0, MAX_EXTRACTED_LENGTH),
-    analysis_result: JSON.stringify(analysis).slice(0, MAX_ANALYSIS_LENGTH),
+    analysis_result: analysis ? JSON.stringify(analysis).slice(0, MAX_ANALYSIS_LENGTH) : '',
   }
   if (documents.length > 0) {
     await databases.updateDocument(
@@ -313,6 +446,336 @@ async function saveResumeAnalysis(userId, fileId, fileName, text, analysis) {
   return created.$id
 }
 
+async function updateAnalysisFields(userId, analysisId, fields) {
+  await getOwnedAnalysisDoc(userId, analysisId)
+  await databases.updateDocument(config.appwrite.databaseId, COLLECTIONS.resumeAnalyses, analysisId, {
+    ...fields,
+    updated_at: new Date().toISOString(),
+  })
+}
+
+function resumeJsonToSkillSignals(resumeJson) {
+  const signals = []
+  const seen = new Set()
+  const skills = resumeJson?.skills || {}
+  const push = (name) => {
+    const key = String(name || '').trim().toLowerCase()
+    if (!key || seen.has(key)) return
+    seen.add(key)
+    signals.push({ skill: String(name).trim(), confidence: 80 })
+  }
+  for (const category of Object.values(skills)) {
+    for (const item of category || []) {
+      if (typeof item === 'string') push(item)
+      else push(item?.name)
+    }
+  }
+  return signals.slice(0, 16)
+}
+
+// ============================================================================
+// Stage 1+2 — ingest + AI extraction into structured Resume JSON
+// ============================================================================
+
+export async function extractResumePipeline(userId, { fileId, fileName, text, applySkills = false }) {
+  let rawText = text || ''
+  let pdfBytes = null
+  let mimeType = ''
+  if (!rawText && fileId) {
+    const fetched = await fetchFileBytes(fileId)
+    pdfBytes = fetched.bytes
+    mimeType = fetched.mimeType
+  }
+  if (!rawText && !pdfBytes) {
+    throw new ApiError(400, 'Upload a resume file or provide its text to analyze.', 'RESUME_CONTENT_REQUIRED')
+  }
+
+  const payload = {
+    file_name: fileName,
+    mime_type: mimeType || undefined,
+  }
+  if (rawText) {
+    payload.text = rawText
+  } else {
+    payload.pdf = pdfBytes.toString('base64')
+  }
+
+  const result = await requestPipeline(payload, '/ai/resume/extract', { timeout: 120000 })
+  const resumeJson = result?.resume_json || {}
+
+  const analysisId = await saveResumeAnalysis(
+    userId,
+    fileId || '',
+    fileName,
+    result?.raw_text || rawText,
+    null,
+  )
+  await updatePipelineData(userId, analysisId, {
+    resume_json: resumeJson,
+  })
+
+  let skillsAdded = 0
+  if (applySkills) {
+    skillsAdded = await applyDetectedSkills(userId, resumeJsonToSkillSignals(resumeJson))
+  }
+
+  return {
+    source: 'llm',
+    analysis_id: analysisId,
+    file_name: fileName,
+    source_type: result?.source_type || 'text',
+    prompt_version: result?.prompt_version || null,
+    resume_json: resumeJson,
+    raw_text: result?.raw_text || rawText,
+    skills_added: skillsAdded,
+  }
+}
+
+// ============================================================================
+// Stage 3 — resume analysis (LLM semantics + deterministic weighting)
+// ============================================================================
+
+export async function analyzeResumePipeline(userId, { analysisId, resumeJson: override, jobDescription }) {
+  const data = await getPipelineData(userId, analysisId)
+  const storedResume = data.resume_json
+  if (!storedResume) {
+    throw new ApiError(400, 'No extracted resume data found. Run extraction first.', 'RESUME_NOT_EXTRACTED')
+  }
+  const resumeJson = override || storedResume
+
+  const payload = {
+    resume_json: resumeJson,
+    job_description: (jobDescription || '').trim() || undefined,
+  }
+  const doc = await getOwnedAnalysisDoc(userId, analysisId)
+  if (doc.extracted_data) payload.raw_text = doc.extracted_data
+
+  const result = await requestPipeline(payload, '/ai/resume/analyze', { timeout: 120000 })
+  const analysis = result?.analysis || {}
+
+  await updatePipelineData(userId, analysisId, {
+    analysis_json: analysis,
+  })
+
+  return {
+    analysis_id: analysisId,
+    analysis,
+  }
+}
+
+// ============================================================================
+// Stage 4 — job description matching
+// ============================================================================
+
+export async function matchResumePipeline(userId, { analysisId, resumeJson: override, jobDescription }) {
+  const data = await getPipelineData(userId, analysisId)
+  const storedResume = data.resume_json
+  if (!storedResume) {
+    throw new ApiError(400, 'No extracted resume data found. Run extraction first.', 'RESUME_NOT_EXTRACTED')
+  }
+  const resumeJson = override || storedResume
+  if (!jobDescription || !jobDescription.trim()) {
+    throw new ApiError(400, 'Paste a job description to match against.', 'JOB_DESCRIPTION_REQUIRED')
+  }
+
+  const result = await requestPipeline(
+    { resume_json: resumeJson, job_description: jobDescription },
+    '/ai/resume/match',
+    { timeout: 120000 },
+  )
+  const jobMatch = result?.job_match || {}
+
+  await updatePipelineData(userId, analysisId, {
+    job_description: String(jobDescription).slice(0, MAX_JOB_DESCRIPTION_LENGTH),
+    job_match_json: jobMatch,
+  })
+
+  return {
+    analysis_id: analysisId,
+    job_match: jobMatch,
+  }
+}
+
+// ============================================================================
+// Stage 5 — resume optimization (improve wording, never invent facts)
+// ============================================================================
+
+export async function optimizeResumePipeline(userId, { analysisId, resumeJson: override, jobDescription }) {
+  const data = await getPipelineData(userId, analysisId)
+  const storedResume = data.resume_json
+  if (!storedResume) {
+    throw new ApiError(400, 'No extracted resume data found. Run extraction first.', 'RESUME_NOT_EXTRACTED')
+  }
+  const sourceResume = override || storedResume
+  const analysis = data.analysis_json
+  const jobDescriptionText = (jobDescription || data.job_description || '').trim()
+
+  const payload = { resume_json: sourceResume }
+  if (analysis) payload.analysis = analysis
+  if (jobDescriptionText) payload.job_description = jobDescriptionText
+
+  const result = await requestPipeline(payload, '/ai/resume/optimize', { timeout: 120000 })
+  const optimized = result?.optimized_resume_json || {}
+
+  await updatePipelineData(userId, analysisId, {
+    optimized_resume_json: optimized,
+  })
+
+  return {
+    analysis_id: analysisId,
+    optimized_resume_json: optimized,
+    prompt_version: result?.prompt_version || null,
+  }
+}
+
+// ============================================================================
+// Stage 6 — Jake LaTeX generation + PDF compilation
+// ============================================================================
+
+export async function generateResumePipeline(userId, { analysisId, resumeJson: override, compilePdf = true }) {
+  const data = await getPipelineData(userId, analysisId)
+  const storedResume = data.resume_json
+  if (!storedResume) {
+    throw new ApiError(400, 'No extracted resume data found. Run extraction first.', 'RESUME_NOT_EXTRACTED')
+  }
+  const optimized = data.optimized_resume_json
+  const sourceResume = override || optimized || storedResume
+
+  const result = await requestPipeline(
+    { resume_json: sourceResume, compile_pdf: compilePdf },
+    '/ai/resume/generate',
+    { timeout: 120000 },
+  )
+
+  const latex = result?.latex || ''
+  let pdfFileId = null
+  if (result?.compiled && result.pdf_base64) {
+    pdfFileId = await storePdfBytes(userId, Buffer.from(result.pdf_base64, 'base64'))
+  }
+
+  await updatePipelineData(userId, analysisId, {
+    latex_source: latex.slice(0, MAX_LATEX_LENGTH),
+  })
+  await updateAnalysisFields(userId, analysisId, {
+    pdf_file_id: pdfFileId || '',
+  })
+
+  return {
+    analysis_id: analysisId,
+    latex,
+    renderer_version: result?.renderer_version || null,
+    compiled: Boolean(result?.compiled),
+    compiler: result?.compiler || null,
+    error: result?.error || null,
+    log: result?.log || null,
+    pdf_file_id: pdfFileId,
+    pdf_url: pdfFileId ? buildPublicPdfUrl(pdfFileId) : null,
+  }
+}
+
+async function storePdfBytes(userId, bytes) {
+  try {
+    const file = new File([bytes], `resume-${Date.now()}.pdf`, { type: 'application/pdf' })
+    const created = await storage.createFile(config.appwrite.resumeBucketId, ID.unique(), file, [
+      Permission.read(Role.user(userId)),
+      Permission.update(Role.user(userId)),
+      Permission.delete(Role.user(userId)),
+    ])
+    return created.$id
+  } catch {
+    return null
+  }
+}
+
+function buildPublicPdfUrl(fileId) {
+  if (!fileId) return null
+  const base = (config.appwrite.endpoint || '').replace(/\/v1$/, '')
+  return `${base}/storage/buckets/${config.appwrite.resumeBucketId}/files/${fileId}/view?project=${encodeURIComponent(config.appwrite.projectId || '')}`
+}
+
+// ============================================================================
+// Retrieval
+// ============================================================================
+
+function toAnalysisDto(doc, data) {
+  data = data || {}
+  const resumeJson = data.resume_json ?? null
+  const analysis = data.analysis_json ?? null
+  const jobMatch = data.job_match_json ?? null
+  const optimized = data.optimized_resume_json ?? null
+  const legacy = doc.analysis_result ? parseStoredJson(doc.analysis_result) : null
+  const dto = {
+    file_name: doc.file_name,
+    analysis_id: doc.$id,
+    source: 'llm',
+    resume_json: resumeJson,
+    analysis,
+    job_description: data.job_description || '',
+    job_match: jobMatch,
+    optimized_resume_json: optimized,
+    latex: data.latex_source || '',
+    pdf_file_id: doc.pdf_file_id || '',
+    pdf_url: buildPublicPdfUrl(doc.pdf_file_id || ''),
+    legacy,
+  }
+  if (!resumeJson && !analysis && legacy) {
+    dto.source = 'legacy'
+    dto.analysis = legacy
+  }
+  return dto
+}
+
+export async function getFullResumeAnalysis(userId, analysisId) {
+  const doc = await getOwnedAnalysisDoc(userId, analysisId)
+  const data = await getPipelineData(userId, analysisId)
+  return toAnalysisDto(doc, data)
+}
+
+export async function getLatexSource(userId, analysisId) {
+  const data = await getPipelineData(userId, analysisId)
+  if (!data.latex_source) {
+    throw new ApiError(404, 'No generated LaTeX found for this analysis.', 'LATEX_NOT_FOUND')
+  }
+  return data.latex_source
+}
+
+export async function getStoredPdf(userId, analysisId) {
+  const doc = await getOwnedAnalysisDoc(userId, analysisId)
+  if (!doc.pdf_file_id) {
+    throw new ApiError(404, 'No compiled PDF stored for this analysis.', 'PDF_NOT_FOUND')
+  }
+  try {
+    const bytes = await toBuffer(await storage.getFileDownload(config.appwrite.resumeBucketId, doc.pdf_file_id))
+    return { bytes, fileName: `resume-${analysisId}.pdf` }
+  } catch {
+    throw new ApiError(404, 'The PDF file is missing from storage.', 'PDF_NOT_FOUND')
+  }
+}
+
+// ============================================================================
+// Legacy analyze entrypoint (POST /api/resume/analyze-legacy)
+// ============================================================================
+
+async function requestLegacyAiAnalysis(payload) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS)
+  try {
+    const response = await fetch(`${config.aiServiceUrl}/ai/resume/analyze-legacy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+    if (!response.ok) return null
+    const body = await response.json()
+    return body?.analysis || null
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 export async function analyzeResume(userId, { fileId, fileName, text, applySkills = false }) {
   let extractedText = text || ''
   let pdfBytes = null
@@ -329,13 +792,13 @@ export async function analyzeResume(userId, { fileId, fileName, text, applySkill
   }
 
   const aiAnalysis = extractedText
-    ? await requestAiAnalysis({ text: extractedText, file_name: fileName })
-    : await requestAiAnalysis({
+    ? await requestLegacyAiAnalysis({ text: extractedText, file_name: fileName })
+    : await requestLegacyAiAnalysis({
         pdf: pdfBytes.toString('base64'),
         file_name: fileName,
       })
 
-  const source = aiAnalysis ? 'full' : 'fallback'
+  const source = aiAnalysis ? 'legacy' : 'fallback'
   const analysis = aiAnalysis || computeFallbackAnalysis(extractedText || pdfBytes?.toString() || '')
 
   const analysisId = await saveResumeAnalysis(userId, fileId || '', fileName, extractedText, analysis)

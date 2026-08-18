@@ -310,7 +310,14 @@ const COLLECTIONS = [
       { key: 'file_name', type: 'string', size: 500 },
       { key: 'extracted_data', type: 'string', size: 2000 },
       { key: 'analysis_result', type: 'string', size: 6000 },
+      // Big pipeline payloads (resume_json, analysis_json, job_match_json,
+      // optimized_resume_json, latex_source) live in Appwrite Storage,
+      // referenced by data_file_id — not as columns, to stay under the
+      // collection row-size limit.
+      { key: 'data_file_id', type: 'string', size: 100 },
+      { key: 'pdf_file_id', type: 'string', size: 100 },
       createdAt,
+      updatedAt,
     ],
     indexes: [{ key: 'user_idx', type: 'key', attributes: ['user_id'] }],
   },
@@ -644,7 +651,7 @@ async function main() {
     Permission.delete(Role.users()),
   ]
 
-  const RESUME_EXTENSIONS = ['pdf', 'docx', 'doc']
+  const RESUME_EXTENSIONS = ['pdf', 'docx', 'doc', 'json']
   // Images are uploaded into the same upload bucket because the free Appwrite
   // plan only allows a single storage bucket.
   const AVATAR_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif']
@@ -669,12 +676,15 @@ async function main() {
     }
   }
 
-  // Broaden the upload bucket so it also accepts image files for avatars.
+  // Broaden the upload bucket so it also accepts image files for avatars and
+  // JSON pipeline blobs.
   const { buckets: allBuckets } = await storage.listBuckets()
   const uploadBucket = allBuckets.find((b) => b.$id === BUCKET_ID)
   if (uploadBucket) {
     const current = (uploadBucket.allowedFileExtensions || []).filter(Boolean)
-    if (!current.some((ext) => AVATAR_EXTENSIONS.includes(ext))) {
+    const required = [...new Set([...current, ...RESUME_EXTENSIONS, ...AVATAR_EXTENSIONS])]
+    const added = required.filter((ext) => !current.includes(ext))
+    if (added.length > 0) {
       await storage.updateBucket(
         BUCKET_ID,
         uploadBucket.name,
@@ -682,16 +692,16 @@ async function main() {
         uploadBucket.fileSecurity,
         uploadBucket.enabled,
         5 * 1024 * 1024,
-        [...new Set([...current, ...AVATAR_EXTENSIONS])],
+        required,
         uploadBucket.compression || 'none',
         uploadBucket.encryption,
         uploadBucket.antivirus,
       )
       console.log(
-        `  ~ bucket ${BUCKET_ID} now accepts image files for profile avatars`,
+        `  ~ bucket ${BUCKET_ID} now accepts ${added.join(', ')} files`,
       )
     } else {
-      console.log(`  = bucket ${BUCKET_ID} already accepts image files`)
+      console.log(`  = bucket ${BUCKET_ID} already accepts required files`)
     }
   }
 
