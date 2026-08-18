@@ -1521,6 +1521,20 @@ LLM_API_KEY=<optional>
 > prebuilt wheels only through Python 3.12 — on Render's default Python 3.14 pip compiles from
 > source and the `pydantic-core` build fails. `PORT` is injected by Render.
 
+> **Resume PDF generation** — the LaTeX compiler is **optional** and detected at runtime
+> (`app/resume/latex/compile.py`). Without one, the `/ai/resume/generate` endpoint still returns
+> the `.tex` source with `compiled: false` and the UI shows a clear "PDF compiler not found"
+> message instead of the download button. Nothing breaks. On a local Windows machine the compiler
+> can be installed with `winget install MiKTeX.MiKTeX`; on Render's Linux containers it must be
+> installed at deploy time. Two supported options when you want PDFs in production:
+>
+> 1. **Tectonic** (recommended) — add `tectonic` to the AI service build command (single ~100MB
+>    binary, downloads LaTeX packages on demand, fits the free-tier disk), and add `tectonic` to
+>    the `COMPILERS` tuple in `app/resume/latex/compile.py`.
+> 2. **TeX Live via apt** — prepend the AI service build command with
+>    `apt-get update && apt-get install -y texlive-latex-extra texlive-fonts-recommended`
+>    (heavy, ~1.5GB, may exceed free-tier disk) — provides `pdflatex`/`xelatex` with no code change.
+
 ## Render service settings
 
 | Setting | `skillsaarthi-node` (backend) | `skillsaarthi-ai` (AI service) |
@@ -1561,6 +1575,10 @@ LLM_API_KEY=<optional>
   files are gitignored and never committed.
 * All user data persists in Appwrite Cloud, so the stateless Node/Python services can be
   redeployed freely without data loss.
+* **Resume PDF** generation works locally when a LaTeX compiler is installed (e.g. MiKTeX via
+  `winget install MiKTeX.MiKTeX`). In production it requires a compiler on the AI service — see
+  the "Resume PDF generation" note under the AI service environment section above. Until then the
+  app degrades gracefully: users still get the `.tex` download.
 
 ---
 

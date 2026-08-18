@@ -2393,6 +2393,19 @@ LLM_API_KEY=<optional>
 > (needs Rust/maturin against a read-only cargo cache). Set the `PYTHON_VERSION` env var to
 > `3.12.10` (fully qualified) to use prebuilt wheels.
 
+> **Resume PDF generation.** The LaTeX compiler is **optional** and detected at runtime
+> (`app/resume/latex/compile.py`). Without one, `/ai/resume/generate` still returns the `.tex`
+> source with `compiled: false` and the UI shows "PDF compiler not found" instead of the download
+> button — the flow degrades gracefully. Locally on Windows: `winget install MiKTeX.MiKTeX`.
+> On Render's Linux container the compiler must be installed at deploy time:
+>
+> 1. **Tectonic** (recommended) — install the single binary in the build command, then add
+>    `tectonic` to `COMPILERS` in `app/resume/latex/compile.py`.
+> 2. **TeX Live via apt** — prepend the build command with
+>    `apt-get update && apt-get install -y texlive-latex-extra texlive-fonts-recommended`
+>    (~1.5GB, may exceed free-tier disk); no code change needed (`pdflatex`/`xelatex` appear on
+>    PATH).
+
 ## 47.5 Render Service Settings
 
 | Setting | Backend (`skillsaarthi-node`) | AI service (`skillsaarthi-ai`) |
