@@ -30,7 +30,6 @@ export default function PreferencesStep({ initial, saving, onSave, onSkip }) {
     career_goal_role: initialRole || initial?.preferred_role || '',
     career_goal_timeframe: initialTimeframe || '',
     preferred_industry: initial?.preferred_industry || '',
-    preferred_role: initial?.preferred_role || initialRole || '',
     preferred_location: initial?.preferred_location || '',
     work_preference: initial?.work_preference || '',
   })
@@ -41,7 +40,6 @@ export default function PreferencesStep({ initial, saving, onSave, onSkip }) {
     career_goal_role: [() => required(values.career_goal_role, 'Target career')],
     career_goal_timeframe: [() => required(values.career_goal_timeframe, 'Goal timeframe')],
     preferred_industry: [() => required(values.preferred_industry, 'Preferred industry')],
-    preferred_role: [() => required(values.preferred_role, 'Preferred role')],
     preferred_location: [() => required(values.preferred_location, 'Preferred location')],
     work_preference: [() => required(values.work_preference, 'Work preference')],
   })
@@ -67,7 +65,6 @@ export default function PreferencesStep({ initial, saving, onSave, onSkip }) {
     if (Object.values(messages).some(Boolean)) return
     onSave({
       career_goal: buildGoalSentence(form.career_goal_role, form.career_goal_timeframe),
-      preferred_role: form.preferred_role,
       preferred_industry: form.preferred_industry,
       preferred_location: form.preferred_location,
       work_preference: form.work_preference,
@@ -127,44 +124,23 @@ export default function PreferencesStep({ initial, saving, onSave, onSkip }) {
           )}
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div>
-            <label className="block text-sm font-bold text-ink" htmlFor="preferred_industry">
-              Preferred industry
-            </label>
-            <select
-              id="preferred_industry"
-              {...fieldProps('preferred_industry')}
-              className={`input-base mt-1${errors.preferred_industry ? ' input-invalid' : ''}`}
-            >
-              <option value="">Select industry…</option>
-              {PREFERRED_INDUSTRIES.map((industry) => (
-                <option key={industry} value={industry}>
-                  {industry}
-                </option>
-              ))}
-            </select>
-            {renderError('preferred_industry')}
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-ink" htmlFor="preferred_role">
-              Preferred role
-            </label>
-            <select
-              id="preferred_role"
-              {...fieldProps('preferred_role')}
-              className={`input-base mt-1${errors.preferred_role ? ' input-invalid' : ''}`}
-            >
-              <option value="">Select role…</option>
-              {CAREER_ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
-            {renderError('preferred_role')}
-          </div>
+        <div>
+          <label className="block text-sm font-bold text-ink" htmlFor="preferred_industry">
+            Preferred industry
+          </label>
+          <select
+            id="preferred_industry"
+            {...fieldProps('preferred_industry')}
+            className={`input-base mt-1${errors.preferred_industry ? ' input-invalid' : ''}`}
+          >
+            <option value="">Select industry…</option>
+            {PREFERRED_INDUSTRIES.map((industry) => (
+              <option key={industry} value={industry}>
+                {industry}
+              </option>
+            ))}
+          </select>
+          {renderError('preferred_industry')}
         </div>
 
         <div>
