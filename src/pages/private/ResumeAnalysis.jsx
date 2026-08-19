@@ -15,6 +15,7 @@ import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
 import Icon from '../../components/common/Icon'
 import DecorativeShapes from '../../components/common/DecorativeShapes'
+import ResumeSkeleton from '../../components/common/ResumeSkeleton'
 
 const ACCEPTED = '.pdf,.doc,.docx'
 
@@ -691,6 +692,8 @@ export default function ResumeAnalysis() {
             </div>
           </section>
         )}
+
+        {busy && <ResumeSkeleton phase={busy} />}
       </main>
 
       <Footer />
