@@ -112,7 +112,7 @@ export default function InterestsStep({ catalog, selected, saving, onSave, onSki
             </p>
           )}
           <button type="button" onClick={handleSave} disabled={saving} className="btn-primary disabled:opacity-50">
-            {saving ? 'Saving…' : 'Save & continue'}
+            {saving ? 'Saving…' : 'Continue →'}
           </button>
         </div>
       </div>
