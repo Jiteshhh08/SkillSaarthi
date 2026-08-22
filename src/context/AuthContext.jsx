@@ -7,6 +7,7 @@ import {
 } from '../services/auth'
 import { getProfile } from '../services/profile'
 import { touchStreak } from '../services/streak'
+import { getVerificationStatus } from '../services/authApi'
 import { AuthContext } from './authContext'
 
 export function AuthProvider({ children }) {
@@ -15,6 +16,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(true)
   const [streak, setStreak] = useState({ current: 0, best: 0 })
+  const [emailVerified, setEmailVerified] = useState(null) // null = unknown/loading, true/false = known
+  const [verificationLoading, setVerificationLoading] = useState(false)
 
   const refreshProfile = useCallback(async (userId) => {
     const id = userId || user?.$id
@@ -32,6 +35,42 @@ export function AuthProvider({ children }) {
     setUser(currentUser)
     return currentUser
   }, [])
+
+  const refreshVerification = useCallback(async () => {
+    if (!user?.$id) {
+      setEmailVerified(null)
+      return null
+    }
+    setVerificationLoading(true)
+    try {
+      const res = await getVerificationStatus()
+      setEmailVerified(Boolean(res.verified))
+      return res.verified
+    } catch {
+      // Fallback: check Appwrite emailVerification and profile field
+      const appwriteVerified = Boolean(user?.emailVerification)
+      const profileVerified = profile?.is_email_verified
+      // Treat undefined as verified for legacy users
+      if (profileVerified === false) {
+        setEmailVerified(false)
+        return false
+      }
+      if (appwriteVerified) {
+        setEmailVerified(true)
+        return true
+      }
+      // If profile has no field and appwrite says not verified, assume verified for legacy
+      // New users will have profile.is_email_verified = false explicitly
+      if (profile && profile.is_email_verified === undefined) {
+        setEmailVerified(true)
+        return true
+      }
+      setEmailVerified(false)
+      return false
+    } finally {
+      setVerificationLoading(false)
+    }
+  }, [user?.$id, user?.emailVerification, profile])
 
   useEffect(() => {
     let mounted = true
@@ -93,11 +132,32 @@ export function AuthProvider({ children }) {
       touchStreak(user.$id).then((result) => {
         if (active) setStreak(result)
       })
+      // Fetch verification status (non-blocking)
+      setVerificationLoading(true)
+      getVerificationStatus()
+        .then((res) => {
+          if (active) setEmailVerified(Boolean(res.verified))
+        })
+        .catch(() => {
+          if (!active) return
+          // Fallback logic
+          const appwriteVerified = Boolean(user.emailVerification)
+          const profileVerified = profile?.is_email_verified
+          if (profileVerified === false) setEmailVerified(false)
+          else if (appwriteVerified) setEmailVerified(true)
+          else if (profile && profile.is_email_verified === undefined) setEmailVerified(true)
+          else setEmailVerified(false)
+        })
+        .finally(() => {
+          if (active) setVerificationLoading(false)
+        })
+    } else {
+      setEmailVerified(null)
     }
     return () => {
       active = false
     }
-  }, [user])
+  }, [user, profile])
 
   return (
     <AuthContext.Provider
@@ -107,11 +167,14 @@ export function AuthProvider({ children }) {
         profileLoading,
         loading,
         streak,
+        emailVerified,
+        verificationLoading,
         login,
         signUp,
         logout,
         refreshProfile,
         refreshUser,
+        refreshVerification,
       }}
     >
       {children}

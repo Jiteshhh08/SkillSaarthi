@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
-import { getAdminStatus } from '../../services/admin'
+import { signupPending } from '../../services/authApi'
 import TopBar from '../../components/layout/TopBar'
 
 export default function Signup() {
@@ -9,26 +8,42 @@ export default function Signup() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const { signUp } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
+    setInfo('')
+    if (name.trim().length < 2) {
+      setError('Name must be at least 2 characters.')
+      return
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.')
+      return
+    }
     setSubmitting(true)
     try {
-      await signUp(name, email, password)
-      let isAdmin = false
-      try {
-        const status = await getAdminStatus()
-        isAdmin = Boolean(status?.is_admin)
-      } catch {
-        isAdmin = false
+      const res = await signupPending({ name: name.trim(), email: email.trim(), password })
+      // store pending email for OTP screen convenience
+      localStorage.setItem('pending_email', email.trim().toLowerCase())
+      if (res._dev_otp) {
+        setInfo(`Dev mode: OTP is ${res._dev_otp} (also logged on server console).`)
       }
-      navigate(isAdmin ? '/home' : '/onboarding')
+      // Redirect to OTP verification — DO NOT create Appwrite user yet
+      navigate(`/verify-otp?email=${encodeURIComponent(email.trim().toLowerCase())}`)
     } catch (err) {
-      setError(err?.message || 'Unable to create your account.')
+      const msg = err?.response?.data?.message || err?.message || 'Unable to create your account.'
+      const lower = msg.toLowerCase()
+      if (lower.includes('already exists') || lower.includes('user with the same')) {
+        setError('An account with this email already exists. Try logging in or reset your password.')
+      } else if (err?.response?.status === 429) {
+        setError('Too many requests. Please wait and try again.')
+      } else {
+        setError(msg)
+      }
     } finally {
       setSubmitting(false)
     }
@@ -39,13 +54,16 @@ export default function Signup() {
       <TopBar />
       <div className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-warm px-4 py-12">
         <form onSubmit={handleSubmit} className="w-full max-w-sm rounded-xl bg-white p-8 shadow-card-rest">
-          <h1 className="text-2xl font-black tracking-tight">Create your account</h1>
-          <p className="mt-1 text-sm text-ink-muted">Start your career journey.</p>
+           <h1 className="text-2xl font-black tracking-tight">Create your account</h1>
+          <p className="mt-1 text-sm text-ink-muted">Verify your email before your account is created — no data is stored until you confirm.</p>
 
           {error && (
             <p className="mt-4 rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
               {error}
             </p>
+          )}
+          {info && (
+            <p className="mt-4 rounded-md bg-brand-soft px-3 py-2 text-sm text-brand-deep">{info}</p>
           )}
 
           <label className="mt-6 block text-sm font-bold text-ink" htmlFor="name">
