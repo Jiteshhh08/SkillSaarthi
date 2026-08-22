@@ -339,8 +339,8 @@ export default function TopBar() {
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-line bg-white">
-        <div className="relative z-50 mx-auto flex h-20 max-w-7xl items-center gap-6 px-6">
-        <Link to={user ? '/home' : '/'} className="flex items-center gap-2">
+        <div className="relative z-50 mx-auto flex h-20 max-w-7xl items-center gap-2 px-3 sm:gap-6 sm:px-6">
+        <Link to={user ? '/home' : '/'} className="flex min-w-0 shrink items-center gap-2 -ml-1 sm:ml-0">
           <img src={logo} alt="skillsaarthi logo" className="h-16 w-48 shrink-0 object-cover" />
         </Link>
 
@@ -372,7 +372,7 @@ export default function TopBar() {
           {/* Admin moved to profile menu */}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2 pl-2 sm:gap-3">
+        <div className="ml-auto flex shrink items-center gap-1 pl-1 sm:gap-3 sm:pl-2">
           {loading ? null : user ? (
             <>
               <NotificationBell />
@@ -397,7 +397,7 @@ export default function TopBar() {
             onClick={() => setMobileOpen((o) => !o)}
             aria-label="Toggle navigation menu"
             aria-expanded={mobileOpen}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-md text-ink transition-colors hover:bg-surface-hover min-[1070px]:hidden"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-ink transition-colors hover:bg-surface-hover sm:mr-3 min-[1070px]:hidden"
           >
             <svg
               className="h-6 w-6"
