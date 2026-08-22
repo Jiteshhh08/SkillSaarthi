@@ -28,6 +28,9 @@ const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'))
 const ResetPassword = lazy(() => import('../pages/auth/ResetPassword'))
 const Home = lazy(() => import('../pages/public/Home'))
 const PrivateHome = lazy(() => import('../pages/private/Home'))
+const VerifyEmail = lazy(() => import('../pages/auth/VerifyEmail'))
+const VerifyOtp = lazy(() => import('../pages/auth/VerifyOtp'))
+const VerifyPending = lazy(() => import('../pages/auth/VerifyPending'))
 
 function PageFallback() {
   return <div className="flex min-h-screen items-center justify-center bg-canvas text-ink-muted">Loading…</div>
