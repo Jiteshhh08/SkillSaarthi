@@ -24,6 +24,9 @@ import Login from '../pages/auth/Login'
 import Signup from '../pages/auth/Signup'
 import ForgotPassword from '../pages/auth/ForgotPassword'
 import ResetPassword from '../pages/auth/ResetPassword'
+import VerifyEmail from '../pages/auth/VerifyEmail'
+import VerifyPending from '../pages/auth/VerifyPending'
+import VerifyOtp from '../pages/auth/VerifyOtp'
 import Home from '../pages/public/Home'
 import PrivateHome from '../pages/private/Home'
 
@@ -56,28 +59,27 @@ export default function AppRoutes() {
         }
       />
 
-      <Route
-        path="/forgot-password"
-        element={
-          <PublicOnlyRoute>
-            <ForgotPassword />
-          </PublicOnlyRoute>
-        }
-      />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      <Route path="/verify-email" element={<VerifyEmail />} />
+
+      <Route path="/verify-otp" element={<VerifyOtp />} />
 
       <Route
-        path="/reset-password"
+        path="/verify-pending"
         element={
-          <PublicOnlyRoute>
-            <ResetPassword />
-          </PublicOnlyRoute>
+          <ProtectedRoute allowUnverified>
+            <VerifyPending />
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/home"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowUnverified>
             <PrivateHome />
           </ProtectedRoute>
         }
@@ -86,7 +88,7 @@ export default function AppRoutes() {
       <Route
         path="/onboarding"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowUnverified>
             <Onboarding />
           </ProtectedRoute>
         }
@@ -94,7 +96,7 @@ export default function AppRoutes() {
       <Route
         path="/onboarding/education-level"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowUnverified>
             <EducationLevel />
           </ProtectedRoute>
         }
@@ -103,7 +105,7 @@ export default function AppRoutes() {
       <Route
         path="/assessment"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowUnverified>
             <Assessment />
           </ProtectedRoute>
         }
@@ -261,7 +263,7 @@ export default function AppRoutes() {
       <Route
         path="/settings"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowUnverified>
             <ProfileSettings />
           </ProtectedRoute>
         }

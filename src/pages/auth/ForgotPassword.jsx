@@ -1,12 +1,13 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { createRecovery } from '../../services/auth'
+import { forgotPassword } from '../../services/authApi'
 import TopBar from '../../components/layout/TopBar'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
+  const [devToken, setDevToken] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [cooldown, setCooldown] = useState(0)
   const cooldownTimer = useRef(null)
@@ -29,16 +30,23 @@ export default function ForgotPassword() {
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
+    setDevToken('')
     setSubmitting(true)
     try {
-      await createRecovery(email)
+      const res = await forgotPassword(email)
       setSent(true)
+      if (res?._dev_token) {
+        setDevToken(res._dev_token)
+      }
       startCooldown()
     } catch (err) {
-      setError(
-        err?.message ||
-          'Unable to send a recovery email. Check the email address and try again.'
-      )
+      const msg = err?.response?.data?.message || err?.message
+      if (err?.response?.status === 429) {
+        setError(msg || 'Too many requests. Please wait and try again.')
+        startCooldown()
+      } else {
+        setError(msg || 'Unable to send a recovery email. Check the email address and try again.')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -65,6 +73,18 @@ export default function ForgotPassword() {
               If an account exists for {email}, a recovery link is on its way. Check
               your inbox (and spam folder). The link expires in about one hour.
             </p>
+          )}
+          {devToken && (
+            <div className="mt-4 rounded-md border border-dashed border-brand bg-brand-soft/50 px-3 py-2">
+              <p className="text-xs font-bold text-brand-deep">Dev mode — Email not configured:</p>
+              <p className="mt-1 break-all text-xs text-ink">
+                Reset link:{' '}
+                <Link to={`/reset-password?token=${encodeURIComponent(devToken)}`} className="font-bold text-brand-deep underline">
+                  Open reset page
+                </Link>
+              </p>
+              <p className="mt-1 break-all text-xs text-ink-soft">Token: {devToken}</p>
+            </div>
           )}
 
           <label className="mt-6 block text-sm font-bold text-ink" htmlFor="email">
