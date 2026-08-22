@@ -4,7 +4,6 @@ import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
 import PostCard from '../../components/community/PostCard'
 import PostComposer from '../../components/community/PostComposer'
-import PressSection from '../../components/community/PressSection'
 import Icon from '../../components/common/Icon'
 import { useAuth } from '../../hooks/useAuth'
 import {
@@ -105,8 +104,6 @@ function Community() {
             </button>
           </div>
         </div>
-
-        <PressSection />
 
         {composerOpen && (
           <div className="mt-6">
