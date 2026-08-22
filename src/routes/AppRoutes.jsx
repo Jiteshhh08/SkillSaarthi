@@ -22,6 +22,8 @@ import ProfileSettings from '../pages/private/ProfileSettings'
 import Onboarding from '../pages/onboarding/Onboarding'
 import Login from '../pages/auth/Login'
 import Signup from '../pages/auth/Signup'
+import ForgotPassword from '../pages/auth/ForgotPassword'
+import ResetPassword from '../pages/auth/ResetPassword'
 import Home from '../pages/public/Home'
 import PrivateHome from '../pages/private/Home'
 
@@ -50,6 +52,24 @@ export default function AppRoutes() {
         element={
           <PublicOnlyRoute>
             <Signup />
+          </PublicOnlyRoute>
+        }
+      />
+
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicOnlyRoute>
+            <ForgotPassword />
+          </PublicOnlyRoute>
+        }
+      />
+
+      <Route
+        path="/reset-password"
+        element={
+          <PublicOnlyRoute>
+            <ResetPassword />
           </PublicOnlyRoute>
         }
       />

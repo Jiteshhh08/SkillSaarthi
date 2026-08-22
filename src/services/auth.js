@@ -21,6 +21,17 @@ export async function getCurrentUser() {
   return account.get()
 }
 
+export async function createRecovery(email) {
+  return account.createRecovery(
+    email,
+    `${window.location.origin}/reset-password`
+  )
+}
+
+export async function updateRecovery(userId, secret, password) {
+  return account.updateRecovery(userId, secret, password, password)
+}
+
 export async function updateName(name) {
   return account.updateName(name)
 }

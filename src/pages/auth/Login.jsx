@@ -54,14 +54,22 @@ export default function Login() {
           <label className="mt-4 block text-sm font-bold text-ink" htmlFor="password">
             Password
           </label>
-          <input
-            id="password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="input-base mt-1"
-          />
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <input
+              id="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="input-base flex-1"
+            />
+            <Link
+              to="/forgot-password"
+              className="shrink-0 text-xs font-bold text-brand-deep hover:underline"
+            >
+              Forgot?
+            </Link>
+          </div>
 
           <button type="submit" disabled={submitting} className="btn-primary mt-6 w-full disabled:opacity-50">
             {submitting ? 'Logging in…' : 'Login'}
