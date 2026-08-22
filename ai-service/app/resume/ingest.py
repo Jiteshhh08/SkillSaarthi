@@ -1,7 +1,6 @@
 """Resume ingestion — file bytes → raw resume text.
 
-PDF text layers are extracted with pypdf (reusing the letter-spacing
-densifier from :mod:`app.resume.analyzer`). DOCX files are converted with
+PDF text layers are extracted with pypdf. DOCX files are converted with
 python-docx. Image-only/scanned PDFs yield an empty text layer — the LLM
 extraction then reports an empty resume rather than hallucinating one.
 """
@@ -12,6 +11,55 @@ import re
 import zipfile
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Letter-spacing densifier (collapses per-glyph spaced PDF text layers)
+# ---------------------------------------------------------------------------
+_TOKEN_RE = r"\w\.@_"
+_LETTER_SPACED_RE = re.compile(r"(?<=[" + _TOKEN_RE + r"]) (?=[" + _TOKEN_RE + r"])")
+_SPACE_RUN_RE = re.compile(r"[ ]{2,}")
+_ALNUM_RUN_RE = re.compile(r"[\w.@_]+")
+
+
+def _is_letter_spaced(text):
+    """Heuristic: are words rendered as isolated single characters?
+
+    In a letter-spaced text layer, every glyph is followed by one space, so
+    there are almost no multi-character runs. Normal prose, by contrast, is
+    dominated by real words (multi-character runs between spaces).
+    """
+    if not text:
+        return False
+    runs = _ALNUM_RUN_RE.findall(text)
+    if len(runs) < 8:
+        return False
+    multi_char = sum(1 for run in runs if len(run) >= 2)
+    return multi_char / len(runs) < 0.05
+
+
+def densify_text(text):
+    """Collapse the per-glyph spaces of a letter-spaced PDF text layer.
+
+    Words in such extractions appear as e.g. 'j a v a s c r i p t'. We remove a
+    single space that sits between two word characters, leaving multi-space
+    runs (which separate real words) and newlines intact.
+    """
+    if not text or not _is_letter_spaced(text):
+        return text
+    chunks = re.split(r"( {2,}|\n)", text)
+    rebuilt = []
+    for chunk in chunks:
+        if chunk is None:
+            continue
+        if re.fullmatch(r"( {2,}|\n)", chunk):
+            rebuilt.append(chunk)
+        else:
+            rebuilt.append(_LETTER_SPACED_RE.sub("", chunk))
+    result = "".join(rebuilt)
+    result = re.sub(r"[ ]{2,}", " ", result)
+    result = re.sub(r"\s+([.,;:!?'\"\)\]])", r"\1", result)
+    result = re.sub(r"([(\[])\s+", r"\1", result)
+    return result
 
 MAX_RAW_TEXT = 20000
 
@@ -43,8 +91,6 @@ def _extract_pdf(data):
             pages.append(page.extract_text() or "")
         except Exception:  # noqa: BLE001 — a single bad page must not kill extraction
             continue
-    from .analyzer import densify_text
-
     return densify_text("\n".join(pages))
 
 

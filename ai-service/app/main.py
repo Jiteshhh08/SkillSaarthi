@@ -1,11 +1,9 @@
 """skillsaarthi AI service — FastAPI application.
 
-Serves resume intelligence (LLM) — remaining deterministic scoring (careers/compare/what-if/github)
-has been moved to Node (server/src/services/scoring.js / github.service.js).
+Serves resume intelligence (LLM) — extract, analyze, match, optimize, generate.
 
-Endpoints kept:
+Endpoints:
   GET  /health
-  POST /ai/resume/analyze-legacy
   POST /ai/resume/extract
   POST /ai/resume/analyze
   POST /ai/resume/match
@@ -22,7 +20,6 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from .resume.analyzer import analyze as analyze_resume_legacy
 from .ai.client import (
     AIConfigurationError,
     AIGatewayError,
@@ -47,7 +44,7 @@ from .resume.latex.compile import compile_pdf
 app = FastAPI(
     title="skillsaarthi AI Service",
     version="0.2.0",
-    description="Resume intelligence (LLM) — scoring/github moved to Node.",
+    description="Resume intelligence (LLM) — extract, analyze, match, optimize, generate.",
 )
 
 
@@ -68,18 +65,6 @@ async def ai_gateway_error_handler(request: Request, exc: AIGatewayError):
         status_code=status,
         content={"success": False, "code": exc.code, "message": str(exc)},
     )
-
-
-class ResumeAnalyzeRequest(BaseModel):
-    text: str | None = None
-    pdf: str | None = None
-    file_name: str | None = None
-
-
-class ResumeAnalyzeResponse(BaseModel):
-    file_name: str | None = None
-    source: str = "full"
-    analysis: dict
 
 
 class ResumeExtractRequest(BaseModel):
@@ -145,15 +130,6 @@ class ResumeGenerateResponse(BaseModel):
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "ai-service", "version": app.version}
-
-
-@app.post("/ai/resume/analyze-legacy", response_model=ResumeAnalyzeResponse)
-def resume_analyze_legacy(request: ResumeAnalyzeRequest):
-    """Legacy rule-based resume read (docs §27)."""
-    analysis = analyze_resume_legacy(request.model_dump())
-    return ResumeAnalyzeResponse(
-        file_name=request.file_name, source="legacy", analysis=analysis
-    )
 
 
 @app.post("/ai/resume/extract", response_model=ResumeExtractResponse)

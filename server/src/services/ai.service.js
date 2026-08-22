@@ -22,7 +22,7 @@ async function post(path, payload) {
     if (error instanceof ApiError) throw error
     throw new ApiError(
       503,
-      'Recommendations are temporarily unavailable.',
+      'AI service is temporarily unavailable.',
       'AI_SERVICE_UNAVAILABLE',
     )
   } finally {
@@ -45,24 +45,4 @@ async function get(path) {
   } finally {
     clearTimeout(timer)
   }
-}
-
-export function recommendCareers(payload) {
-  return post('/ai/recommend-careers', payload)
-}
-
-export function compareCareers(payload) {
-  return post('/ai/compare-careers', payload)
-}
-
-export function simulateWhatIf(payload) {
-  return post('/ai/what-if/simulate', payload)
-}
-
-export function skillGaps(payload) {
-  return post('/ai/skill-gaps', payload)
-}
-
-export function getCareers() {
-  return get('/ai/careers')
 }
