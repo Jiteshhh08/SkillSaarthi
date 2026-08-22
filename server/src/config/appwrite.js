@@ -37,6 +37,9 @@ export const COLLECTIONS = {
   communityComments: 'community_comments',
   postLikes: 'post_likes',
   postBookmarks: 'post_bookmarks',
+  emailVerificationTokens: 'email_verification_tokens',
+  passwordResetTokens: 'password_reset_tokens',
+  pendingRegistrations: 'pending_registrations',
 }
 
 export { ID, Permission, Query, Role }
