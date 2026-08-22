@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import rateLimit from 'express-rate-limit'
 import healthRoutes from './routes/health.routes.js'
 import careerRoutes from './routes/career.routes.js'
 import comparisonRoutes from './routes/comparison.routes.js'
@@ -17,6 +18,18 @@ const app = express()
 
 app.use(cors())
 app.use(express.json())
+
+const sensitiveLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, code: 'RATE_LIMITED', message: 'Too many requests, try again shortly.' },
+})
+
+app.use('/api/github', sensitiveLimiter)
+app.use('/api/resume', sensitiveLimiter)
+app.use('/api/admin', sensitiveLimiter)
 
 // Lightweight root + health routes for uptime monitoring (cron-job.org).
 app.get('/', (_req, res) => {
