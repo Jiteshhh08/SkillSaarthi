@@ -14,12 +14,12 @@ skillsaarthi follows a modular architecture consisting of four major application
 
 1. **Frontend Layer** — React + Tailwind CSS (repo root)
 2. **Infrastructure & Data Layer** — Appwrite (Auth, Databases, Storage, Messaging, Realtime, Functions)
-3. **Backend/Application Layer** — Node.js + Express (thin backend for business logic and orchestration)
-4. **AI Layer** — Python + FastAPI
+3. **Backend/Application Layer** — Node.js + Express (business logic & orchestration **plus scoring, career catalog, GitHub analysis, profile building** — `server/src/services/scoring.js`, `careerCatalog.js`, `profile.builder.js`, `github.service.js`)
+4. **AI Layer** — Python + FastAPI (**resume-only LLM service** — 6 endpoints: `GET /health` + `POST /ai/resume/{extract,analyze,match,optimize,generate}`)
 
 The core architectural principle is:
 
-> **Appwrite handles infrastructure and primary data storage, Node.js handles business logic and orchestration, and Python handles AI/ML processing. There is no MySQL — Appwrite Databases is the primary data store.**
+> **Appwrite handles infrastructure and primary data storage, Node.js handles business logic, scoring, catalog, GitHub analysis and orchestration, and Python handles resume LLM processing only. There is no MySQL — Appwrite Databases is the primary data store.**
 
 ---
 
@@ -56,16 +56,16 @@ The core architectural principle is:
                                             ▼
                                    ┌─────────────────────┐
                                    │   Python/FastAPI    │
-                                   │      AI Service     │
+                                   │  Resume LLM Service │
                                    │    (ai-service/)    │
-                                   │                     │
-                                   │ • Skill Matching    │
-                                   │ • Recommendations  │
-                                   │ • Resume Analysis  │
-                                   │ • GitHub Analysis  │
-                                   │ • AI Assistant     │
-                                   │ • ML Models        │
+                                   │  (resume-only)      │
+                                   │ • Resume Extract    │
+                                   │ • Resume Analyze    │
+                                   │ • Resume Match      │
+                                   │ • Resume Optimize   │
+                                   │ • Resume Generate   │
                                    └─────────────────────┘
+                                 (Scoring/Catalog/GitHub → Node: scoring.js, careerCatalog.js, github.service.js)
 ```
 
 ---
@@ -138,17 +138,17 @@ Appwrite Web SDK (client-safe)
 The frontend is responsible for:
 
 - Rendering UI
-- Navigation
-- Forms
-- Client-side validation
-- Dashboard
-- User interaction
-- Appwrite client integration (auth, DB reads/writes, file upload, realtime)
-- API communication with the Node backend (Axios)
-- Displaying AI recommendations
-- Roadmap visualization
-- Progress tracking
-- In-app notification inbox (Appwrite client SDK reads + mark-read)
+- Navigation (TopBar 3 hubs: **Discover / Build / Opportunities**; `CommunityFab` kept)
+- Homes merged: single `Home` (public + private merged)
+- Forms / Client-side validation / Dashboard (8 cards — reverted per user request; 800 ms retry on transient fetch failure)
+- Onboarding 6→4 steps: **Skills+Interests tabs**, **Goals+Assessment sub-step**, removed silent auto-add at proficiency 2
+- Recommendations: auto-generate on onboarding complete + inline `GapDrawer` for skill gaps
+- GitHub: `ContributionGrid` (`src/components/github/ContributionGrid.jsx`) — 13 metrics, warm background with contrast, tooltip `"22 Sept — N contributions"`
+- User interaction / Appwrite client integration (auth, DB reads/writes, file upload, realtime)
+- API communication with Node backend (Axios via `src/services/api.js` — **JWT cached until 60 s before expiry**, avoids per-request `createJWT`)
+- Displaying recommendations (now Node-native)
+- Roadmap visualization / Progress tracking
+- In-app notification inbox — Realtime via `appwriteClient.subscribe` + 45 s polling fallback (`src/components/layout/NotificationBell.jsx`)
 - Daily-activity streak tracking (`touchStreak`) and display
 
 ---
@@ -165,32 +165,34 @@ skillsaarthi/                      # repo root = React frontend
 │   ├── assets/
 │   │
 │   ├── components/
-│   │   ├── common/
+│   │   ├── common/           # Icon.jsx, DecorativeShapes.jsx, CommunityFab.jsx (kept)
 │   │   ├── auth/
 │   │   ├── profile/
-│   │   ├── career/
+│   │   ├── career/           # GapDrawer.jsx (inline gaps on Recommendations)
 │   │   ├── roadmap/
 │   │   ├── resume/
-│   │   ├── github/
+│   │   ├── github/           # ContributionGrid.jsx (13 metrics, warm bg, tooltip)
 │   │   ├── courses/
 │   │   ├── internships/
+│   │   ├── layout/           # TopBar.jsx (3 hubs: Discover/Build/Opportunities), NotificationBell.jsx (Realtime + polling)
 │   │   └── assistant/
 │   │
 │   ├── pages/
-│   │   ├── public/
+│   │   ├── public/           # Home.jsx (merged public+private)
 │   │   ├── auth/
-│   │   └── private/
+│   │   └── private/          # Dashboard.jsx (8 cards + 800ms retry), Onboarding.jsx (4 steps), Recommendations.jsx (auto-generate)
 │   │
 │   ├── services/
-│   │   ├── api.js            # Axios instance → Node backend
-│   │   ├── appwrite.js       # Appwrite client + database helpers
-│   │   └── auth.js           # Auth helpers (login/signup/session)
+│   │   ├── api.js            # Axios → Node (JWT cached until 60s before exp)
+│   │   ├── appwrite.js       # Appwrite client + database helpers + appwriteClient for Realtime
+│   │   ├── auth.js           # Auth helpers (login/signup/session + avatar)
+│   │   └── notifications.js  # getNotifications / markRead (client SDK)
 │   │
 │   ├── hooks/
 │   ├── context/
 │   ├── utils/
 │   ├── routes/
-│   │   └── AppRoutes.jsx
+│   │   └── AppRoutes.jsx     # lazy-loaded routes (React.lazy + Suspense)
 │   │
 │   ├── App.jsx
 │   ├── main.jsx
@@ -470,20 +472,19 @@ UI updates
 
 # 14. Node.js Backend Architecture
 
-Node.js is a thin application server used for business logic and orchestration. It is **not** the primary data store.
+Node.js is the application server for business logic and orchestration (now also **scoring, career catalog, GitHub analysis, profile building** — not a thin proxy). It is **not** the primary data store.
 
 Responsibilities:
 
 - REST API (business-logic endpoints)
-- Business logic
+- Business logic + **scoring & skill-gap** (`scoring.js`), **career catalog** (`careerCatalog.js`), **profile building** (`profile.builder.js`), **GitHub analysis** (`github.service.js`)
 - Authorization checks on server-only operations
-- Validation
+- Validation + **rate limiting** (`express-rate-limit` 30/min on `/api/github|resume|admin` in `app.js`)
 - Appwrite server-side integration (Admin SDK)
-- AI service communication
-- External API integration (GitHub, courses, internships)
-- Recommendation orchestration
-- Roadmap generation orchestration
-- Notification triggering
+- AI service communication (**resume LLM only** — `ai.service.js` proxies to `/ai/resume/*`)
+- External API integration (GitHub API, courses, internships)
+- Recommendation / Roadmap orchestration
+- Notification triggering (Realtime + polling fallback)
 
 ---
 
@@ -516,23 +517,27 @@ server/
 │   │   └── roadmap.controller.js
 │   │
 │   ├── services/
-│   │   ├── recommendation.service.js
+│   │   ├── scoring.js              # NEW — weighted scoring + skill-gap + compare + what-if (moved from Python)
+│   │   ├── careerCatalog.js        # NEW — static careers catalog (moved from ai-service/careers.py)
+│   │   ├── profile.builder.js      # NEW — builds normalized profile for scoring
+│   │   ├── github.service.js       # Node-native GitHub analyzer (no Python, 13 metrics)
+│   │   ├── recommendation.service.js # orchestrates scoring.js + Appwrite
 │   │   ├── career.service.js
 │   │   ├── appwrite.service.js
-│   │   ├── ai.service.js
+│   │   ├── ai.service.js           # resume-only LLM proxy (POST /ai/resume/* + fallback)
 │   │   ├── roadmap.service.js
-│   │   ├── github.service.js
 │   │   ├── notification.service.js
 │   │   └── ...
 │   │
 │   ├── middleware/
 │   │   ├── auth.middleware.js
 │   │   ├── validation.middleware.js
-│   │   └── error.middleware.js
+│   │   ├── error.middleware.js
+│   │   └── rateLimit.middleware.js  # express-rate-limit 30/min
 │   │
 │   ├── utils/
 │   │
-│   └── app.js
+│   └── app.js                      # mounts routes + rate limiters on /api/github|resume|admin
 │
 ├── .env
 └── package.json
@@ -874,124 +879,102 @@ erDiagram
 
 # 19. Python AI Service
 
-The AI service is an independent Python application.
+The AI service is an independent Python application — **resume-LLM only**. Scoring, catalog, GitHub and what-if/comparison now live in Node (`server/src/services/scoring.js`, `careerCatalog.js`, `profile.builder.js`, `github.service.js`).
 
 Technology:
 
 ```text
 Python
 FastAPI
-scikit-learn
-pandas
-numpy
+pypdf / pdf extraction
+LLM provider (OpenAI-compatible)
+LaTeX compiler (optional — tectonic/pdflatex for PDF generation)
 ```
-
-Additional libraries may be introduced when required.
 
 ## AI Service Responsibilities
 
-The Python service handles:
+The Python service handles **only** (6 endpoints: health + 5 resume):
 
-- Skill normalization
-- Skill matching
-- Career recommendation
-- Skill-gap calculation
-- Resume analysis
-- GitHub technical profile analysis
-- Career comparison
-- Career ranking
-- What-if simulation
-- LLM-based processing where required
+- `GET /health` — health check
+- `POST /ai/resume/extract` — resume text extraction
+- `POST /ai/resume/analyze` — resume LLM analysis
+- `POST /ai/resume/match` — resume ↔ career matching
+- `POST /ai/resume/optimize` — resume optimization suggestions
+- `POST /ai/resume/generate` — LaTeX/PDF generation (degrades to `.tex` when no compiler)
+
+Moved to Node (no longer Python): skill normalization, skill matching, career recommendation/ranking, skill-gap, GitHub analysis, career comparison, what-if simulation, the static careers catalog, and legacy rule-based resume analysis.
 
 ---
 
 # 20. AI Service Architecture
 
 ```text
-ai-service/
+ai-service/                  # resume-LLM only (scoring/github/catalog are Node-native)
 │
 ├── app/
-│   ├── main.py              # FastAPI app: /health, /ai/careers, /ai/recommend-careers, /ai/skill-gaps
+│   ├── main.py              # FastAPI app: GET /health + POST /ai/resume/{extract,analyze,match,optimize,generate}
 │   │
-│   ├── api/
-│   │
-│   ├── preprocessing/
-│   │
-│   ├── recommendation/
-│   │   ├── careers.py       # Career dataset (13 careers with required skills/importance)
-│   │   ├── career_ranker.py
-│   │   └── scoring.py       # Weighted scoring + skill-gap analysis + explanations
+│   ├── ai/
+│   │   └── client.py        # LLM gateway client (OpenAI-compatible, Qwen3.6-35B-A3B)
 │   │
 │   ├── resume/
-│   │   ├── parser.py
-│   │   └── analyzer.py
+│   │   ├── ingest.py        # file ingestion (PDF/DOCX/DOC → text) + densify_text
+│   │   ├── pipeline.py      # LLM pipeline: extract → analyze → match → optimize
+│   │   ├── prompts.py       # versioned prompt builders
+│   │   ├── schema.py        # resume JSON schema, normalization, validation
+│   │   ├── scoring.py       # deterministic ATS + section scoring
+│   │   └── latex/
+│   │       ├── renderer.py  # resume JSON → LaTeX (Jake-style template)
+│   │       ├── compile.py   # optional LaTeX → PDF (pdflatex/xelatex/latexmk)
+│   │       └── escape.py    # safe LaTeX escaping
 │   │
-│   ├── github/
-│   │   └── analyzer.py
-│   │
-│   └── assistant/
-│       └── llm_service.py
-│
-├── models/
-├── data/
+├── tests/                   # resume pipeline, schema, scoring, ingest, LaTeX, AI client tests
 └── requirements.txt
 ```
+
+> The Python service is now resume-only. All recommendation, GitHub, comparison, what-if, and legacy analysis features are Node-native: `server/src/services/scoring.js`, `careerCatalog.js`, `profile.builder.js`, `github.service.js`.
 
 ---
 
 # 21. AI Communication
 
-Node.js communicates with Python through HTTP.
+Node.js communicates with Python **only for resume LLM** (scoring/catalog/GitHub/what-if are now Node-native, in-process). Resume flows retain an AI-fallback; all other flows are Node-direct with no Python call.
 
 ```text
-Node.js
-   │
-   │ HTTP POST
-   ▼
-FastAPI
-   │
-   ▼
-AI Processing
-   │
-   ▼
-JSON Response
-   │
-   ▼
-Node.js
+Resume path (Python):        Scoring/GitHub path (Node-native):
+Node.js ──HTTP POST──► FastAPI ──► LLM          Node.js ──► scoring.js / careerCatalog.js
+   │  /ai/resume/*         │ JSON                │           / github.service.js
+   ◄───────────────────────┘                     └──────────► Appwrite / GitHub API
 ```
 
-Example endpoint:
+Resume example endpoint (Python):
 
 ```http
-POST /ai/recommend-careers
+POST /ai/resume/analyze
 ```
 
-Example request:
+Example resume request (Node → Python):
 
 ```json
 {
-  "education_level": "college",
-  "skills": [
-    {
-      "name": "JavaScript",
-      "proficiency": 4
-    },
-    {
-      "name": "React",
-      "proficiency": 4
-    }
-  ],
-  "interests": [
-    "Web Development",
-    "Software Engineering"
-  ],
-  "goals": ["internship", "software engineering job"],
-  "assessment_score": 80,
-  "experience_years": 2
+  "file_id": "appwrite_file_id",
+  "file_name": "resume.pdf"
 }
 ```
 
-Example response (Phase 3):
+Scoring example (Node-native, **no Python call**):
+
+```http
+POST /api/recommendations/generate   → server/src/services/scoring.js
+POST /api/careers/compare            → scoring.js + careerCatalog.js
+POST /api/what-if/simulate           → scoring.js + profile.builder.js
+POST /api/github/analyze             → github.service.js (GitHub API + local heuristics)
+GET  /api/careers                    → careerCatalog.js
+```
+
+> Removed Python endpoints: `POST /ai/recommend-careers`, `POST /ai/skill-gaps`, `GET /ai/careers`, `POST /ai/compare-careers`, `POST /ai/what-if/simulate`, `POST /ai/github/analyze`, `POST /ai/resume/analyze-legacy`. Skill-gap, recommendation, comparison, what-if, and legacy analysis are now pure Node (see §22-26). Only `GET /health` and `POST /ai/resume/{extract,analyze,match,optimize,generate}` remain on Python.
+
+Previous recommendation response shape is unchanged but now produced by Node (`scoring.js`):
 
 ```json
 {
@@ -1002,19 +985,8 @@ Example response (Phase 3):
       "category": "Software & Technology",
       "description": "Creates responsive user interfaces...",
       "score": 91,
-      "breakdown": {
-        "skill": 92.5,
-        "interest": 100.0,
-        "education": 100.0,
-        "goal": 50.0,
-        "assessment": 100.0,
-        "experience": 100.0
-      },
-      "reasons": [
-        "Strong React skills (4/4)",
-        "Strong JavaScript skills (4/4)",
-        "Interest in Web Development"
-      ],
+      "breakdown": { "skill": 92.5, "interest": 100.0, "education": 100.0, "goal": 50.0, "assessment": 100.0, "experience": 100.0 },
+      "reasons": ["Strong React skills (4/4)", "Strong JavaScript skills (4/4)"],
       "strengths": ["JavaScript", "React"],
       "skill_gaps": ["Testing", "Accessibility"],
       "next_steps": ["Learn TypeScript (level 0 → 3)"]
@@ -1023,84 +995,33 @@ Example response (Phase 3):
 }
 ```
 
-Skill-gap analysis for a single target career:
-
-```http
-POST /ai/skill-gaps
-```
-
-Example request:
-
-```json
-{
-  "career": "Full Stack Developer",
-  "skills": [
-    { "name": "JavaScript", "proficiency": 4 },
-    { "name": "Node.js", "proficiency": 1 }
-  ]
-}
-```
-
-Example response:
-
-```json
-{
-  "career_id": "career_full_stack_developer",
-  "career": "Full Stack Developer",
-  "category": "Software & Technology",
-  "description": "Builds and maintains both front-end and back-end...",
-  "strong": [
-    { "skill": "javascript", "required": 4, "current": 4, "importance": 5 }
-  ],
-  "needs_improvement": [
-    { "skill": "node.js", "required": 4, "current": 1, "importance": 4 }
-  ]
-}
-```
-
-The AI service also exposes the scoring catalog its engine uses:
-
-```http
-GET /ai/careers
-```
-
 ---
 
-# 22. Career Recommendation Pipeline
+# 22. Career Recommendation Pipeline (Node-native)
 
 ```text
 User Profile (Appwrite Databases)
      ↓
-Node Backend
+Node Backend (profile.builder.js → builds normalized profile)
      ↓
-FastAPI
+scoring.js + careerCatalog.js (Node, in-process — no Python)
      ↓
-Input Validation
+Input Validation → Feature Extraction → Skill Normalization
      ↓
-Feature Extraction
+Career Matching → Career Scoring → Skill Gap Calculation → Ranking
      ↓
-Skill Normalization
+JSON Response (breakdown + reasons + strengths/gaps/next_steps)
      ↓
-Career Matching
+Appwrite Databases (career_recommendations)
      ↓
-Career Scoring
-     ↓
-Skill Gap Calculation
-     ↓
-Recommendation Ranking
-     ↓
-JSON Response
-     ↓
-Node Backend
-     ↓
-Appwrite Databases
-     ↓
-React Dashboard
+React Dashboard / Recommendations page
 ```
+
+> Python is not involved. No fallback needed — scoring runs locally in Node. Resume path remains the only Python-dependent flow.
 
 ---
 
-# 23. Recommendation Engine
+# 23. Recommendation Engine (Node-native)
 
 The first implementation should **not** depend entirely on a complex ML model.
 
@@ -1116,7 +1037,7 @@ The recommended approach is a hybrid system:
           │            │            │
           └────────────┼────────────┘
                        ▼
-                  Score Engine
+                  Score Engine (Node)
                        │
                        ▼
                 Career Ranking
@@ -1141,42 +1062,40 @@ accepts a list of `education_levels` (comparison against the user's
 `education_level`), a minimum assessment `assessment` threshold, minimum
 `experience` years, and matching `interests` / `goals`.
 
-Weights are configurable in `ai-service/app/recommendation/scoring.py` and can be
-changed during testing.
+Weights are configurable in `server/src/services/scoring.js` and the catalog in `server/src/services/careerCatalog.js`.
 
 Machine learning can be introduced later when enough suitable training/evaluation data exists.
 
-### Career Comparison
+### Career Comparison (Node-native)
 
 Career comparison (PRD §18) reuses the same hybrid scoring engine instead of
 inventing a separate metric, so a career ranked #1 in *matches* also wins the
 side-by-side *comparison* as the "best pick".
 
 ```text
-User selects career names (Backend) → compare_careers(profile, career_names)
-    ├── score via §23 formula (breakdown + reasons + strengths)
+User selects career names → POST /api/careers/compare (Node)
+    ├── profile.builder.js builds normalized profile
+    ├── scoring.js scores via §23 formula (breakdown + reasons + strengths)
     ├── skill gaps (strong vs needs_improvement, current → required levels)
     ├── difficulty = f(avg required proficiency, assessment bar, years exp.)
-    └── best pick = highest score, summary sentence
+    └── best pick = highest score, summary sentence (careerCatalog.js)
 ```
 
 Data flow: frontend (`/career-compare`) → `POST /api/careers/compare` (Node
-backend builds the profile and maps names to the Appwrite career catalog) →
-`POST /ai/compare-careers` (Python, `compare_careers` in
-`ai-service/app/recommendation/scoring.py`). Comparison is stateless — nothing is
-persisted; when the AI service is down the backend scores the selected careers
-with a skills-only fallback and tags the response `source: "fallback"`.
+builds profile via `profile.builder.js`, maps names via `careerCatalog.js`,
+scores via `scoring.js`). Comparison is stateless — nothing is persisted, no
+Python call, no fallback needed.
 
 ---
 
-# 24. Skill Gap Engine
+# 24. Skill Gap Engine (Node-native: scoring.js)
 
-The skill-gap engine compares:
+The skill-gap engine compares (Node `scoring.js::analyzeSkillGaps`, catalog from `careerCatalog.js`):
 
 ```text
-Required Career Skills
+Required Career Skills (careerCatalog.js)
         VS
-User Skills
+User Skills (profile.builder.js)
 ```
 
 Example:
@@ -1216,9 +1135,9 @@ SQL
 
 ---
 
-# 25. Roadmap Generation
+# 25. Roadmap Generation (Node-native)
 
-The roadmap engine uses the output of the skill-gap engine.
+The roadmap engine uses the output of the Node skill-gap engine (`scoring.js` + `careerCatalog.js`, no Python).
 
 ```text
 Target Career
@@ -1294,21 +1213,9 @@ Python = 4
 New Career Recommendations
 ```
 
-### Implementation
+### Implementation (Node-native)
 
-Implemented end-to-end as `POST /api/what-if/simulate` (Node) →
-`POST /ai/what-if/simulate` (Python `simulate_what_if` in
-`ai-service/app/recommendation/scoring.py`). The Node service builds the user's
-real profile and validates the requested changes (each
-`{ name, proficiency 1–5 }`); the Python engine copies the profile via
-`_apply_what_if_changes` (upsert skills by normalized name, append new
-interests/goals), scores the full catalog for both the baseline and the
-simulated profile, and returns per-career `delta`s plus a summary. `top_n`
-caps the returned baseline/simulated rankings; the `changes` table always
-covers the whole catalog. The real profile is never written to. Results are
-labelled as **estimated**. If the AI service is down, the backend returns a
-skills-only estimate (`source: "fallback"`). Frontend: `WhatIfSimulator.jsx`
-at `/what-if`.
+Implemented end-to-end as `POST /api/what-if/simulate` (Node only — `server/src/services/scoring.js` + `profile.builder.js` + `careerCatalog.js`, no Python). The Node service builds the user's real profile, validates requested changes (each `{ name, proficiency 1–5 }`), copies the profile via `_applyWhatIfChanges` (upsert skills by normalized name, append interests/goals), scores the full catalog for both baseline and simulated profiles via `scoring.js`, and returns per-career `delta`s plus a summary. `top_n` caps the returned rankings; the `changes` table always covers the whole catalog. The real profile is never written to. Results are labelled **estimated**. No AI fallback — simulation is local. Frontend: `WhatIfSimulator.jsx` at `/what-if`.
 
 ---
 
@@ -1357,38 +1264,34 @@ heuristic (`computeFallbackAnalysis`) returns the same result shape with
 
 ---
 
-# 28. GitHub Analysis
+# 28. GitHub Analysis (Node-native)
 
-The GitHub analysis service uses the GitHub API to retrieve publicly accessible information.
+The GitHub analysis service uses the GitHub API to retrieve publicly accessible information — **Node only**, no Python.
 
 ```text
 GitHub Username
        ↓
-Node Backend
+Node Backend (server/src/services/github.service.js)
        ↓
-GitHub API
+GitHub API (public profile + repos)
        ↓
-Public Repository Data
+Languages / Repositories / Activity / Project Signals
        ↓
-Python Analyzer
+Local Analyzer (github.service.js heuristics — 13 metrics)
        ↓
-Languages
-Repositories
-Activity
-Project Signals
+Technical Profile + ContributionGrid data
        ↓
-Technical Profile
+Appwrite Databases (github_analyses)
        ↓
-Appwrite Databases
+React (ContributionGrid.jsx, warm bg contrast, tooltip "22 Sept — N contributions")
 ```
 
 The system should only process publicly available GitHub information.
 
 ### Implementation
 
-*Only public data is used* — the user's profile fields and repository metadata (name, description, language, topics, star/fork counts, activity dates). No private or code content is ever fetched or stored.
-The Node backend (`server/src/services/github.service.js`) calls the GitHub API, sends the payload to the Python analyzer at `POST /ai/github/analyze`, and persists the result in `github_analyses`. If the AI service is unreachable, a built-in heuristic analyzer (`computeFallbackAnalysis`) produces the same result shape so the feature degrades gracefully. Optionally, detected skills at ≥70 confidence can be written to the user's `user_skills` to feed recommendations and internships.
-An optional `GITHUB_TOKEN` in the backend environment raises GitHub API rate limits.
+*Only public data is used* — profile fields and repository metadata (name, description, language, topics, stars/forks, activity dates). No private code is fetched or stored.
+The Node backend (`server/src/services/github.service.js`) calls the GitHub API and runs the local analyzer in-process (no `POST /ai/github/analyze`). Results include 13 metrics consumed by `src/components/github/ContributionGrid.jsx` (warm background with sufficient contrast, tooltip shows date + count). Persisted in `github_analyses`; detected skills at ≥70 confidence can be written to `user_skills`. No AI fallback — service is Node-native. `GITHUB_TOKEN` raises rate limits; API routes are rate-limited (see §32, §39).
 
 ---
 
@@ -1517,7 +1420,7 @@ Listings pass through a review gate instead of being published automatically:
 
 # 32. API Architecture
 
-Authentication is handled entirely by Appwrite Auth from the client — the Node backend exposes business-logic APIs only.
+Authentication is handled entirely by Appwrite Auth from the client — the Node backend exposes business-logic APIs only. **Rate limiting:** `express-rate-limit` 30 req/min on `/api/github`, `/api/resume`, `/api/admin` (and their sub-routes) configured in `server/src/app.js`. Scoring, catalog, GitHub and what-if are Node-native (`server/src/services/scoring.js`, `careerCatalog.js`, `profile.builder.js`, `github.service.js`); only resume proxies to Python (`/ai/resume/*`) with a local fallback.
 
 ## Profile
 
@@ -1564,24 +1467,30 @@ PUT    /api/roadmaps/:id/tasks/:taskId
 DELETE /api/roadmaps/:id/tasks/:taskId
 ```
 
-## Resume
+## Resume (Python-backed, with fallback)
 
 ```text
-POST /api/resume/analyze
-GET  /api/resume/analysis/:id
+POST /api/resume/analyze          (implemented — proxies to POST /ai/resume/analyze; fallback computeFallbackAnalysis on AI down, rate-limited)
+GET  /api/resume/analysis/:id     (implemented)
+POST /api/resume/extract          (implemented — proxies to POST /ai/resume/extract)
+POST /api/resume/match|optimize|generate (implemented — proxy to Python resume LLM)
 ```
 
-## GitHub
+> **Hold:** resume flow is the only Python-dependent flow; keep as-is per session hold.
+
+## GitHub (Node-native, rate-limited)
 
 ```text
-POST /api/github/analyze          (implemented)
+POST /api/github/analyze          (implemented — Node-native via github.service.js, no Python)
 GET  /api/github/analysis/:id     (implemented)
 ```
 
-## What-If
+UI: `src/components/github/ContributionGrid.jsx` renders 13 metrics, warm background with contrast, tooltip `"22 Sept — N contributions"`.
+
+## What-If (Node-native)
 
 ```text
-POST /api/what-if/simulate   (implemented)
+POST /api/what-if/simulate   (implemented — Node-native via scoring.js + profile.builder.js, no Python)
 ```
 
 ## Courses
@@ -1673,8 +1582,7 @@ POST  /api/admin/notifications  (admin — send to one user or broadcast)
 
 - `src/services/notifications.js` — `getNotifications`, `markNotificationRead`,
   `markAllNotificationsRead`, `timeAgo` (Appwrite client SDK).
-- `src/components/layout/NotificationBell.jsx` — bell icon with unread badge, dropdown
-  inbox, mark-all-read, marked read on click, and 45s polling; mounted in `TopBar`.
+- `src/components/layout/NotificationBell.jsx` — bell icon with unread badge, dropdown inbox, mark-all-read, marked read on click; **Realtime** via `appwriteClient.subscribe` on `notifications` collection + **45 s polling fallback**; mounted in `TopBar`.
 - `src/components/common/Icon.jsx` — shared semantic icon component (Lucide `lucide-react`)
   plus a real GitHub brand SVG for the GitHub-analysis tiles; no emoji anywhere in the UI.
 - `src/components/common/DecorativeShapes.jsx` — low-opacity decorative circles
@@ -1968,26 +1876,29 @@ Internal implementation details must not be exposed to users.
 
 # 42. AI Failure Handling
 
-The application must remain usable if the AI service is unavailable.
+The application must remain usable if the resume LLM service is unavailable. **Only resume has a fallback** — scoring, catalog, GitHub, what-if/comparison are Node-native (`scoring.js`, `careerCatalog.js`, `profile.builder.js`, `github.service.js`) and never call Python.
 
 ```text
-User requests recommendation
+Resume path (only Python-dependent):
+User requests resume analyze
           ↓
-Node Backend
+Node Backend (ai.service.js → POST /ai/resume/analyze)
           ↓
-Python AI Service
+Python AI Service unavailable
           ↓
-Service unavailable
+Node computeFallbackAnalysis
           ↓
-Node detects failure
+Return same shape + source:"fallback" (200) — UI shows heuristic results, no crash
+
+Node-native paths (no Python call — always succeed locally):
+User requests recommendations / skill-gaps / compare / what-if / GitHub
           ↓
-Return controlled error
+Node Backend (scoring.js / careerCatalog.js / github.service.js / profile.builder.js)
           ↓
-Frontend displays:
-"Recommendations are temporarily unavailable."
+JSON Response (no AI failure mode, no fallback tag)
 ```
 
-The application must not crash because the AI service is temporarily unavailable.
+The application must not crash because the resume AI service is temporarily unavailable; non-resume features are unaffected by Python downtime.
 
 ---
 
@@ -2063,11 +1974,11 @@ Career Goals
 ## Phase 3 — Career Engine (complete)
 
 ```text
-Career Database          ✓   careers.py (13 careers) + Appwrite careers collection
+Career Database          ✓   careerCatalog.js (13 careers) + Appwrite careers collection
 Skill Database           ✓   Appwrite skills collection (seeded)
 Career-Skill Mapping     ✓   Appwrite career_skills (required_level 1–5, importance 1–5)
-Basic Recommendation Engine ✓ scoring.py (hybrid weighted scoring)
-Skill-gap analysis       ✓   analyze_skill_gaps / POST /ai/skill-gaps
+Basic Recommendation Engine ✓ scoring.js (hybrid weighted scoring)
+Skill-gap analysis       ✓   analyzeSkillGaps / POST /api/recommendations/skill-gaps
 Recommendation explanations ✓ reasons / strengths / next_steps / breakdown
 Node API                 ✓   /api/careers, /api/recommendations/*, skill-gaps
 ```
@@ -2076,11 +1987,11 @@ Node API                 ✓   /api/careers, /api/recommendations/*, skill-gaps
 
 ```text
 Python                       ✓   ai-service/ (FastAPI on port 8000)
-FastAPI                      ✓   /health, /ai/careers, /ai/recommend-careers, /ai/skill-gaps, /ai/github/analyze, /ai/compare-careers, /ai/what-if/simulate
-Skill Matching               ✓   importance-weighted matching (scoring.py, §23)
+FastAPI                      ✓   /health + /ai/resume/{extract,analyze,match,optimize,generate}
+Skill Matching               ✓   importance-weighted matching (scoring.js, §23)
 Recommendation Ranking       ✓   score_careers — hybrid weights, sorted, reasons/strengths/next_steps
 Skill Gap                    ✓   analyze_skill_gaps (§24, strong vs needs_improvement)
-Tests                        ✓   ai-service/tests (pytest) — 44 tests, incl. alias normalization, resume, comparison, what-if
+Tests                        ✓   ai-service/tests (pytest) — resume pipeline, schema, scoring, ingest, LaTeX, AI client
 Node resilience              ✓   rule-based fallback in recommendation.service.js when the AI
                                  service is down (200 + source:"fallback" instead of 503); mirrored
                                  UI badges ("Estimated · AI offline")
@@ -2287,10 +2198,10 @@ Used for:
 
 ```text
 REST APIs
-Business Logic
-Authorization
+Business Logic + Scoring / Career Catalog / GitHub Analysis / Profile Building
+Authorization + Rate Limiting (express-rate-limit)
 External Integrations
-AI Orchestration
+AI Orchestration (resume LLM proxy only)
 ```
 
 ### Python/FastAPI
@@ -2298,13 +2209,9 @@ AI Orchestration
 Used for:
 
 ```text
-AI
-ML
-Recommendation
-Skill Matching
-Resume Analysis
-GitHub Analysis
-LLM Integration
+Resume LLM only (6 endpoints: health + resume/extract|analyze|match|optimize|generate)
+LLM integration (resume prompts)
+Optional LaTeX → PDF (tectonic/pdflatex)
 ```
 
 This separation keeps the system understandable, maintainable, and scalable while allowing the team to develop each part independently.

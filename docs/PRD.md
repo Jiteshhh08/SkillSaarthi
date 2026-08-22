@@ -185,31 +185,21 @@ Updated Career Readiness
 ```text
 User
  ↓
-Home Page
+Home Page (merged src/pages/public/Home.jsx + private/Home.jsx — single Home; CommunityFab in App.jsx)
  ↓
 Login / Signup
  ↓
-Select Education Level
+4-Step Onboarding (Education → Academics → Skills & Interests tabs → Goals & Assessment sub-step)
  ↓
-Career Onboarding
+Personal Career Profile (auto-generates 6 recommendations via Node scoring.js)
  ↓
-Personal Career Profile
+Dashboard (8 cards, 800ms retry) — TopBar 3 hubs: Discover / Build / Opportunities
  ↓
-Assessment
- ↓
-AI / Recommendation Engine
- ↓
-Career Recommendations
- ↓
-Skill Gap Analysis
- ↓
-Personalized Roadmap
- ↓
-Dashboard
+Career Recommendations (GapDrawer in-page) → Skill Gap Analysis (Node) → Personalized Roadmap
  ↓
 Track / Modify / Complete Roadmap
  ↓
-Additional Career Tools
+Additional Tools: Compare / What-If / GitHub ContributionGrid (13 metrics) / Resume (resume-only AI) / Internships / Community
 ```
 
 ---
@@ -349,67 +339,31 @@ Users must be able to modify their education level later from their profile.
 
 ---
 
-# 10. Career Onboarding
+# 10. Career Onboarding (4-step — updated)
 
-The onboarding process should be divided into multiple steps rather than presenting one large form.
+The onboarding process is a 4-step wizard (`src/pages/private/Onboarding.jsx`) — consolidated from 6/7 — with tabbed and sub-step UX to reduce friction.
 
 ## Step 1 — Education
 
-Fields vary according to education level.
+Select `high_school` / `college` / `job_seeker` (fields adapt by level; admin bypass via `ADMIN_EMAILS`).
 
-## Step 2 — Academic Information
+## Step 2 — Academics
 
 * Subjects
 * Grades/CGPA
 * Academic strengths
+* Degree/branch/year (college) or experience (job seeker)
 
-## Step 3 — Skills
+## Step 3 — Skills & Interests (tabs)
 
-* Technical skills
-* Soft skills
-* Skill proficiency
+* Skills with explicit proficiency 1–5 (silent auto-add at 2 removed)
+* Interests (Web Development, AI/ML, Cybersecurity, Cloud, Data, Design, Finance, Research, Entrepreneurship, etc.)
 
-## Step 4 — Interests
+## Step 4 — Goals & Assessment (sub-step)
 
-Examples:
-
-* Web Development
-* AI/ML
-* Cybersecurity
-* Cloud
-* Data
-* Design
-* Finance
-* Research
-* Entrepreneurship
-
-## Step 5 — Career Preferences
-
-* Preferred industry
-* Preferred role
-* Work preference
-* Location preference
-* Internship/job goals
-
-## Step 6 — Projects & Experience
-
-* Projects
-* Experience
-* Certifications
-* Achievements
-
-## Step 7 — Career Assessment
-
-A personalized questionnaire evaluates:
-
-* Interests
-* Aptitude
-* Work preferences
-* Problem-solving orientation
-* Technical inclination
-* Creativity
-* Communication
-* Career preferences
+* Career preferences: preferred industry / role / work preference / location / goals
+* Embedded 10-question assessment as a sub-step (interests, aptitude, work preferences, problem-solving, technical inclination, creativity, communication, career preferences). `/assessment` remains available to retake.
+* On complete: auto-generates 6 recommendations (Node `scoring.js`) and routes to `/dashboard` (8 cards, 800ms retry to avoid 0-skills flash)
 
 ---
 
@@ -446,79 +400,31 @@ The profile becomes the primary input to the recommendation system.
 
 ---
 
-# 12. AI / Recommendation Engine
+# 12. AI / Recommendation Engine (Node-native scoring — updated)
 
-The platform will use a **hybrid intelligent recommendation architecture**.
+Scoring, catalog, and skill-gap are **Node-native** (`server/src/services/scoring.js` + `careerCatalog.js` + `profile.builder.js`); Python is **resume-only** (`GET /health` + `POST /ai/resume/{extract,analyze,match,optimize,generate}`). No ML model required for MVP.
 
-It should not depend entirely on machine learning.
-
-## Layer 1 — Rule-Based Engine
-
-Used for deterministic relationships.
-
-Example:
+The platform uses a **hybrid weighted scoring** (no separate ML layer for recommendations):
 
 ```text
-IF
-JavaScript = Advanced
-React = Advanced
-Web Development Interest = High
-
-THEN
-
-increase Full Stack Developer compatibility
+Career Score =
+    Skill Match       × 0.40   (importance-weighted, proficiency 1–5)
+  + Interest Match    × 0.20
+  + Assessment Match  × 0.15
+  + Education Match   × 0.10
+  + Goal Match        × 0.10
+  + Experience Match  × 0.05
 ```
 
----
+Skill match is importance-weighted per `career_skills.required_level`/`importance`.
 
-## Layer 2 — Skill Matching
-
-Compare:
-
-```text
-User Skills
-      ↓
-Career Required Skills
-      ↓
-Skill Similarity
-      ↓
-Career Match Score
-```
+**Resume LLM only** (Python) — uses LLM for `extract/analyze/match/optimize/generate` with `pypdf` + LaTeX fallback. Scoring/compare/what-if/GitHub never call Python and never need a fallback.
 
 ---
 
-## Layer 3 — Optional ML
+# 13. Career Recommendation (Node `scoring.js` — updated)
 
-The Python service may use lightweight machine-learning algorithms such as:
-
-* Logistic Regression
-* Decision Trees
-* Random Forest
-* Similarity-based recommendation
-
-The exact model should be selected after dataset evaluation.
-
-Deep learning is not required for the MVP.
-
----
-
-## Layer 4 — LLM
-
-An LLM may optionally be used for:
-
-* Explaining recommendations
-* Conversational career guidance
-* Roadmap explanations
-* Answering career-related questions
-* Transforming structured recommendations into natural-language guidance
-
-The LLM must not be treated as the source of truth for structured career data.
-
----
-
-# 13. Career Recommendation
-
-The system should generate multiple recommendations rather than only one.
+The system generates multiple recommendations (auto-generates 6 on onboarding complete) via Node (`server/src/services/scoring.js` + `careerCatalog.js` + `profile.builder.js` — in-process, no Python).
 
 Example:
 
@@ -529,13 +435,12 @@ Example:
 4. Data Analyst — 64%
 ```
 
-Each recommendation should include:
+Each recommendation includes:
 
-* Match score
-* Why it matches
-* Strong existing skills
-* Missing skills
-* Recommended next steps
+* Match score (0–100) + `breakdown` (skill/interest/education/goal/assessment/experience)
+* Why it matches (`reasons`)
+* Strong existing skills (`strengths`) / missing skills (`skill_gaps`) / next steps
+* Displayed in `src/pages/private/Recommendations.jsx` with in-page `GapDrawer` (`src/components/career/GapDrawer.jsx`) and TopBar **Discover** hub (Matches/Gaps/Compare/What-If); JWT cached in `src/services/api.js` until 60s before expiry, routes lazy-loaded via `src/routes/AppRoutes.jsx` (662k→409k)
 
 ---
 
@@ -563,9 +468,9 @@ Example:
 
 ---
 
-# 15. Skill Gap Analysis
+# 15. Skill Gap Analysis (Node `scoring.js::analyzeSkillGaps` — updated)
 
-The system compares:
+The system compares (`careerCatalog.js` required vs `profile.builder.js` user skills, via `scoring.js`):
 
 ```text
 Current User Skill
@@ -582,12 +487,7 @@ SQL              ████░░░░░░ 40%
 Backend          ███░░░░░░░ 30%
 ```
 
-Skill status:
-
-* 🟢 Strong
-* 🟡 Moderate
-* 🟠 Developing
-* 🔴 Missing
+Statuses: 🟢 Strong / 🟡 Moderate / 🟠 Developing / 🔴 Missing — rendered in `src/pages/private/SkillGaps.jsx` and in-page `GapDrawer` on Recommendations (no separate Python call; API `GET /api/recommendations/careers/:careerId/skill-gaps`, Node-only, rate-limited).
 
 ---
 
@@ -637,9 +537,9 @@ Users should be able to:
 
 ---
 
-# 17. Career What-If Simulator
+# 17. Career What-If Simulator (Node-native — updated)
 
-One of the major differentiating features.
+One of the major differentiating features — now **Node-native** (`server/src/services/scoring.js` + `profile.builder.js` + `careerCatalog.js`, `POST /api/what-if/simulate` at `server/src/routes/whatif.routes.js`, rate-limited). The real profile is never mutated — changes are applied to an in-memory copy (`_applyWhatIfChanges`).
 
 Users can simulate:
 
@@ -649,7 +549,7 @@ or:
 
 > "What happens if I learn AWS?"
 
-The system recalculates career compatibility.
+The system recalculates career compatibility (baseline vs simulated ranking, per-career delta, summary).
 
 Example:
 
@@ -667,13 +567,13 @@ Data Analyst           76%
 Data Scientist         68%
 ```
 
-The simulator should clearly indicate that these are **estimated recommendation scores**, not guaranteed career outcomes.
+The simulator clearly indicates **estimated** scores (not guaranteed outcomes). Frontend: `src/pages/private/WhatIfSimulator.jsx` at `/what-if` (TopBar Discover hub + Dashboard card); no Python call, no fallback needed.
 
 ---
 
-# 18. Career Comparison
+# 18. Career Comparison (Node-native — updated)
 
-Users can compare multiple careers.
+Users can compare multiple careers — now **Node-native** (`server/src/services/scoring.js` + `careerCatalog.js` + `profile.builder.js`, `POST /api/careers/compare` at `server/src/routes/comparison.routes.js`, no Python; stateless, rate-limited).
 
 Example:
 
@@ -685,11 +585,13 @@ Example:
 | Recommended Projects | 3          | 4              |
 | Current Strength     | High       | Low            |
 
+Frontend: `src/pages/private/CareerComparison.jsx` at `/career-compare` (TopBar Discover hub + Dashboard card); reuses §12/§23 hybrid scoring, difficulty from required proficiency/assessment/years, best-pick highlight. No Python endpoints.
+
 ---
 
-# 19. Resume Analysis
+# 19. Resume Analysis (resume-only AI — untouched per hold)
 
-Users can upload their resume.
+Users can upload their resume (PDF/DOC/DOCX → Appwrite `resumes` bucket → Node `server/src/services/resume.service.js` → Python `POST /ai/resume/analyze` + `/extract`/`/match`/`/optimize`/`/generate`).
 
 The system can extract:
 
@@ -708,22 +610,19 @@ The system should identify:
 * Potential improvements
 * Recommended roles
 
-The resume analysis should feed relevant structured information back into the user's career profile where appropriate.
+The resume analysis should feed relevant structured information back into the user's career profile where appropriate. Only resume path calls Python and has a heuristic `source:"fallback"` when down; all other features are Node-native. Rate-limited 30/min (`server/src/app.js`). LaTeX/PDF generation degrades to `.tex` without compiler.
 
 ---
 
-# 20. GitHub Profile Analysis
+# 20. GitHub Profile Analysis (Node-only — updated)
 
-Users can provide a GitHub profile.
+Users can provide a GitHub username — analyzed **Node-only** via `server/src/services/github.service.js` (GitHub API + local heuristics, no Python `POST /ai/github/analyze`; `ai-service/app/github` removed). Rate-limited 30/min (`server/src/app.js`).
 
-The system can analyze:
+The system analyzes (13 metrics consumed by `src/components/github/ContributionGrid.jsx` — warm bg with contrast, tooltip `"22 Sept 2026 — N contributions"`):
 
-* Public repositories
-* Languages
-* Project activity
-* Repository topics
-* Contribution activity where available
-* Project diversity
+* Public/private repos (private count = only private repos), followers, PRs/issues/reviews
+* Total contributions, current/longest streak, avg daily, most active day/month
+* Top languages via `languageShare` (includes forks), project activity/topics/diversity
 
 Potential output:
 
@@ -735,7 +634,7 @@ Python                   Basic
 Open Source Activity     Moderate
 ```
 
-GitHub analysis should never claim private information that is not publicly accessible.
+GitHub analysis never claims private information that is not publicly accessible.
 
 ---
 
@@ -781,7 +680,7 @@ The system should prioritize relevance rather than simply displaying a generic i
 
 ---
 
-# 23. Personalized Notifications
+# 23. Personalized Notifications (Realtime — updated)
 
 Examples:
 
@@ -793,7 +692,7 @@ Examples:
 
 > Your career profile has changed significantly.
 
-Notifications should be useful and non-spammy.
+Notifications are **Realtime** via `src/components/layout/NotificationBell.jsx` (`appwriteClient.subscribe` to `databases.*.collections.notifications.documents`) with 45s polling fallback, backed by `notifications` collection + `server/src/services/notification.service.js` (`notify`/`notifyAllUsers`). Admin broadcasts via `POST /api/admin/notifications` from the profile menu (Admin moved from TopBar). Notifications should be useful and non-spammy.
 
 ---
 
@@ -813,11 +712,11 @@ The assistant should use the user's structured profile and roadmap context where
 
 ---
 
-# 25. Dashboard
+# 25. Dashboard (8 cards — reverted per user, updated)
 
-The dashboard acts as the user's career command center.
+The dashboard acts as the user's career command center (reverted to 8 cards per user request; `src/pages/private/Dashboard.jsx` with 800ms retry to avoid 0-skills flash; lazy-loaded via `src/routes/AppRoutes.jsx`).
 
-It should show:
+It should show (8 cards):
 
 * Career readiness
 * Top career match
@@ -828,7 +727,7 @@ It should show:
 * Progress
 * Recommended courses
 * Recommended internships
-* Quick access to career tools
+* Quick access to career tools (Compare, What-If, GitHub ContributionGrid, etc.)
 
 ---
 

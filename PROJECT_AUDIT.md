@@ -17,7 +17,7 @@ User → React + Tailwind (src/App.jsx:7, src/routes/AppRoutes.jsx:30)
 
 - **Frontend** `src/` — 23 routes, `BrowserRouter` + `AuthProvider` (`src/context/AuthContext.jsx:12`). No code-splitting; all pages eager-imported in `src/routes/AppRoutes.jsx:3-28`. JWT created per-request via `account.createJWT()` (`src/services/api.js:9`). `TopBar.jsx:10` + `MobileMenu` + `CommunityFab.jsx:1` handle nav.
 - **Backend** `server/src/app.js:30` — 10 route groups under `/api` (health, careers, recommendations, github, resume, internships, admin, roadmaps, what-if, community). Auth `server/src/middleware/auth.middleware.js:6`, admin `server/src/middleware/admin.middleware.js`, error handler `server/src/middleware/error.middleware.js:1`.
-- **AI Service** `ai-service/app/main.py:57` — 13 endpoints: `GET /health`, `GET /ai/careers`, `POST /ai/recommend-careers`, `/ai/skill-gaps`, `/ai/compare-careers`, `/ai/what-if/simulate`, `/ai/github/analyze`, `/ai/resume/*` (analyze-legacy, extract, analyze, match, optimize, generate). Version `0.2.0`.
+- **AI Service** `ai-service/app/main.py` — 6 endpoints: `GET /health`, `POST /ai/resume/{extract,analyze,match,optimize,generate}`. Version `0.2.0`. Resume-only LLM service.
 - **Data** Appwrite Database: `profiles` (docId = user `$id`), `user_skills`, `user_interests`, `assessments`, `skills`, `interests`, `careers`, `career_skills`, `recommendations`, `roadmaps`+`roadmap_tasks`, `internships`, `resume_analyses`, `notifications`, `community_profiles/posts/comments/post_likes/post_bookmarks`, `github_analyses`. Storage bucket `resumes`.
 - **Build/Tooling** `package.json:8` (oxlint), `vite.config.js:8` (react + tailwindcss), `.oxlintrc.json`, `vercel.json`, `scripts/setup-appwrite.mjs` + `seed-catalog.mjs`.
 
@@ -29,13 +29,12 @@ User → React + Tailwind (src/App.jsx:7, src/routes/AppRoutes.jsx:30)
 - Utils: `utils/validation.js`.
 
 ### Backend `server/src/`
-- Controllers 6, Services 9 (`appwrite.service.js:10662` loc, `career.service.js`, `recommendation.service.js:220`, `comparison.service.js:203`, `whatif.service.js:205`, `github.service.js:569`, `resume.service.js:818`, `roadmap.service.js:10358`, `internship.service.js`, `community.service.js:17619`, `notification.service.js`, `ai.service.js:68`), Routes 10, Middleware 3, Config 2.
+- Controllers 6, Services 9 (`appwrite.service.js`, `career.service.js`, `recommendation.service.js`, `comparison.service.js`, `whatif.service.js`, `github.service.js:569`, `resume.service.js`, `roadmap.service.js`, `internship.service.js`, `community.service.js`, `notification.service.js`, `ai.service.js`), Routes 10, Middleware 3, Config 2.
 
 ### AI `ai-service/app/`
-- `recommendation/careers.py` (13 careers catalog) + `recommendation/scoring.py` (hybrid 40/20/15/10/10/5).
-- `github/analyzer.py` (language/domain/skill detection).
-- `resume/` (analyzer.py, ingest.py, pipeline.py, latex/renderer.py + compile.py, schema.py, scoring.py, prompts.py, ai/client.py).
-- Tests `tests/` — 44 tests `pytest`.
+- `ai/client.py` — LLM gateway client (OpenAI-compatible, Qwen3.6-35B-A3B).
+- `resume/` — ingest.py, pipeline.py, prompts.py, schema.py, scoring.py, latex/renderer.py + compile.py.
+- Tests `tests/` — resume pipeline, schema, scoring, ingest, LaTeX, and AI client tests.
 
 ---
 
@@ -48,7 +47,7 @@ User → React + Tailwind (src/App.jsx:7, src/routes/AppRoutes.jsx:30)
 | EducationLevel standalone | `/onboarding/education-level` `src/pages/private/EducationLevel.jsx:1` | Change education level post-onboarding | Low | Redundant | **MERGE** into onboarding + `ProfileSettings.jsx` |
 | Assessment | `/assessment` `src/pages/private/Assessment.jsx:1` | 10-Q questionnaire, `assessment_score` 0–100 | Low (retake) | Duplicate (also step 6) | **MERGE** keep as wizard sub-step + standalone retake only |
 | Dashboard | `/dashboard` `src/pages/private/Dashboard.jsx:1` — streak, completion %, checklist, next-steps, 8 tool cards, skill chips | Hub after onboarding (gated by `ProfileCompleteRoute` `src/components/common/RouteGuards.jsx:42`) | High | Overloaded | **SIMPLIFY** 1 hero + 3 CTAs, remove duplicate checklist |
-| Recommendations | `/recommendations` `src/pages/private/Recommendations.jsx:1` — list + `Generate recommendations` button `Recommendations.jsx:137` | Ranked careers vs hybrid score `ai-service/app/recommendation/scoring.py` §23 | High | Manual trigger | **IMPROVE** auto-generate on onboarding complete; inline gaps |
+| Recommendations | `/recommendations` `src/pages/private/Recommendations.jsx:1` — list + `Generate recommendations` button `Recommendations.jsx:137` | Ranked careers vs hybrid score `server/src/services/scoring.js` §23 | High | Manual trigger | **IMPROVE** auto-generate on onboarding complete; inline gaps |
 | Skill Gaps | `/skill-gaps`, `/skill-gaps/:careerId` `src/pages/private/SkillGaps.jsx:1` dropdown + strong/needs_improvement | Per-career gap analysis | High | Duplicates recommendation card | **MERGE** drawer/modal from card, deprecate standalone |
 | Roadmaps | `/roadmaps`, `/roadmaps/:id` `src/pages/private/Roadmaps.jsx`, `RoadmapDetail.jsx` | Ordered tasks CRUD, reorder, progress `roadmap.service.js` | High | Core value | **KEEP** — add optimistic updates |
 | GitHub Analysis | `/github` `src/pages/private/GitHubAnalysis.jsx:1` `server/src/services/github.service.js:525` | Public repos → languages/skills/domains/career matches | Medium | Has Node fallback but still calls `POST /ai/github/analyze` `github.service.js:506` | **REWORK** per user request — new contribution-style view, Node-only |
@@ -177,10 +176,9 @@ Proposed:  Hero + 1 progress bar + 3 primary CTAs (View matches / Continue roadm
 - Security: Admin = `ADMIN_EMAILS` allowlist only (no role doc); no rate-limit on `/api/auth`/`/api/admin/**`/`/api/resume/analyze`/`/api/github/analyze`; `resumes` bucket `create("users")` allows unbounded upload (only 5MB size check).
 
 ### AI Service `ai-service/app/`
-- Keeps legacy endpoint `POST /ai/resume/analyze-legacy` `ai-service/app/main.py:413` for old Node flow — dead after pipeline migration.
-- 13 endpoints, but 6 are purely deterministic re-implementations of Node fallbacks (recommend/skill-gaps/compare/what-if/github) — no ML model loaded (uses `Pandas/Scikit-learn` listed but no model file used in scoring).
-- No rate-limit; exception handler maps `AIConfigurationError→503` etc (`ai-service/app/main.py:64`) but Node `ai.service.js:25` treats all 5xx as `AI_SERVICE_UNAVAILABLE` — lossy.
-- Tests `ai-service/tests/` 44 tests cover scoring/normalization/resume but not contribution/Streak logic.
+- Resume-only: 5 LLM endpoints + `/health`. No recommendation, GitHub, or legacy endpoints remain.
+- No rate-limit; exception handler maps `AIConfigurationError→503` etc (`ai-service/app/main.py:51`) but Node `ai.service.js` treats all 5xx as `AI_SERVICE_UNAVAILABLE` — lossy.
+- Tests `ai-service/tests/` cover resume pipeline, schema, scoring, ingest, LaTeX, and AI client.
 
 ### Database / Appwrite
 - `resume_analyses` indirection via `data_file_id` avoids row-size cap (correct) but requires orphan GC; `analysis_result` column still kept for legacy (`resume.service.js:419`).
@@ -288,20 +286,13 @@ Proposed:  Hero + 1 progress bar + 3 primary CTAs (View matches / Continue roadm
 
 | Current ai-service Endpoint | Caller `server/src/` | Uses LLM? | Can Move to Node? | Rationale | Action |
 |---|---|---|---|---|---|
-| `POST /ai/recommend-careers` `ai-service/app/main.py:355` `score_careers` `scoring.py` | `recommendation.service.js:69 recommendCareers()` | No — hybrid weighted formula 40/20/15/10/10/5 `scoring.py` | **YES** | Deterministic, catalog 13 careers, no model load; Node fallback `computeFallbackRecommendations` already parity but incomplete (only skill-weighted, missing interest/education/assessment/goal). | Move to Node shared scorer; delete `ai.service.js:getCareers()/recommendCareers()` call path, keep ai-service endpoint for backwards compat but not called. |
-| `POST /ai/skill-gaps` `ai-service/app/main.py:365` `analyze_skill_gaps` | `recommendation.service.js:196 skillGaps()` | No — strong vs needs_improvement by `required_level` vs `current` | **YES** | Simple filter/sort on `career_skills`; Node already computes same in fallback `recommendation.service.js:200`. | Move to Node; inline in `analyzeCareerGaps`. |
-| `POST /ai/compare-careers` `ai-service/app/main.py:377` `compare_careers` | `comparison.service.js:159 compareCareers()` | No — same scorer + difficulty + recommended pick | **YES** | Node `computeFallbackComparison` + `computeDifficulty` `comparison.service.js:62` already equivalent. | Move to Node. |
-| `POST /ai/what-if/simulate` `ai-service/app/main.py:388` `simulate_what_if` | `whatif.service.js:187 simulateWhatIf()` | No — applies changes in-memory then re-scores full catalog | **YES** | Pure function `_apply_what_if_changes` + scorer; Node fallback `computeFallbackWhatIf` `whatif.service.js:101` identical. | Move to Node. |
-| `POST /ai/github/analyze` `ai-service/app/main.py:406` `github/analyzer.py` | `github.service.js:506 requestAiAnalysis()` | No — languageShare + TOPIC_TO_SKILL + domain maps (static dicts) | **YES** — **per user request, do this first** | Deterministic; Node `computeFallbackAnalysis` `github.service.js:339` already produces languages/skills/domains/activity/career_matches. New contribution-grid view is also deterministic. | **Remove ai-service from GitHub entirely**; Node-only per §5.5. |
-| `POST /ai/resume/analyze-legacy` `ai-service/app/main.py:413` | `resume.service.js:759 requestLegacyAiAnalysis` | No — rule-based `resume/analyzer.py` | YES (already fallback) | Legacy compat; Node `computeFallbackAnalysis` `resume.service.js:199` parity. | Delete endpoint call path; keep fallback only; delete legacy route after soak. |
-| `POST /ai/careers` `GET /ai/careers` `ai-service/app/main.py:341` | `ai.service.js:66 getCareers()` | No — static catalog `recommendation/careers.py` | YES | Catalog already in Appwrite `careers` + `career_skills` seed; Node `listCareers()` `career.service.js` is source of truth. | Delete Node `getCareers()` call; use Appwrite catalog directly. |
-| `POST /ai/resume/extract` `ai-service/app/main.py:427` `extract_resume` + `ingest.py` + LLM `app/ai/client.py` | `resume.service.js:503 requestPipeline /extract` | **YES — LLM extraction to structured Resume JSON** `EXTRACTION_PROMPT_VERSION` | **NO** | Needs `app/ai/client.py` gateway → LLM. Keep. | Keep ai-service. |
-| `POST /ai/resume/analyze` `ai-service/app/main.py:460` `pipeline.py:ai_analyze_resume` | `resume.service.js:553` | **YES — semantic analysis + deterministic scoring** | **NO** | LLM semantics then local weighting. Keep. | Keep. |
-| `POST /ai/resume/match` `ai-service/app/main.py:472` `match_job` | `resume.service.js:582` | **YES — JD matching** `MATCH_PROMPT_VERSION` | **NO** | LLM. Keep. | Keep. |
-| `POST /ai/resume/optimize` `ai-service/app/main.py:478` `optimize_resume` | `resume.service.js:618` | **YES — wording optimization** `OPTIMIZATION_PROMPT_VERSION` | **NO** | LLM, never invents facts. Keep. | Keep. |
-| `POST /ai/resume/generate` `ai-service/app/main.py:492` `render_resume` + `compile_pdf` `latex/renderer.py` | `resume.service.js:644` | **NO** — deterministic Jake LaTeX `RENDERER_VERSION` + optional `pdflatex` compile | **YES (optional)** | Renderer is pure string templating; compile needs local `pdflatex` but file-gen could run in Node with same template. Currently ai-service already does it; moving to Node saves one AI slot but not critical. | **Candidate for later Node move** (P3); keep on ai-service for now unless you want it on Node too. |
+| `POST /ai/resume/extract` `ai-service/app/main.py` `extract_resume` + `ingest.py` + LLM `app/ai/client.py` | `resume.service.js` `requestPipeline /extract` | **YES — LLM extraction to structured Resume JSON** `EXTRACTION_PROMPT_VERSION` | **NO** | Needs `app/ai/client.py` gateway → LLM. Keep. | Keep ai-service. |
+| `POST /ai/resume/analyze` `ai-service/app/main.py` `pipeline.py:ai_analyze_resume` | `resume.service.js` | **YES — semantic analysis + deterministic scoring** | **NO** | LLM semantics then local weighting. Keep. | Keep. |
+| `POST /ai/resume/match` `ai-service/app/main.py` `match_job` | `resume.service.js` | **YES — JD matching** `MATCH_PROMPT_VERSION` | **NO** | LLM. Keep. | Keep. |
+| `POST /ai/resume/optimize` `ai-service/app/main.py` `optimize_resume` | `resume.service.js` | **YES — wording optimization** `OPTIMIZATION_PROMPT_VERSION` | **NO** | LLM, never invents facts. Keep. | Keep. |
+| `POST /ai/resume/generate` `ai-service/app/main.py` `render_resume` + `compile_pdf` `latex/renderer.py` | `resume.service.js` | **NO** — deterministic Jake LaTeX `RENDERER_VERSION` + optional `pdflatex` compile | **YES (optional)** | Renderer is pure string templating; compile needs local `pdflatex` but file-gen could run in Node with same template. Currently ai-service already does it; moving to Node saves one AI slot but not critical. | **Candidate for later Node move** (P3); keep on ai-service for now unless you want it on Node too. |
 
-**Summary:** 7 of 13 endpoints are deterministic pure functions with no LLM and **should move to Node** to cut `ai-service` dependency: `recommend-careers`, `skill-gaps`, `compare-careers`, `what-if/simulate`, `github/analyze`, `careers`, `resume/analyze-legacy`. GitHub first per your request. Resume `extract/analyze/match/optimize` must stay on ai-service; `generate` can stay or move later (P3).
+**Summary:** All 5 remaining ai-service endpoints use LLM (`extract/analyze/match/optimize`) or are tightly coupled to Python (`generate`). The recommendation, GitHub, skill-gaps, compare, what-if, careers, and legacy analyze-legacy endpoints have been removed — those features are now fully Node-native.
 
 ---
 
@@ -313,13 +304,11 @@ Proposed:  Hero + 1 progress bar + 3 primary CTAs (View matches / Continue roadm
 - Verify `resumes` bucket quota/orphan risk; no destructive DB migration (indexes additive only).
 - Check `server/src/middleware/error.middleware.js` leak stack, `auth.middleware.js:14 setJWT` expiry handling.
 
-### P1 — High (major UX + ai-service removal)
-1. **GitHub Node-only** per §5.5 + `PROJECT_AUDIT.md` screenshot spec (delete `requestAiAnalysis`, add `ContributionGrid.jsx`, keep `fetchGitHubProfile/Repos`).
-2. **Recommendations/skill-gaps/compare/what-if → Node** per §6 (unify `scoring.fallback.js` + `profile.builder.js`, delete `ai.service.js:50 post()` call paths for those 4, keep endpoints live but unused).
-3. **Onboarding 6→3** + silent auto-add removal.
-4. **Recommendations auto-generate** + SkillGaps drawer.
-5. **TopBar IA** (3 hubs, remove FAB, merge Homes) + lazy routes + `NotificationBell` Realtime.
-6. **Dashboard simplify** (1 progress + 3 CTAs, reduce 8 cards→4).
+### P1 — High (major UX)
+1. **Onboarding 6→3** + silent auto-add removal.
+2. **Recommendations auto-generate** + SkillGaps drawer.
+3. **TopBar IA** (3 hubs, remove FAB, merge Homes) + lazy routes + `NotificationBell` Realtime.
+4. **Dashboard simplify** (1 progress + 3 CTAs, reduce 8 cards→4).
 
 ### P2 — Medium (maintainability, simplification)
 - Resume 5→2 stages, Tailor accordion (`ResumeAnalysis.jsx:24`).

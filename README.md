@@ -175,33 +175,19 @@ The onboarding process adapts according to the selected category.
 
 ---
 
-## 3. Build Your Career Profile
+## 3. Build Your Career Profile (4-step wizard)
 
-The user provides information such as:
+The user provides information via `src/pages/private/Onboarding.jsx` — 4 steps: **Education → Academics → Skills & Interests (tabs) → Goals & Assessment (sub-step)** (previously 6; silent auto-add at proficiency 2 removed):
 
-* Education
-* Academic performance
-* Skills
-* Interests
-* Projects
-* Experience
-* Certifications
-* Career preferences
-* Goals
+* Education / Academic performance / Subjects & strengths
+* Skills (proficiency 1–5) & Interests (tabs)
+* Goals & career preferences; assessment bundled as sub-step
 
 ---
 
-## 4. Complete Assessment
+## 4. Complete Assessment (now inside onboarding)
 
-The system collects additional information related to:
-
-* Interests
-* Aptitude
-* Work preferences
-* Career preferences
-* Technical inclination
-* Problem-solving
-* Creativity
+The assessment (10 questions covering interests, aptitude, work preferences, technical inclination, problem-solving, creativity) runs as a sub-step of Goals; `/assessment` remains available to retake anytime.
 
 ---
 
@@ -300,7 +286,7 @@ Their progress is reflected on the dashboard.
 | 🧭 Career Explorer            | Explore different career paths       |
 
 
-## Notifications
+## Notifications (Realtime)
 
 In-app notifications are stored in the `notifications` collection (one document per
 recipient, user-scoped permissions) and shown in a bell dropdown in the top bar:
@@ -312,15 +298,14 @@ Node Backend  (server/src/services/notification.service.js — notify / notifyAl
         ↓
 Appwrite Databases  (notifications collection)
         ↓
-Notification Bell  (NotificationBell.jsx — reads via Appwrite client SDK, 45s polling)
+Notification Bell  (src/components/layout/NotificationBell.jsx — appwriteClient.subscribe to databases.*.collections.notifications.documents + 45s polling fallback)
         ↓
 User inbox
 ```
 
-Admins can broadcast announcements from the admin panel (`POST /api/admin/notifications`),
-targeting a single user by **email** or all users, and the system notifies users when new career
-matches or a roadmap are ready. (Email lookup uses the Appwrite `Users` service, so the backend
-API key needs the `users.read` scope.)
+Admins can broadcast from `/admin` (profile menu) via `POST /api/admin/notifications`,
+targeting a single user by **email** or all users, and the system notifies on new career
+matches or roadmap. (Email lookup uses Appwrite `Users` service → `users.read` scope on the backend API key.)
 
 ## Daily Activity Streak
 
@@ -398,12 +383,10 @@ This approach allows the MVP to work reliably even without a large machine-learn
 
 ## Frontend
 
-* React
-* JavaScript
-* Tailwind CSS
-* React Router
-* Axios (Node backend calls)
-* Appwrite Web SDK
+* React + JavaScript + Tailwind CSS + React Router
+* Axios via `src/services/api.js` — **JWT cached until 60s before expiry** (avoids per-request `createJWT`)
+* Lazy routes via `src/routes/AppRoutes.jsx` (`React.lazy` + `Suspense`, main chunk 662k → 409k)
+* Appwrite Web SDK (auth, DB, storage, Realtime)
 
 ## Infrastructure & Data
 
@@ -415,12 +398,9 @@ This approach allows the MVP to work reliably even without a large machine-learn
 
 ## Backend (server/)
 
-* Node.js + Express
-* REST APIs
-* Business logic
-* Appwrite server integration
-* External APIs
-* AI service orchestration
+* Node.js + Express + `express-rate-limit` (30/min on `/api/github|resume|admin` in `server/src/app.js`)
+* Business logic + **scoring/catalog/GitHub/profile** (`server/src/services/scoring.js`, `careerCatalog.js`, `github.service.js` with `ContributionGrid`, `profile.builder.js`)
+* Appwrite server integration + external APIs + resume-only AI orchestration (`/ai/resume/*`)
 
 ## Data Model
 
@@ -436,14 +416,11 @@ This approach allows the MVP to work reliably even without a large machine-learn
 * Assessments
 * Community posts, comments, likes, and bookmarks
 
-## AI / ML
+## AI / ML — resume-only
 
-* Python
-* FastAPI
-* Pandas
-* NumPy
-* Scikit-learn
-* Optional LLM integration
+* Python + FastAPI — `GET /health` + 5 resume endpoints (`POST /ai/resume/{extract,analyze,match,optimize,generate}`)
+* pypdf / LLM provider (resume prompts) / optional LaTeX (`tectonic`/`pdflatex`)
+* Scoring, careers catalog, skill-gaps, compare/what-if, GitHub moved to Node (see Backend)
 
 ## Development
 
@@ -460,26 +437,30 @@ This approach allows the MVP to work reliably even without a large machine-learn
                       ▼
               ┌───────────────┐
               │ React +       │
-              │ Tailwind      │
+              │ Tailwind      │  lazy routes AppRoutes.jsx (662k→409k)
+              │ JWT cache     │  api.js (reuse until 60s before exp)
               └───────┬───────┘
                       │
           ┌───────────┴────────────┐
           │                        │
           ▼                        ▼
-   ┌──────────────┐        ┌──────────────┐
-   │   Appwrite   │        │ Node/Express  │
-   │              │        │   Backend     │
-   │ Auth         │        │               │
-   │ Databases    │        │ Business      │
-   │ Storage      │        │ Logic         │
-   │ Messaging    │        │ APIs          │
-   │ Realtime     │        └───────┬───────┘
-   └──────────────┘                │
-                                   ▼
-                          ┌──────────────┐
-                          │ Python AI    │
-                          │ FastAPI      │
-                          └──────────────┘
+   ┌──────────────┐        ┌──────────────────────┐
+   │   Appwrite   │        │   Node/Express       │
+   │              │        │   Backend (server/)  │
+   │ Auth         │        │                      │
+   │ Databases    │        │ Business Logic       │
+   │ Storage      │        │ + Scoring/catalog    │  scoring.js, careerCatalog.js, profile.builder.js
+   │ Messaging    │        │ + GitHub 13 metrics  │  github.service.js → ContributionGrid.jsx
+   │ Realtime     │◄───────│ + Rate-limit 30/min  │  /api/github|resume|admin
+   └──────────────┘        └───────────┬──────────┘
+                                      │ resume-only
+                                      ▼
+                             ┌──────────────────┐
+                             │ Python AI (resume)│
+                             │ FastAPI           │
+                              │ 5 endpoints       │  /health + /ai/resume/{extract,analyze,match,optimize,generate}
+                             └──────────────────┘
+                     (TopBar 3 hubs: Discover / Build / Opportunities; Homes merged Home.jsx; CommunityFab in App.jsx; NotificationBell Realtime + polling)
 ```
 
 For the complete architecture, database design, ER diagram, API architecture, AI architecture, and data flows:
@@ -496,35 +477,40 @@ skillsaarthi/
 ├── src/                      # React frontend (repo root)
 │   ├── assets/
 │   ├── components/
+│   │   ├── layout/           # TopBar.jsx (3 hubs: Discover:Matches/Gaps/Compare/What-If, Build:Roadmap/Resume/GitHub, Opportunities:Internships/Community), NotificationBell.jsx (Realtime+polling), CommunityFab.jsx (App.jsx)
+│   │   ├── github/           # ContributionGrid.jsx (13 metrics, warm bg, tooltip "22 Sept 2026 — N contributions")
+│   │   ├── career/           # GapDrawer.jsx (in-page on Recommendations)
+│   │   └── ...               # common, auth, profile, roadmap, resume, courses, internships, assistant
 │   ├── pages/
-│   │   ├── public/
+│   │   ├── public/           # Home.jsx (merged public+private — single component)
 │   │   ├── auth/
-│   │   ├── private/           # Dashboard, Assessment, EducationLevel
-│   │   └── onboarding/        # Multi-step profile wizard
-│   ├── services/             # appwrite.js, api.js, auth.js, profile.js, skills.js, interests.js, assessment.js, careers.js, recommendations.js, roadmaps.js, streak.js, notifications.js
+│   │   ├── private/          # Dashboard.jsx (8 cards + 800ms retry), Recommendations.jsx (auto-generate 6 + GapDrawer), Onboarding.jsx (4 steps)
+│   │   └── onboarding/       # (legacy) now consolidated into pages/private/Onboarding.jsx — 4 steps
+│   ├── services/             # appwrite.js (appwriteClient for Realtime), api.js (JWT cache 60s), auth.js, profile.js, skills.js, interests.js, assessment.js, careers.js, recommendations.js, roadmaps.js, streak.js, notifications.js, github.js, comparison.js, whatif.js
 │   ├── hooks/
 │   ├── context/
-│   ├── routes/
-│   └── App.jsx
+│   ├── routes/               # AppRoutes.jsx (React.lazy + Suspense, 662k→409k)
+│   └── App.jsx               # CommunityFab kept
 │
 ├── public/
 │
 ├── server/                   # Node.js + Express backend
 │   ├── src/
 │   │   ├── config/
-│   │   ├── controllers/      # career, recommendation
-│   │   ├── services/         # appwrite, ai, career, recommendation
-│   │   ├── middleware/       # auth, error
-│   │   ├── routes/           # health, careers, recommendations
+│   │   ├── controllers/      # career, recommendation, roadmap, community, etc.
+│   │   ├── services/         # scoring.js, careerCatalog.js, profile.builder.js, github.service.js (13 metrics, private count fix, languageShare incl. forks), appwrite, ai (resume-only), career, recommendation, roadmap, community, notification
+│   │   ├── middleware/       # auth, error, rateLimit (express-rate-limit 30/min on /api/github|resume|admin)
+│   │   ├── routes/           # health, careers, recommendations, roadmaps, resume, github, what-if, comparison, community, admin
+│   │   ├── app.js            # mounts rate limiters
 │   │   └── utils/
 │   └── package.json
 │
-├── ai-service/               # Python AI/ML service
+├── ai-service/               # Python resume-only LLM service
 │   ├── app/
-│   │   ├── recommendation/   # careers.py (dataset), scoring.py (engine)
-│   │   └── main.py           # /health, /ai/careers, /ai/recommend-careers, /ai/skill-gaps, /ai/compare-careers, /ai/what-if/simulate
-│   ├── models/
-│   ├── data/
+│   │   ├── ai/               # LLM gateway client
+│   │   ├── resume/           # ingest.py, pipeline.py, prompts.py, schema.py, scoring.py, latex/
+│   │   └── main.py           # GET /health + POST /ai/resume/{extract,analyze,match,optimize,generate}
+│   ├── tests/                # test_health + resume pipeline/schema/scoring/ingest/latex tests
 │   └── requirements.txt
 │
 ├── docs/
@@ -665,23 +651,20 @@ uvicorn app.main:app --reload
 
 The service runs at `http://127.0.0.1:8000` — health check: `http://127.0.0.1:8000/health`.
 
-Endpoints:
+Endpoints (resume-only — scoring/catalog/GitHub moved to Node `scoring.js`/`careerCatalog.js`/`github.service.js`):
 
 ```text
 GET  /health                     service health
-GET  /ai/careers                 scoring catalog (13 careers)
-POST /ai/recommend-careers       ranked recommendations + explanations
-POST /ai/skill-gaps              strong vs needs-improvement for one career
-POST /ai/compare-careers         compare careers side by side for a profile
-POST /ai/what-if/simulate        baseline vs simulated career scores for hypothetical changes
+POST /ai/resume/extract          extract text from resume bytes
+POST /ai/resume/analyze          LLM resume analysis (main)
+POST /ai/resume/match            resume ↔ career matching
+POST /ai/resume/optimize         resume optimization suggestions
+POST /ai/resume/generate         LaTeX/PDF generation (degrades to .tex without compiler)
 ```
 
 > **Windows note:** PowerShell 5.1 does not support `&&` (use `;` to chain commands). If you prefer to activate the venv explicitly, run `Set-ExecutionPolicy -Scope Process RemoteSigned` once, then activate with `.\venv\Scripts\Activate.ps1`.
 
-> **Keep it running.** The AI service is a standalone process and must stay up for recommendations
-> to work. The Node backend calls it on demand at `AI_SERVICE_URL=http://localhost:8000`; if it is
-> down, the app stays usable but the career/skill-gap/GitHub analysis endpoints return a controlled
-> "temporarily unavailable" error (see [docs/main_architecture.md §42](docs/main_architecture.md)).
+> **Keep it running.** The resume LLM is the only Python-dependent flow; scoring, recommendations, skill-gaps, compare/what-if, and GitHub are Node-native (`scoring.js`/`careerCatalog.js`/`github.service.js`/`profile.builder.js`) and work even if the AI service is down. The Node backend calls Python only for `/ai/resume/*` at `AI_SERVICE_URL=http://localhost:8000`; if it is down, resume returns a heuristic fallback (`source:"fallback"`) while other features stay fully functional (see [docs/main_architecture.md §42](docs/main_architecture.md)).
 > So during local development you keep **three** things running at once:
 
 | # | Service | Folder | Command | URL |
@@ -760,34 +743,32 @@ AI service is ready by opening `http://localhost:8000/health` — it should retu
 
 ---
 
-# 🧭 Phase 2 — Profile & Onboarding
+# 🧭 Phase 2 — Profile & Onboarding (4-step, updated)
 
-Phase 2 (complete) builds the user's structured career profile in Appwrite. This profile is the primary input to the Phase 3 recommendation engine.
+Phase 2 (complete) builds the user's structured career profile in Appwrite. This profile is the primary input to the Phase 3 recommendation engine. Updated this session: 6 → 4 steps, tabs consolidation, no silent proficiency-2 auto-add.
 
 ## User flow
 
 ```text
 Sign up
    ↓
-/onboarding — multi-step wizard
+/onboarding — 4-step wizard (src/pages/private/Onboarding.jsx)
    ├── 1. Education level
-   ├── 2. Academic info (fields vary by education level)
-   ├── 3. Skills (+ proficiency 1–5)
-   ├── 4. Interests
-   ├── 5. Career preferences
-   └── 6. Career assessment (10-question questionnaire)
-       ↓
-Onboarding marked complete → /dashboard
+   ├── 2. Academics (fields vary by education level — subjects, grades/CGPA, strengths)
+   ├── 3. Skills & Interests (two tabs in one step; proficiency 1–5 explicit — removed silent auto-add at 2)
+   └── 4. Goals & Assessment (career preferences + 10-question assessment as sub-step)
+        ↓
+Onboarding marked complete → auto-generates 6 recommendations → /dashboard (8 cards, 800ms retry avoids 0-skills flash)
 ```
 
 * New users land on `/onboarding` right after signup.
 * **Admins skip onboarding** — if the signup email is in `ADMIN_EMAILS`, signup sends the user
-  to `/home` instead, the home page shows an "Open admin panel" CTA, and `ProfileCompleteRoute`
+  to `/home` (merged `src/pages/public/Home.jsx` + `private/Home.jsx` — single `Home` component) instead, the hero shows an "Open admin panel" CTA via the profile menu (Admin moved from TopBar to profile dropdown), and `ProfileCompleteRoute`
   lets admins through without a completed profile.
 * The wizard resumes at the first **incomplete** step for returning users (each step can be skipped).
 * `/assessment` is available any time to retake the career assessment and compare scores.
 * `/onboarding/education-level` lets users change their education level later from the dashboard.
-* `/dashboard` is gated by `ProfileCompleteRoute`, which requires `onboarding_completed = true` (admins exempt).
+* `/dashboard` is gated by `ProfileCompleteRoute`, which requires `onboarding_completed = true` (admins exempt). Lazy routes in `src/routes/AppRoutes.jsx` keep the main chunk small (662k→409k).
 
 ## Profile data
 
@@ -833,21 +814,21 @@ npm run setup:appwrite
 
 ---
 
-# 🧠 Phase 3 — Core Intelligence
+# 🧠 Phase 3 — Core Intelligence (Node-native, updated)
 
 Phase 3 (complete) implements the product's core intelligence: the career/skill
 datasets, the career-skill mapping, the recommendation engine, skill-gap analysis,
-and explainable recommendations.
+and explainable recommendations — now **entirely Node** (`server/src/services/scoring.js` + `careerCatalog.js` + `profile.builder.js`), no Python.
 
 ## What was built
 
 | Sub-part | Where |
 |---|---|
-| Career dataset | `ai-service/app/recommendation/careers.py` (13 careers) + Appwrite `careers` collection |
+| Career dataset | `server/src/services/careerCatalog.js` (13 careers) + Appwrite `careers` collection |
 | Skill dataset | Appwrite `skills` collection (seeded) |
 | Career-skill mapping | Appwrite `career_skills` collection (`required_level` 1–5, `importance` 1–5) |
-| Recommendation engine | `ai-service/app/recommendation/scoring.py` (`score_careers`) |
-| Skill-gap analysis | `ai-service/app/recommendation/scoring.py` (`analyze_skill_gaps`) + `/ai/skill-gaps` |
+| Recommendation engine | `server/src/services/scoring.js` (`scoreCareers`) + `profile.builder.js` |
+| Skill-gap analysis | `server/src/services/scoring.js` (`analyzeSkillGaps`) — Node in-process, no `/ai/skill-gaps` |
 | Recommendation explanations | `reasons`, `strengths`, `next_steps`, score `breakdown` in every recommendation |
 
 ## Recommendation scoring
@@ -874,23 +855,20 @@ Every recommendation includes an explainable payload:
 * `skill_gaps` — required skills the user has not yet met
 * `next_steps` — ordered "Learn/Strengthen X (level a → b)" actions
 
-## API endpoints (Node backend)
+## API endpoints (Node backend — no Python call)
 
-All routes require `Authorization: Bearer <jwt>` (Appwrite session token).
+All routes require `Authorization: Bearer <jwt>` (Appwrite session token, cached in `src/services/api.js` until 60s before expiry).
 
 | Method | Route | Description |
 |---|---|---|
-| `GET` | `/api/careers` | List career catalog with required skills |
+| `GET` | `/api/careers` | List career catalog with required skills (`careerCatalog.js`) |
 | `GET` | `/api/careers/:careerId` | Single career with required skills |
-| `POST` | `/api/recommendations/generate` | Generate + persist recommendations for the user (`body: { top_n? }`) |
+| `POST` | `/api/recommendations/generate` | Generate + persist recommendations via `scoring.js` (`body: { top_n? }`) — auto-generates 6 on onboarding complete |
 | `GET` | `/api/recommendations` | Saved recommendations |
 | `GET` | `/api/recommendations/:id` | Single saved recommendation |
-| `GET` | `/api/recommendations/careers/:careerId/skill-gaps` | Skill-gap analysis for a career |
+| `GET` | `/api/recommendations/careers/:careerId/skill-gaps` | Skill-gap analysis via `scoring.js` for a career |
 
-> If the AI service is down, the backend falls back to a rule-based scorer in
-> `server/src/services/recommendation.service.js`: it returns `200` with
-> `source: "fallback"` estimates instead of the controlled
-> `503 AI_SERVICE_UNAVAILABLE` error (see the Phase 4 — AI section below).
+> Node-native — no AI failure mode for recommendations. Python is only for resume (`/ai/resume/*` with `source:"fallback"` heuristic); scoring/compare/what-if/GitHub never call Python.
 
 ## Frontend services
 
@@ -899,16 +877,14 @@ All routes require `Authorization: Bearer <jwt>` (Appwrite session token).
 
 ## Frontend pages
 
-Phase 3 UI is wired and routed behind `ProfileCompleteRoute`:
+Phase 3 UI is wired and routed behind `ProfileCompleteRoute` (lazy via `src/routes/AppRoutes.jsx`):
 
 | Page | Route | What it does |
 |---|---|---|
-| `src/pages/private/Recommendations.jsx` | `/recommendations` | Lists saved matches; "Generate recommendations" rebuilds them from the latest profile |
-| `src/pages/private/SkillGaps.jsx` | `/skill-gaps/:careerId?` | Career dropdown + strong/needs-improvement gap analysis (deep-linked from each recommendation) |
+| `src/pages/private/Recommendations.jsx` | `/recommendations` | Lists saved matches; auto-generates 6 on onboarding complete; "Generate recommendations" rebuilds; in-page `GapDrawer` (`src/components/career/GapDrawer.jsx`) shows gaps without navigation |
+| `src/pages/private/SkillGaps.jsx` | `/skill-gaps/:careerId?` | Career dropdown + strong/needs-improvement gap analysis (also via GapDrawer) |
 
-The rule of three: if the AI service is running (ai-service on `:8000`), generate + skill-gap
-analysis run in Python; if it is down, the backend returns rule-based estimates with
-`source: "fallback"` and the pages show an "Estimated · AI offline" badge on each card.
+TopBar 3 hubs: **Discover** (Matches/Gaps/Compare/What-If), **Build** (Roadmap/Resume/GitHub), **Opportunities** (Internships/Community); Admin moved to profile menu.
 
 ## Upgrading an existing Appwrite setup
 
@@ -923,39 +899,31 @@ npm run seed:catalog
 
 ---
 
-# 🤖 Phase 4 — AI
+# 🤖 Phase 4 — AI (resume-only, lightweight — updated)
 
-Phase 4 (complete) implements the AI layer as an independent Python service and hardens
-the Phase 3 engine against failure.
+Phase 4 now implements the AI layer as a **resume-only** Python service; scoring, catalog, and GitHub have moved to Node.
 
 ## What was built
 
 | Sub-part | Where |
 |---|---|
-| Python AI service | `ai-service/` — FastAPI app on port 8000 |
-| Endpoints | `GET /health`, `GET /ai/careers`, `POST /ai/recommend-careers`, `POST /ai/skill-gaps`, `POST /ai/github/analyze` |
-| Skill matching + ranking | `ai-service/app/recommendation/scoring.py` (`score_careers`, hybrid weights from §23) |
-| Skill-gap analysis | `ai-service/app/recommendation/scoring.py` (`analyze_skill_gaps`, strong vs needs_improvement) |
-| Tests | `ai-service/tests/` (pytest) — 44 tests: ranking, explainability, validation, alias normalization, resume, comparison, what-if |
-| Fallback scorer | `server/src/services/recommendation.service.js` — rule-based estimates when the AI service is down |
+| Python AI service (resume-only) | `ai-service/` — FastAPI on port 8000 — `GET /health` + 5 resume endpoints (`POST /ai/resume/{extract,analyze,match,optimize,generate}`) |
+| Scoring / catalog / GitHub | **Node-native**: `server/src/services/scoring.js`, `careerCatalog.js`, `github.service.js` + `profile.builder.js` (no Python endpoints) |
+| Resume pipeline | `ai-service/app/resume/` — LLM extraction, analysis, matching, optimization, LaTeX/PDF generation |
+| Tests | `ai-service/tests/` — resume pipeline, schema, scoring, ingest, LaTeX, and AI client tests |
 
 ## Fallback behavior
 
-If the AI service is unreachable, the Node backend still returns recommendations and
-skill-gaps (instead of a hard failure):
+Only the resume path has a fallback — other features are Node-native and need none:
 
-* `POST /api/recommendations/generate` → `200` rule-based matches with `source: "fallback"` (embedded in each explanation)
-* `GET /api/recommendations/careers/:careerId/skill-gaps` → `200` rule-based gaps with `source: "fallback"`
-* The React pages show an **"Estimated · AI offline"** badge so users know the scores are estimates
-
-Successful AI runs are tagged `source: "ai"`, and live AI results are mapped back to Appwrite
-career documents by name.
+* `POST /api/resume/analyze` → `200` heuristic `computeFallbackAnalysis` with `source:"fallback"` if Python is down (resume untouched per hold)
+* `POST /api/recommendations/generate`, `/skill-gaps`, `/compare`, `/what-if`, `/github/analyze` → Node-direct via `scoring.js`/`github.service.js` — always succeed, no `source:"fallback"` tag
 
 ## Running the tests
 
 ```bash
 cd ai-service
-python -m pytest        # 44 passed
+python -m pytest        # health + resume only (scoring tests removed — now Node)
 ```
 
 ---
@@ -998,9 +966,9 @@ Results rendered on /resume
 | Appwrite bucket | `resumes` (max 5 MB, pdf/doc/docx) — `create` permission added so users can upload |
 | Node service | `server/src/services/resume.service.js` — fetch bytes via `storage.getFileDownload`, orchestrate AI, persist result, optional skill apply |
 | Node routes | `server/src/routes/resume.routes.js` — `POST /api/resume/analyze`, `GET /api/resume/analysis/:id` (owner only) |
-| Python analyzer | `ai-service/app/resume/analyzer.py` + `POST /ai/resume/analyze` |
+| Python AI | `ai-service/app/resume/pipeline.py` + `POST /ai/resume/{extract,analyze,match,optimize,generate}` |
 | Resume dataset | `resume_analyses` collection (`user_id`, `appwrite_file_id`, `file_name`, `extracted_data`, `analysis_result`, `created_at`) |
-| Tests | `ai-service/tests/test_resume.py` — skill detection, experience, education, letter-spacing densify, API |
+| Tests | `ai-service/tests/` — resume pipeline, schema, scoring, ingest, LaTeX, AI client tests |
 
 ## Extraction & normalization
 
@@ -1089,31 +1057,27 @@ The dashboard shows your current roadmap and its progress, and the top nav links
 
 ---
 
-# ⚖️ Career Comparison
+# ⚖️ Career Comparison (Node-native, updated)
 
 An advanced career tool that lets a user select two or more careers and see them
 side by side. Each career card shows the hybrid match score, a difficulty
 estimate, the reasons it matches, the user's current strengths, the exact skills
 to grow (with current → required levels), and next steps — plus a "best pick"
-highlight and a natural-language summary of which career fits best.
+highlight and a natural-language summary.
 
-It reuses the same hybrid scoring formula as recommendations (docs
-`main_architecture.md` §23 / `PRD.md` §18) and the career-skill catalog, so the
-scores and skill gaps stay consistent with the rest of the product.
+It reuses the same Node hybrid scoring formula as recommendations (`server/src/services/scoring.js` + `careerCatalog.js` + `profile.builder.js`, §23) so scores stay consistent.
 
 ## User flow
 
 ```text
-User opens /career-compare and selects 2+ careers from the catalog
+User opens /career-compare and selects 2+ careers
     ↓
-Node backend builds the user profile (skills, interests, goals, assessment, experience)
+Node backend (profile.builder.js builds normalized profile)
     ↓
-Python AI service /ai/compare-careers scores each selected career
-    ├── hybrid §23 score + reasons + strengths + skill gaps + next steps
+scoring.js + careerCatalog.js (in-process, no Python)
+    ├── §23 score + reasons + strengths + skill gaps + next steps
     ├── difficulty estimate (required proficiency, assessment bar, years)
-    └── recommended best pick + summary
-    ↓
-Backend maps results back to Appwrite career ids and returns them
+    └── best pick + summary
     ↓
 Results rendered side by side on /career-compare
 ```
@@ -1124,44 +1088,37 @@ Results rendered side by side on /career-compare
 |---|---|
 | Frontend page | `src/pages/private/CareerComparison.jsx` at `/career-compare` (multi-select catalog, side-by-side cards, best-pick banner, difficulty badge) |
 | API client | `src/services/comparison.js` |
-| Node service | `server/src/services/comparison.service.js` — builds the user profile, orchestrates the AI call, maps results to catalog ids, fallback when AI is down |
-| Node routes | `server/src/routes/comparison.routes.js` — `POST /api/careers/compare` (requires ≥ 2 career ids) |
-| Python compare engine | `ai-service/app/recommendation/scoring.py` `compare_careers(...)` + `POST /ai/compare-careers` |
-| Tests | `ai-service/tests/test_scoring.py` — name filtering, catalog fallback, metadata, gap details, recommended pick |
-| Navigation | Top-bar "Compare" link + Dashboard "Career Comparison" card |
+| Node service | `server/src/services/comparison.service.js` → `scoring.js` + `careerCatalog.js` + `profile.builder.js` (Node-native, no AI call) |
+| Node routes | `server/src/routes/comparison.routes.js` — `POST /api/careers/compare` (≥ 2 ids) |
+| Python | Removed — `ai-service/app/recommendation/scoring.py` + all Python recommendation endpoints deleted |
+| Navigation | TopBar **Discover** hub → Compare + Dashboard "Career Comparison" card (Dashboard now 8 cards, 800ms retry) |
 
-Like the other AI features, comparison is **stateless**: it scores the selected
-careers on demand and does not persist anything. If the AI service is down, the
-backend returns the built-in skills-based fallback with `source: "fallback"`.
+Stateless — scores on demand, nothing persisted, no fallback needed (Node-direct).
 
 ---
 
-# 🔮 What-If Simulator
+# 🔮 What-If Simulator (Node-native, updated)
 
-A safe, read-only tool that lets a user answer questions like *"What happens if
-I learn Python?"* before investing real time. It runs the recommendation engine
+A safe, read-only tool that lets a user answer *"What happens if I learn Python?"* before investing time. It runs the recommendation engine
 against a **temporary copy** of the user's profile — the real profile is never
-modified (docs `main_architecture.md` §26 / PRD §17).
+modified (§26).
 
 Each simulated change is a skill with a target proficiency (1–5), e.g. "Python
 at level 4". The engine re-scores the whole catalog and returns the current
 (baseline) and hypothetical (simulated) rankings side by side, with per-career
-score deltas and a plain-language summary of the biggest movers. All scores are
-labelled as **estimated**, not guaranteed outcomes.
+score deltas and a plain-language summary. All scores are **estimated**, not guarantees.
 
 ## User flow
 
 ```text
-User opens /what-if and adds hypothetical skill changes (skill + target level)
+User opens /what-if and adds hypothetical skill changes
     ↓
-Node backend builds the real user profile (skills, interests, goals, assessment, experience)
+Node backend (profile.builder.js builds real profile)
     ↓
-Python AI service /ai/what-if/simulate applies the changes to an in-memory copy
+scoring.js + careerCatalog.js apply changes to in-memory copy (_applyWhatIfChanges)
     ├── baseline ranking  (real profile)
     ├── simulated ranking (modified profile)
     └── delta per career + summary
-    ↓
-Backend maps careers back to Appwrite career ids and returns them
     ↓
 Results rendered on /what-if (biggest movers, ranking shift, unchanged careers)
 ```
@@ -1172,36 +1129,32 @@ Results rendered on /what-if (biggest movers, ranking shift, unchanged careers)
 |---|---|
 | Frontend page | `src/pages/private/WhatIfSimulator.jsx` at `/what-if` (skill+level builder, biggest-movers cards, baseline vs simulated ranking shift) |
 | API client | `src/services/whatif.js` |
-| Node service | `server/src/services/whatif.service.js` — builds the user profile, normalizes + validates changes, orchestrates the AI call, maps results to catalog ids, fallback when AI is down |
-| Node routes | `server/src/routes/whatif.routes.js` — `POST /api/what-if/simulate` (requires ≥ 1 change; skill proficiency 1–5) |
-| Python simulator | `ai-service/app/recommendation/scoring.py` `simulate_what_if(...)` + `_apply_what_if_changes(...)` + `POST /ai/what-if/simulate` |
-| Tests | `ai-service/tests/test_scoring.py` — skill change raises matching careers, original profile never mutated, delta math, top-n truncation, interest changes |
-| Navigation | Top-bar "What-If" link + Dashboard "What-If Simulator" card |
+| Node service | `server/src/services/whatif.service.js` → `scoring.js` + `profile.builder.js` + `careerCatalog.js` (Node-native, validates `{name, proficiency 1–5}`, copies profile, never writes real profile) |
+| Node routes | `server/src/routes/whatif.routes.js` — `POST /api/what-if/simulate` (≥ 1 change; proficiency 1–5) — rate-limited via `server/src/app.js` |
+| Python | Removed — `ai-service/app/recommendation/scoring.py` + all Python recommendation endpoints deleted |
+| Navigation | TopBar **Discover** hub → What-If + Dashboard "What-If Simulator" card |
 
-Like comparison and recommendations, the simulator is **stateless** — nothing is
-persisted. If the AI service is down, the backend returns a skills-only
-estimate with `source: "fallback"`.
+Stateless — nothing persisted, no fallback needed (Node-direct).
 
 ---
 
-# 🐙 GitHub Analysis & Internships
+# 🐙 GitHub Analysis (Node-native) & Internships
 
-Two implemented advanced career tools backed by the Node backend + Python AI service.
+Two implemented advanced career tools — GitHub is now **Node-only** (no Python), internships unchanged.
 
-## GitHub analysis
+## GitHub analysis (Node-native, 13 metrics)
 
 Analyzes **publicly accessible** GitHub data (profile + repository metadata only —
 never private content) and translates it into a technical profile with
-languages, skill signals, active domains, activity/open-source indicators, and
-career matches.
+`src/components/github/ContributionGrid.jsx` — warm background with contrast, tooltip `"22 Sept 2026 — N contributions"`, 13 metrics: current/longest streak, total contributions, avg daily, most active day/month, top languages (includes forks via `languageShare`), public/private repos (private count = only private repos), followers, PRs/issues/reviews. Rate-limited 30/min (`server/src/app.js`).
 
 ## What was built
 
 | Sub-part | Where |
 |---|---|
-| Node provider + orchestration | `server/src/services/github.service.js` (`analyzeGitHub`) — GitHub API fetch → AI call → persist → optional skill apply |
-| Fallback analyzer | `computeFallbackAnalysis` in the same service — same output shape when the AI service is down |
-| Python analyzer | `ai-service/app/github/analyzer.py` + `POST /ai/github/analyze` |
+| Node analyzer (no Python) | `server/src/services/github.service.js` (`analyzeGitHub`) — GitHub API fetch → local heuristics (13 metrics) → persist → optional skill apply; `languageShare` includes forks, private count correct |
+| Frontend grid | `src/components/github/ContributionGrid.jsx` — 13 metrics, warm bg contrast, tooltip `"22 Sept 2026 — N contributions"` |
+| Python analyzer | **Removed** — `ai-service/app/github/analyzer.py` + `POST /ai/github/analyze` deleted |
 | Frontend page | `src/pages/private/GitHubAnalysis.jsx` at `/github` |
 | API client | `src/services/github.js` |
 | Internship scoring | `server/src/services/internship.service.js` — weighted matching, top-10 persisted to `internship_recommendations` |
@@ -1221,13 +1174,13 @@ Internship Score =
   + Location Match         × 0.10   (preferred_location, remote/hybrid preference)
 ```
 
-## API endpoints (Node backend)
+## API endpoints (Node backend — JWT cached 60s before exp; `/api/github|resume|admin` rate-limited 30/min)
 
 All routes require `Authorization: Bearer <jwt>` (Appwrite session token).
 
 | Method | Route | Description |
 |---|---|---|
-| `POST` | `/api/github/analyze` | Analyze a public GitHub username (`body: { username, apply_skills? }`). Returns `{ username, source, analysis, analysis_id, skills_added }` |
+| `POST` | `/api/github/analyze` | Node-native via `github.service.js` (no Python) — analyze a public username (`body: { username, apply_skills? }`). Returns `{ username, source, analysis, analysis_id, skills_added }` with 13 ContributionGrid metrics |
 | `GET` | `/api/github/analysis/:id` | Fetch a saved analysis (owner only) |
 | `GET` | `/api/internships` | List **active, non-expired** internships (`query: { search?, company?, location? }`) |
 | `GET` | `/api/internships/recommended` | Top-10 ranked matches for the user, persisted to `internship_recommendations` |
@@ -1237,8 +1190,7 @@ All routes require `Authorization: Bearer <jwt>` (Appwrite session token).
 | `PATCH` | `/api/admin/internships/:id` | Update fields/`status` — Approve/Reject/Restore (admin only) |
 | `DELETE` | `/api/admin/internships/:id` | Delete a listing (admin only) |
 
-> If the AI service is down, GitHub analysis returns the built-in heuristic
-> result with `source: "fallback"` instead of failing.
+> GitHub is Node-native — no Python call, no `source:"fallback"` needed. Resume is the only fallback path.
 
 ## Keeping the catalog fresh (hybrid)
 
@@ -1316,7 +1268,7 @@ no new services**.
 | Frontend service | `src/services/community.js` |
 | Reusable components | `src/components/community/` — `Avatar`, `PostCard`, `PostComposer`, `CommentSection`, `ProfileEditor`, `PressSection` (news carousel) |
 | Frontend pages | `src/pages/private/Community*.jsx` routed behind `ProfileCompleteRoute` |
-| Navigation | Floating Community button (`src/components/layout/CommunityFab.jsx`) — a sticky bottom-right green square that expands into a shareable "Community" pill on hover (replaced the top-bar Explore entry) + footer link |
+| Navigation | Floating Community button (`src/components/layout/CommunityFab.jsx` kept in `src/App.jsx`) — sticky bottom-right green square that expands into "Community" pill on hover + footer link; TopBar now 3 hubs (Discover/Build/Opportunities) — Admin moved to profile menu |
 
 ## Posts
 
@@ -1679,13 +1631,12 @@ For complete development rules:
 
 ---
 
-## Phase 4 — AI
+## Phase 4 — AI (resume-only, updated)
 
-* [x] Python AI service (FastAPI)
-* [x] Skill matching + ranking
-* [x] Skill-gap analysis
-* [x] AI test suite (pytest)
-* [x] Rule-based fallback when the AI service is down
+* [x] Python AI service (FastAPI) — resume-only 6 endpoints (`/health` + `/ai/resume/*`)
+* [x] Scoring / catalog / GitHub moved to Node (`scoring.js`, `careerCatalog.js`, `github.service.js`, `profile.builder.js`)
+* [x] Resume test suite only (`test_health` + `test_resume`; `test_scoring` removed)
+* [x] Rate limiting 30/min (`express-rate-limit` on `/api/github|resume|admin`), JWT cache (60s), lazy routes (662k→409k)
 
 ---
 
@@ -1699,12 +1650,14 @@ For complete development rules:
 
 ---
 
-## Phase 6 — Advanced Features
+## Phase 6 — Advanced Features (updated)
 
-* [x] GitHub analysis
-* [x] Resume analysis
-* [x] What-If simulator
-* [x] Career comparison
+* [x] GitHub analysis — Node-native with ContributionGrid 13 metrics (warm bg, tooltip date, correct private count, languageShare incl. forks)
+* [x] Resume analysis — untouched per hold (Python `/ai/resume/*` + fallback)
+* [x] What-If simulator — Node-native (`scoring.js` + `profile.builder.js`)
+* [x] Career comparison — Node-native (`scoring.js` + `careerCatalog.js`)
+* [x] Recommendations — auto-generate 6 on onboarding + GapDrawer in-page
+* [x] Notifications — Realtime (`appwriteClient.subscribe` + 45s polling fallback)
 * [ ] AI career assistant
 
 ---
