@@ -25,7 +25,7 @@ export const config = {
     secure: String(process.env.EMAIL_SECURE || '').toLowerCase() === 'true',
     user: process.env.EMAIL_USER || '',
     pass: process.env.EMAIL_PASS || '',
-    from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@skillsaarthi.com',
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@skillsaarthi.vercel.app',
   },
   auth: {
     verificationTokenExpiryMs: Number(process.env.VERIFICATION_TOKEN_EXPIRY_MS) || 24 * 60 * 60 * 1000,
