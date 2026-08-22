@@ -7,6 +7,7 @@ import {
   markNotificationRead,
   timeAgo,
 } from '../../services/notifications'
+import { APPWRITE_DATABASE_ID, COLLECTIONS, appwriteClient } from '../../services/appwrite'
 
 const POLL_MS = 45000
 
@@ -24,9 +25,28 @@ export default function NotificationBell() {
 
   useEffect(() => {
     refresh()
+    // Realtime subscription for instant updates; keep polling as fallback for offline/unsupported envs
+    let unsubscribe = () => {}
+    try {
+      const channel = `databases.${APPWRITE_DATABASE_ID}.collections.${COLLECTIONS.notifications}.documents`
+      unsubscribe = appwriteClient.subscribe(channel, (event) => {
+        const doc = event.payload
+        if (!doc || !user) return
+        // Only react to docs for current user
+        if (doc.user_id && doc.user_id !== user.$id) return
+        refresh()
+      })
+    } catch {
+      // subscribe not available (e.g., missing Realtime) — polling remains
+    }
     const interval = setInterval(refresh, POLL_MS)
-    return () => clearInterval(interval)
-  }, [refresh])
+    return () => {
+      try {
+        unsubscribe()
+      } catch {}
+      clearInterval(interval)
+    }
+  }, [refresh, user?.$id])
 
   useEffect(() => {
     function onDocClick(e) {

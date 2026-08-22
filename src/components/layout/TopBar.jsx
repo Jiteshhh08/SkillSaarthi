@@ -67,7 +67,7 @@ function NavDropdown({ label, items, active }) {
   )
 }
 
-function ProfileMenu({ user, onLogout }) {
+function ProfileMenu({ user, onLogout, isAdmin }) {
   const avatarSrc = useAvatarUrl(user)
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -129,6 +129,17 @@ function ProfileMenu({ user, onLogout }) {
             <Icon name="settings" size={16} className="text-ink-muted" />
             Update profile
           </Link>
+          {isAdmin && (
+            <Link
+              to="/admin/internships"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-bold text-ink hover:bg-surface-hover"
+            >
+              <Icon name="shield-check" size={16} className="text-ink-muted" />
+              Admin panel
+            </Link>
+          )}
           <button
             type="button"
             role="menuitem"
@@ -300,26 +311,27 @@ export default function TopBar() {
     { to: '/home', label: 'Home' },
     { to: '/dashboard', label: 'Dashboard' },
     {
-      label: 'Explore',
+      label: 'Discover',
       items: [
         { to: '/recommendations', label: 'Matches' },
-        { to: '/internships', label: 'Internships' },
-      ],
-    },
-    {
-      label: 'Growth',
-      items: [
         { to: '/skill-gaps', label: 'Skill Gaps' },
-        { to: '/roadmaps', label: 'Roadmap' },
+        { to: '/career-compare', label: 'Compare' },
+        { to: '/what-if', label: 'What-If' },
       ],
     },
     {
-      label: 'Tools',
+      label: 'Build',
       items: [
-        { to: '/github', label: 'GitHub' },
+        { to: '/roadmaps', label: 'Roadmap' },
         { to: '/resume', label: 'Resume' },
-        { to: '/career-compare', label: 'Compare' },
-        { to: '/what-if', label: 'WhatIfSimulator'},
+        { to: '/github', label: 'GitHub' },
+      ],
+    },
+    {
+      label: 'Opportunities',
+      items: [
+        { to: '/internships', label: 'Internships' },
+        { to: '/community', label: 'Community' },
       ],
     },
   ]
@@ -327,8 +339,8 @@ export default function TopBar() {
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-line bg-white">
-        <div className="relative z-50 mx-auto flex h-20 max-w-7xl items-center gap-6 px-6">
-        <Link to={user ? '/home' : '/'} className="flex items-center gap-2">
+        <div className="relative z-50 mx-auto flex h-20 max-w-7xl items-center gap-2 px-3 sm:gap-6 sm:px-6">
+        <Link to={user ? '/home' : '/'} className="flex min-w-0 shrink items-center gap-2 -ml-1 sm:ml-0">
           <img src={logo} alt="skillsaarthi logo" className="h-16 w-48 shrink-0 object-cover" />
         </Link>
 
@@ -357,22 +369,10 @@ export default function TopBar() {
                 </Link>
               )
             )}
-          {user && isAdmin && (
-            <Link
-              to="/admin/internships"
-              className={`relative rounded-md px-3 py-2 text-sm font-bold transition-colors ${
-                isActive('/admin') ? 'text-brand-deep' : 'text-brand-deep hover:bg-surface-hover'
-              }`}
-            >
-              Admin
-              {isActive('/admin') && (
-                <span className="absolute inset-x-3 -bottom-1 h-0.5 rounded-full bg-brand" />
-              )}
-            </Link>
-          )}
+          {/* Admin moved to profile menu */}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2 pl-2 sm:gap-3">
+        <div className="ml-auto flex shrink items-center gap-1 pl-1 sm:gap-3 sm:pl-2">
           {loading ? null : user ? (
             <>
               <NotificationBell />
@@ -380,7 +380,7 @@ export default function TopBar() {
                 <Icon name="flame" size={16} className="text-accent-orange" />
                 {streak.current} {streak.current === 1 ? 'day' : 'days'} streak
               </span>
-              <ProfileMenu user={user} onLogout={handleLogout} />
+              <ProfileMenu user={user} onLogout={handleLogout} isAdmin={isAdmin} />
             </>
           ) : (
             <>
@@ -397,7 +397,7 @@ export default function TopBar() {
             onClick={() => setMobileOpen((o) => !o)}
             aria-label="Toggle navigation menu"
             aria-expanded={mobileOpen}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-md text-ink transition-colors hover:bg-surface-hover min-[1070px]:hidden"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-ink transition-colors hover:bg-surface-hover sm:mr-3 min-[1070px]:hidden"
           >
             <svg
               className="h-6 w-6"

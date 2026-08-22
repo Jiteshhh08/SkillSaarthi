@@ -114,25 +114,40 @@ export default function Dashboard() {
 
   useEffect(() => {
     let mounted = true
-    Promise.all([getUserSkills(user.$id), getUserInterests(user.$id), getRoadmaps()])
-      .then(([skillsData, interestsData, roadmapDocs]) => {
+    let retryTimer = null
+
+    const fetchAll = async (isRetry = false) => {
+      try {
+        const [skillsData, interestsData, roadmapDocs] = await Promise.all([
+          getUserSkills(user.$id),
+          getUserInterests(user.$id),
+          getRoadmaps(),
+        ])
         if (!mounted) return
         setSkills(skillsData)
         setInterests(interestsData)
         setRoadmaps(roadmapDocs || [])
-      })
-      .catch(() => {
+        // If first load returns empty but user likely has data (onboarding completed), retry once after session settles
+        if (!isRetry && skillsData.length === 0 && interestsData.length === 0) {
+          retryTimer = setTimeout(() => {
+            if (mounted) fetchAll(true)
+          }, 800)
+        }
+      } catch {
         if (mounted) {
           setSkills([])
           setInterests([])
           setRoadmaps([])
         }
-      })
-      .finally(() => {
+      } finally {
         if (mounted) setLoading(false)
-      })
+      }
+    }
+
+    fetchAll()
     return () => {
       mounted = false
+      if (retryTimer) clearTimeout(retryTimer)
     }
   }, [user.$id])
 

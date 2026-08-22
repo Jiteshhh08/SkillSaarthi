@@ -754,27 +754,8 @@ export async function getStoredPdf(userId, analysisId) {
 
 // ============================================================================
 // Legacy analyze entrypoint (POST /api/resume/analyze-legacy)
+// Uses Node-native heuristic analysis (no Python dependency).
 // ============================================================================
-
-async function requestLegacyAiAnalysis(payload) {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS)
-  try {
-    const response = await fetch(`${config.aiServiceUrl}/ai/resume/analyze-legacy`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    })
-    if (!response.ok) return null
-    const body = await response.json()
-    return body?.analysis || null
-  } catch {
-    return null
-  } finally {
-    clearTimeout(timer)
-  }
-}
 
 export async function analyzeResume(userId, { fileId, fileName, text, applySkills = false }) {
   let extractedText = text || ''
@@ -791,15 +772,8 @@ export async function analyzeResume(userId, { fileId, fileName, text, applySkill
     )
   }
 
-  const aiAnalysis = extractedText
-    ? await requestLegacyAiAnalysis({ text: extractedText, file_name: fileName })
-    : await requestLegacyAiAnalysis({
-        pdf: pdfBytes.toString('base64'),
-        file_name: fileName,
-      })
-
-  const source = aiAnalysis ? 'legacy' : 'fallback'
-  const analysis = aiAnalysis || computeFallbackAnalysis(extractedText || pdfBytes?.toString() || '')
+  const analysis = computeFallbackAnalysis(extractedText || pdfBytes?.toString() || '')
+  const source = 'fallback'
 
   const analysisId = await saveResumeAnalysis(userId, fileId || '', fileName, extractedText, analysis)
 

@@ -270,31 +270,29 @@ export default function ResumeAnalysis() {
           )}
         </div>
 
-        {analysisId && (
-          <nav className="mt-8 flex flex-wrap gap-2">
-            {STEPS.map((label, index) => {
-              const done = index < currentStep
-              const active = index === currentStep
-              return (
-                <span
-                  key={label}
-                  className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-bold transition-colors ${
-                    active
-                      ? 'bg-brand text-white'
-                      : done
-                        ? 'bg-brand-soft text-brand-deep'
-                        : 'bg-surface-soft text-ink-muted'
-                  }`}
-                >
-                  <span className="grid h-5 w-5 place-items-center rounded-full text-xs">
-                    {done ? <Icon name="shield-check" size={14} /> : index + 1}
-                  </span>
-                  {label}
+        <nav className="mt-8 flex flex-wrap gap-2">
+          {STEPS.map((label, index) => {
+            const done = index < currentStep
+            const active = index === currentStep
+            return (
+              <span
+                key={label}
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-bold transition-colors ${
+                  active
+                    ? 'bg-brand text-white'
+                    : done
+                      ? 'bg-brand-soft text-brand-deep'
+                      : 'bg-surface-soft text-ink-muted'
+                }`}
+              >
+                <span className="grid h-5 w-5 place-items-center rounded-full text-xs">
+                  {done ? <Icon name="shield-check" size={14} /> : index + 1}
                 </span>
-              )
-            })}
-          </nav>
-        )}
+                {label}
+              </span>
+            )
+          })}
+        </nav>
 
         {error && (
           <div className="mt-6 rounded-lg border border-danger-soft bg-danger-soft px-4 py-3 text-sm font-bold text-danger">
