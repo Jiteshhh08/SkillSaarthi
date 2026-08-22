@@ -1,35 +1,42 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ProfileCompleteRoute, ProtectedRoute, PublicOnlyRoute } from '../components/common/RouteGuards'
-import Dashboard from '../pages/private/Dashboard'
-import EducationLevel from '../pages/private/EducationLevel'
-import Assessment from '../pages/private/Assessment'
-import GitHubAnalysis from '../pages/private/GitHubAnalysis'
-import ResumeAnalysis from '../pages/private/ResumeAnalysis'
-import CareerComparison from '../pages/private/CareerComparison'
-import WhatIfSimulator from '../pages/private/WhatIfSimulator'
-import Internships from '../pages/private/Internships'
-import Recommendations from '../pages/private/Recommendations'
-import SkillGaps from '../pages/private/SkillGaps'
-import Roadmaps from '../pages/private/Roadmaps'
-import RoadmapDetail from '../pages/private/RoadmapDetail'
-import AdminInternships from '../pages/private/AdminInternships'
-import Community from '../pages/private/Community'
-import CommunityDrafts from '../pages/private/CommunityDrafts'
-import CommunityPostDetail from '../pages/private/CommunityPostDetail'
-import CommunitySaved from '../pages/private/CommunitySaved'
-import CommunityUserProfile from '../pages/private/CommunityUserProfile'
-import ProfileSettings from '../pages/private/ProfileSettings'
-import Onboarding from '../pages/onboarding/Onboarding'
-import Login from '../pages/auth/Login'
-import Signup from '../pages/auth/Signup'
-import ForgotPassword from '../pages/auth/ForgotPassword'
-import ResetPassword from '../pages/auth/ResetPassword'
-import Home from '../pages/public/Home'
-import PrivateHome from '../pages/private/Home'
+
+const Dashboard = lazy(() => import('../pages/private/Dashboard'))
+const EducationLevel = lazy(() => import('../pages/private/EducationLevel'))
+const Assessment = lazy(() => import('../pages/private/Assessment'))
+const GitHubAnalysis = lazy(() => import('../pages/private/GitHubAnalysis'))
+const ResumeAnalysis = lazy(() => import('../pages/private/ResumeAnalysis'))
+const CareerComparison = lazy(() => import('../pages/private/CareerComparison'))
+const WhatIfSimulator = lazy(() => import('../pages/private/WhatIfSimulator'))
+const Internships = lazy(() => import('../pages/private/Internships'))
+const Recommendations = lazy(() => import('../pages/private/Recommendations'))
+const SkillGaps = lazy(() => import('../pages/private/SkillGaps'))
+const Roadmaps = lazy(() => import('../pages/private/Roadmaps'))
+const RoadmapDetail = lazy(() => import('../pages/private/RoadmapDetail'))
+const AdminInternships = lazy(() => import('../pages/private/AdminInternships'))
+const Community = lazy(() => import('../pages/private/Community'))
+const CommunityDrafts = lazy(() => import('../pages/private/CommunityDrafts'))
+const CommunityPostDetail = lazy(() => import('../pages/private/CommunityPostDetail'))
+const CommunitySaved = lazy(() => import('../pages/private/CommunitySaved'))
+const CommunityUserProfile = lazy(() => import('../pages/private/CommunityUserProfile'))
+const ProfileSettings = lazy(() => import('../pages/private/ProfileSettings'))
+const Onboarding = lazy(() => import('../pages/onboarding/Onboarding'))
+const Login = lazy(() => import('../pages/auth/Login'))
+const Signup = lazy(() => import('../pages/auth/Signup'))
+const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'))
+const ResetPassword = lazy(() => import('../pages/auth/ResetPassword'))
+const Home = lazy(() => import('../pages/public/Home'))
+const PrivateHome = lazy(() => import('../pages/private/Home'))
+
+function PageFallback() {
+  return <div className="flex min-h-screen items-center justify-center bg-canvas text-ink-muted">Loading…</div>
+}
 
 export default function AppRoutes() {
   return (
-    <Routes>
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
       <Route
         path="/"
         element={
@@ -268,6 +275,7 @@ export default function AppRoutes() {
       />
 
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   )
 }
