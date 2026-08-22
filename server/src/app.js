@@ -11,6 +11,7 @@ import adminRoutes from './routes/admin.routes.js'
 import roadmapRoutes from './routes/roadmap.routes.js'
 import whatifRoutes from './routes/whatif.routes.js'
 import communityRoutes from './routes/community.routes.js'
+import authRoutes from './routes/auth.routes.js'
 import { errorHandler, notFound } from './middleware/error.middleware.js'
 
 const app = express()
@@ -37,6 +38,7 @@ app.use('/api/admin', adminRoutes)
 app.use('/api/roadmaps', roadmapRoutes)
 app.use('/api/what-if', whatifRoutes)
 app.use('/api/community', communityRoutes)
+app.use('/api/auth', authRoutes)
 
 app.use(notFound)
 app.use(errorHandler)

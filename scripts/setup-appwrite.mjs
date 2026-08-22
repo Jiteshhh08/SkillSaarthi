@@ -101,6 +101,7 @@ const COLLECTIONS = [
       { key: 'current_streak', type: 'integer', default: 0 },
       { key: 'best_streak', type: 'integer', default: 0 },
       { key: 'last_active_date', type: 'string', size: 20 },
+      { key: 'is_email_verified', type: 'boolean', default: false },
       createdAt,
       updatedAt,
     ],
@@ -436,6 +437,66 @@ const COLLECTIONS = [
     indexes: [
       { key: 'user_post_unique', type: 'unique', attributes: ['user_id', 'post_id'] },
       { key: 'post_idx', type: 'key', attributes: ['post_id'] },
+    ],
+  },
+  {
+    id: 'email_verification_tokens',
+    name: 'Email Verification Tokens',
+    permissions: USER_SCOPE,
+    attributes: [
+      { key: 'user_id', type: 'string', size: 100, required: true },
+      { key: 'email', type: 'string', size: 200, required: true },
+      { key: 'token_hash', type: 'string', size: 200, required: true },
+      { key: 'expires_at', type: 'datetime', required: true },
+      { key: 'used', type: 'boolean', default: false },
+      createdAt,
+    ],
+    indexes: [
+      { key: 'token_hash_idx', type: 'key', attributes: ['token_hash'] },
+      { key: 'user_id_idx', type: 'key', attributes: ['user_id'] },
+    ],
+  },
+  {
+    id: 'password_reset_tokens',
+    name: 'Password Reset Tokens',
+    permissions: USER_SCOPE,
+    attributes: [
+      { key: 'user_id', type: 'string', size: 100, required: true },
+      { key: 'email', type: 'string', size: 200, required: true },
+      { key: 'token_hash', type: 'string', size: 200, required: true },
+      { key: 'expires_at', type: 'datetime', required: true },
+      { key: 'used', type: 'boolean', default: false },
+      createdAt,
+    ],
+    indexes: [
+      { key: 'token_hash_idx', type: 'key', attributes: ['token_hash'] },
+      { key: 'user_id_idx', type: 'key', attributes: ['user_id'] },
+    ],
+  },
+  {
+    id: 'pending_registrations',
+    name: 'Pending Registrations',
+    permissions: [
+      Permission.create(Role.users()),
+      Permission.read(Role.users()),
+      Permission.update(Role.users()),
+      Permission.delete(Role.users()),
+      // Allow server (API key) to read/write even without user session;
+      // public client not needed — pending flow is via backend.
+    ],
+    attributes: [
+      { key: 'email', type: 'string', size: 200, required: true },
+      { key: 'name', type: 'string', size: 200, required: true },
+      { key: 'password_enc', type: 'string', size: 2000, required: true },
+      { key: 'otp_hash', type: 'string', size: 200, required: true },
+      { key: 'expires_at', type: 'datetime', required: true },
+      { key: 'used', type: 'boolean', default: false },
+      { key: 'attempts', type: 'integer', default: 0 },
+      createdAt,
+    ],
+    indexes: [
+      { key: 'email_idx', type: 'key', attributes: ['email'] },
+      { key: 'otp_hash_idx', type: 'key', attributes: ['otp_hash'] },
     ],
   },
 ]
