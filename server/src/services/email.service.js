@@ -63,6 +63,29 @@ function wrapHtml(title, body) {
 }
 
 export async function sendEmail({ to, subject, html, text }) {
+  // 1) Resend HTTPS (preferred on Render - not blocked like SMTP)
+  const resendKey = config.email.resendApiKey
+  const from = config.email.resendFrom || config.email.from
+  if (resendKey) {
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ from, to: Array.isArray(to) ? to : [to], subject, html, text, reply_to: 'skillsaarthi.support@gmail.com' }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.message || `Resend ${res.status}`)
+      console.log(`[email:resend] Sent to ${to} — ${body.id}`)
+      return { mocked: false, messageId: body.id }
+    } catch (err) {
+      console.warn(`[email:resend] Send failed to ${to}:`, err.message)
+      throw err
+    }
+  }
+
   const t = getTransporter()
 
   if (!t) {
@@ -78,7 +101,6 @@ export async function sendEmail({ to, subject, html, text }) {
     ])
   } catch {}
 
-  const from = config.email.from
   try {
     const info = await Promise.race([
       t.sendMail({ from, to, subject, html, text }),
@@ -185,6 +207,6 @@ function escapeHtml(value) {
 }
 
 export function isEmailConfigured() {
-  const { host, user, pass } = config.email
-  return Boolean(host && user && pass)
+  const { host, user, pass, resendApiKey } = config.email
+  return Boolean(resendApiKey || (host && user && pass))
 }

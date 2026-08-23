@@ -26,6 +26,8 @@ export const config = {
     user: process.env.EMAIL_USER || '',
     pass: process.env.EMAIL_PASS || '',
     from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@skillsaarthi.vercel.app',
+    resendApiKey: process.env.RESEND_API_KEY || '',
+    resendFrom: process.env.RESEND_FROM || process.env.EMAIL_FROM || '',
   },
   auth: {
     verificationTokenExpiryMs: Number(process.env.VERIFICATION_TOKEN_EXPIRY_MS) || 24 * 60 * 60 * 1000,
