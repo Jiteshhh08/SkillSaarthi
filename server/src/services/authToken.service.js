@@ -149,7 +149,7 @@ export async function markEmailVerified(userId) {
   await invalidateExistingTokens(COLLECTIONS.emailVerificationTokens, userId)
 }
 
-// ---- Password Reset Tokens ----
+// ---- Password Reset Tokens (link) ----
 export async function createPasswordResetToken(userId, email) {
   await invalidateExistingTokens(COLLECTIONS.passwordResetTokens, userId)
 
@@ -202,6 +202,70 @@ export async function consumePasswordResetToken(token) {
   } catch {
     // ignore
   }
+  return result
+}
+
+// ---- Password Reset OTP (6-digit) ----
+import { generateOtp, hashOtp } from '../utils/crypto.js'
+
+export async function createPasswordResetOtp(userId, email) {
+  await invalidateExistingTokens(COLLECTIONS.passwordResetTokens, userId)
+  const otp = generateOtp(config.auth.otpLength)
+  const otpHash = hashOtp(otp)
+  const expiresAt = expiryDate(config.auth.pendingExpiryMs) // 10 min like signup OTP
+  try {
+    await databases.createDocument(DB(), COLLECTIONS.passwordResetTokens, ID.unique(), {
+      user_id: userId,
+      email,
+      token_hash: otpHash,
+      expires_at: expiresAt,
+      used: false,
+      created_at: new Date().toISOString(),
+    })
+  } catch (err) {
+    if (err.message?.includes('Collection with the requested ID could not be found')) {
+      throw new Error('Password reset collection not found. Run: npm run setup:appwrite to create missing collections.')
+    }
+    throw err
+  }
+  return { otp, expiresAt }
+}
+
+export async function verifyPasswordResetOtp(email, otp) {
+  if (!email || !otp) return { valid: false, reason: 'missing_params' }
+  const normalizedEmail = String(email).trim().toLowerCase()
+  const cleanOtp = String(otp).trim()
+  const otpHash = hashOtp(cleanOtp)
+  let doc
+  try {
+    const res = await databases.listDocuments(DB(), COLLECTIONS.passwordResetTokens, [
+      Query.equal('email', normalizedEmail),
+      Query.equal('token_hash', otpHash),
+      Query.equal('used', false),
+      Query.limit(10),
+    ])
+    // Find non-expired match (hash already filtered)
+    doc = res.documents.find((d) => !isExpired(d.expires_at)) || null
+    if (!doc && res.documents.length > 0) {
+      // Found but expired
+      const expired = res.documents.find((d) => isExpired(d.expires_at))
+      if (expired) return { valid: false, reason: 'expired' }
+    }
+  } catch {
+    return { valid: false, reason: 'lookup_failed' }
+  }
+  if (!doc) return { valid: false, reason: 'invalid_otp' }
+  if (doc.used) return { valid: false, reason: 'already_used' }
+  if (isExpired(doc.expires_at)) return { valid: false, reason: 'expired' }
+  return { valid: true, doc }
+}
+
+export async function consumePasswordResetOtp(email, otp) {
+  const result = await verifyPasswordResetOtp(email, otp)
+  if (!result.valid) return result
+  try {
+    await databases.updateDocument(DB(), COLLECTIONS.passwordResetTokens, result.doc.$id, { used: true })
+  } catch {}
   return result
 }
 
