@@ -97,11 +97,9 @@ router.post(
       password: String(password),
     })
 
-    try {
-      await sendOtpEmail({ to: normalizedEmail, name: String(name).trim(), otp })
-    } catch (err) {
-      console.error('[auth] sendOtpEmail failed:', err.message)
-    }
+    sendOtpEmail({ to: normalizedEmail, name: String(name).trim(), otp }).catch((err) =>
+      console.error('[auth] sendOtpEmail failed:', err.message),
+    )
 
     const response = {
       success: true,
@@ -175,13 +173,10 @@ router.post(
     if (result.decryptFailed) {
       throw new ApiError(500, 'Unable to resend code. Please sign up again.', 'RESEND_FAILED')
     }
-    // result has otp
-    try {
-      const pendingName = result.doc.name || ''
-      await sendOtpEmail({ to: String(email).trim().toLowerCase(), name: pendingName, otp: result.otp })
-    } catch (err) {
-      console.error('[auth] resend sendOtpEmail failed:', err.message)
-    }
+    // result has otp — fire-and-forget
+    sendOtpEmail({ to: String(email).trim().toLowerCase(), name: result.doc.name || '', otp: result.otp }).catch((err) =>
+      console.error('[auth] resend sendOtpEmail failed:', err.message),
+    )
     const response = {
       success: true,
       message: 'Verification code resent. Please check your inbox.',
@@ -378,11 +373,9 @@ router.post(
     }
 
     const { otp, expiresAt } = await createPasswordResetOtp(user.$id, user.email)
-    try {
-      await sendPasswordResetOtpEmail({ to: user.email, name: user.name || '', otp })
-    } catch (err) {
-      console.error('[auth] sendPasswordResetOtpEmail failed:', err.message)
-    }
+    sendPasswordResetOtpEmail({ to: user.email, name: user.name || '', otp }).catch((err) =>
+      console.error('[auth] sendPasswordResetOtpEmail failed:', err.message),
+    )
 
     const response = {
       success: true,

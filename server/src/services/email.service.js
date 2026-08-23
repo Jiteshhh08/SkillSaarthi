@@ -18,6 +18,9 @@ function getTransporter() {
     port,
     secure,
     auth: { user, pass },
+    connectionTimeout: 5000,
+    greetingTimeout: 5000,
+    socketTimeout: 5000,
   })
 
   return transporter
@@ -67,12 +70,26 @@ export async function sendEmail({ to, subject, html, text }) {
     return { mocked: true }
   }
 
-  await ensureVerified()
+  // Don't block signup on SMTP verify — fire-and-forget with 5s cap
+  try {
+    await Promise.race([
+      ensureVerified(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('SMTP verify timeout')), 3000)),
+    ])
+  } catch {}
 
   const from = config.email.from
-  const info = await t.sendMail({ from, to, subject, html, text })
-  console.log(`[email] Sent to ${to} — ${info.messageId}`)
-  return { mocked: false, messageId: info.messageId }
+  try {
+    const info = await Promise.race([
+      t.sendMail({ from, to, subject, html, text }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('SMTP send timeout')), 5000)),
+    ])
+    console.log(`[email] Sent to ${to} — ${info.messageId}`)
+    return { mocked: false, messageId: info.messageId }
+  } catch (err) {
+    console.warn(`[email] Send failed to ${to}:`, err.message)
+    throw err
+  }
 }
 
 export async function sendVerificationEmail({ to, name, token }) {
