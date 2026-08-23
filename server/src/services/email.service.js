@@ -65,7 +65,11 @@ function wrapHtml(title, body) {
 export async function sendEmail({ to, subject, html, text }) {
   // 1) Resend HTTPS (preferred on Render - not blocked like SMTP)
   const resendKey = config.email.resendApiKey
-  const from = config.email.resendFrom || config.email.from
+  let from = config.email.resendFrom || config.email.from
+  // Resend only allows verified domains — gmail.com can never be verified. Force test sender when needed.
+  if (resendKey && from && from.toLowerCase().includes('@gmail.com')) {
+    from = 'onboarding@resend.dev'
+  }
   if (resendKey) {
     try {
       const res = await fetch('https://api.resend.com/emails', {
