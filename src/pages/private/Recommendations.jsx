@@ -4,7 +4,6 @@ import { generateRecommendations, getRecommendations } from '../../services/reco
 import { getCareerSkillGaps } from '../../services/careers'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
-import { useAuth } from '../../hooks/useAuth'
 
 function scoreTone(score) {
   if (score >= 80) return 'bg-success-soft text-success'
