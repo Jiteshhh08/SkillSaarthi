@@ -404,19 +404,7 @@ The profile becomes the primary input to the recommendation system.
 
 Scoring, catalog, and skill-gap are **Node-native** (`server/src/services/scoring.js` + `careerCatalog.js` + `profile.builder.js`); Python is **resume-only** (`GET /health` + `POST /ai/resume/{extract,analyze,match,optimize,generate}`). No ML model required for MVP.
 
-The platform uses a **hybrid weighted scoring** (no separate ML layer for recommendations):
-
-```text
-Career Score =
-    Skill Match       × 0.40   (importance-weighted, proficiency 1–5)
-  + Interest Match    × 0.20
-  + Assessment Match  × 0.15
-  + Education Match   × 0.10
-  + Goal Match        × 0.10
-  + Experience Match  × 0.05
-```
-
-Skill match is importance-weighted per `career_skills.required_level`/`importance`.
+The platform uses a **hybrid weighted scoring** (no separate ML layer for recommendations) — see single source [`docs/main_architecture.md` §23](main_architecture.md) (Recommendation Engine) for the canonical formula (`Skill×0.40 + Interest×0.20 + Assessment×0.15 + Education×0.10 + Goal×0.10 + Experience×0.05`, importance-weighted per `career_skills.required_level`/`importance`, proficiency 1–5, configurable in `scoring.js`).
 
 **Resume LLM only** (Python) — uses LLM for `extract/analyze/match/optimize/generate` with `pypdf` + LaTeX fallback. Scoring/compare/what-if/GitHub never call Python and never need a fallback.
 
@@ -616,13 +604,13 @@ The resume analysis should feed relevant structured information back into the us
 
 # 20. GitHub Profile Analysis (Node-only — updated)
 
-Users can provide a GitHub username — analyzed **Node-only** via `server/src/services/github.service.js` (GitHub API + local heuristics, no Python `POST /ai/github/analyze`; `ai-service/app/github` removed). Rate-limited 30/min (`server/src/app.js`).
+Users can provide a GitHub username — analyzed **Node-only** via `server/src/services/github.service.js` `analyzeGitHub()` (GitHub REST at `:102-109` + GraphQL `contributionsCollection` at `:115-168` with `fetchContributionData` at `:144`, fallback `fallbackDaysFromRepos` at `:264-292` when token-less). Old Python `POST /ai/github/analyze` (`ai-service/app/github/analyzer.py`) deleted; no AI call. Rate-limited 30/min (`server/src/app.js` via `sensitiveLimiter` at `:24-30`, `trust proxy 1` at `:20`).
 
-The system analyzes (13 metrics consumed by `src/components/github/ContributionGrid.jsx` — warm bg with contrast, tooltip `"22 Sept 2026 — N contributions"`):
+The system analyzes 13 metrics into `src/components/github/ContributionGrid.jsx` (warm `bg-warm` outer at `:78` + `bg-white` inner at `:95`, 5 intensity levels at `:4-20`, `w-3` cells at `:97,104,118`, `ml-44px` alignment at `:80`, tooltip `"22 Sept 2026 — N contributions"` via `formatTooltip` at `:22-31` with `Sept` spelling):
 
-* Public/private repos (private count = only private repos), followers, PRs/issues/reviews
-* Total contributions, current/longest streak, avg daily, most active day/month
-* Top languages via `languageShare` (includes forks), project activity/topics/diversity
+* Public/private repos — **private count fixed** to only `repositories(privacy: PRIVATE) { totalCount }` at `github.service.js` → `privateCount` at `:454` ( `restrictedContributionsCount` at `:139` is private commits, not repos, and is no longer counted), followers (`:512`), PRs (`:514`), issues (`:515`), reviews (`:516`)
+* Total contributions (`:499`), current/longest streak (`computeStreaks` at `:198-219`), avg daily (`computeTotals` at `:221-225`), most active day/month (`:227-262`)
+* Top languages via `languageShare` at `:306-325` (**now includes forks** — iterates all repos at `:310`, no `!fork` filter; share by `repo.size` at `:313-319`) + project activity/topics/diversity via `buildSkillSignals` at `:376-403`
 
 Potential output:
 

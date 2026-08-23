@@ -162,40 +162,93 @@ The frontend lives at the repo root. `server/` and `ai-service/` are separate ap
 
 # 5. Environment Variables
 
-Copy `.env.sample` to `.env` and fill values. Never commit real secrets.
+Copy `.env.sample` to `.env` and fill values. Never commit real secrets — `.env` files are gitignored; production values live only in Vercel/Render dashboards.
 
-## Frontend (repo root `.env`)
+## Frontend — repo root `.env` (Vite, build-time, client-safe)
 
-```env
-VITE_APPWRITE_ENDPOINT=
-VITE_APPWRITE_PROJECT_ID=
-VITE_APPWRITE_DATABASE_ID=
-VITE_APPWRITE_RESUME_BUCKET_ID=
-# Free plan allows one bucket — reuse the resume bucket (which also accepts images).
-VITE_APPWRITE_AVATAR_BUCKET_ID=resumes
-VITE_API_BASE_URL=
-```
-
-Only client-safe values use the `VITE_` prefix.
-
-## Node Backend (`server/.env`)
+`VITE_`-prefixed vars are inlined by Vite at **build time** (`import.meta.env` via `vite.config.js`). Changing them requires a rebuild/redeploy on Vercel. Only public IDs belong here.
 
 ```env
-PORT=5000
-APPWRITE_ENDPOINT=
-APPWRITE_PROJECT_ID=
-APPWRITE_API_KEY=
-APPWRITE_DATABASE_ID=
-AI_SERVICE_URL=http://localhost:8000
-GITHUB_TOKEN=
-LLM_API_KEY=
+VITE_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1  # Appwrite endpoint (cloud or self-hosted)
+VITE_APPWRITE_PROJECT_ID=                            # Project ID (Appwrite Console → Settings → General)
+VITE_APPWRITE_DATABASE_ID=                           # Database ID (created by npm run setup:appwrite)
+VITE_APPWRITE_RESUME_BUCKET_ID=resumes               # Storage bucket — resumes + avatars on free plan
+VITE_APPWRITE_AVATAR_BUCKET_ID=resumes               # Free plan: reuse resumes (allows png/jpg/webp/gif — see setup-appwrite.mjs)
+                                                     # Paid plan: set to avatars and re-run setup:appwrite
+VITE_API_BASE_URL=http://localhost:5000              # Node backend URL — src/services/api.js (all src/services/*.js use it)
+                                                     # Local: http://localhost:5000 · Prod: https://YOUR-RENDER-URL.onrender.com
 ```
 
-## Python AI Service (`ai-service/.env`)
+Free plan allows one bucket — avatars share `resumes`. After changing `VITE_API_BASE_URL` on Vercel → **Redeploy** (not just save) and hard-refresh.
+
+## Node Backend — `server/.env` (Express, server-only)
+
+Loaded at `server/src/config/environment.js` (`dotenv.config()`). Never `VITE_`.
+
+```env
+PORT=5000                                              # Express port (Render injects $PORT)
+APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1         # Server SDK — server/src/config/appwrite.js
+APPWRITE_PROJECT_ID=                                   # Must match VITE_APPWRITE_PROJECT_ID
+APPWRITE_API_KEY=                                      # Needs databases.* + storage.* + users.read
+APPWRITE_DATABASE_ID=                                  # Must match VITE_APPWRITE_DATABASE_ID
+APPWRITE_RESUME_BUCKET_ID=resumes                      # Must match VITE_APPWRITE_RESUME_BUCKET_ID
+AI_SERVICE_URL=http://localhost:8000                   # Python AI URL — server/src/services/ai.service.js proxy
+                                                       # Local: http://localhost:8000 · Prod: https://YOUR-AI-RENDER-URL.onrender.com
+GITHUB_TOKEN=                                          # Optional PAT — higher limit + GraphQL contributionsCollection + private count (server/src/services/github.service.js,153)
+ADMIN_EMAILS=                                          # Comma-separated — server/src/middleware/auth.middleware.js requireAdmin (empty = admin API disabled, admins bypass onboarding)
+FRONTEND_URL=http://localhost:5173                     # For verify/reset links — server/src/services/email.service.js,167
+RESEND_API_KEY=                                        # Resend HTTPS key (preferred on Render) — email.service.js (fetch https://api.resend.com/emails)
+RESEND_FROM=onboarding@resend.dev                      # Free tier: ONLY onboarding@resend.dev or verified domain; auto-corrects gmail→onboarding@resend.dev at email.service.js; reply_to skillsaarthi.support@gmail.com 
+EMAIL_HOST=smtp.gmail.com                              # SMTP fallback (local dev, Gmail App Password) — nodemailer at email.service.js
+EMAIL_PORT=465                                         # 465 secure true / 587 secure false
+EMAIL_SECURE=true                                      # true for 465
+EMAIL_USER=skillsaarthi.support@gmail.com              # SMTP user
+EMAIL_PASS=                                            # Gmail 16-char App Password
+EMAIL_FROM=skillsaarthi <skillsaarthi.support@gmail.com> # SMTP From header
+LLM_API_KEY=                                           # Legacy alias for AI_KEY
+
+# Auth tuning (optional — defaults in server/src/config/environment.js):
+# PENDING_EXPIRY_MS=600000  # 10 min OTP window
+# OTP_LENGTH=6
+# MAX_OTP_ATTEMPTS=5
+# RESEND_COOLDOWN_MS=60000  # 60s resend throttle
+# VERIFICATION_TOKEN_EXPIRY_MS=86400000 # 24h
+# RESET_TOKEN_EXPIRY_MS=3600000 # 1h
+# PENDING_ENCRYPTION_KEY=  # 32-byte hex
+```
+
+**Email OFF for now:** `server/src/services/email.service.js` `isEmailConfigured()` needs `RESEND_API_KEY` or `(HOST+USER+PASS)`. When false, signup returns `_dev_otp` in JSON (mock at `:97`); banner `src/components/common/VerificationBanner.jsx` and guards `src/components/common/RouteGuards.jsx` are gated by `EMAIL_VERIFICATION_ENABLED=false` (never shown/block). Resend HTTPS ready (`fetch https://api.resend.com/emails` at `:75`) — Render free tier blocks `smtp.gmail.com:465` (ENETUNREACH), so use Resend.
+
+## Python AI Service — `ai-service/.env` (FastAPI, server-only)
 
 ```env
 PORT=8000
-LLM_API_KEY=
+AI_BASE_URL=https://ai.tcetcercd.in/v1                 # Gateway (OpenAI-compatible) — ai-service/app/ai/client.py
+AI_MODEL=Qwen3.6-35B-A3B                                # Model — pipeline.py via ai/client.py
+AI_KEY=                                              # Gateway key (preferred)
+LLM_API_KEY=                                           # Legacy alias — alias for AI_KEY
+# Optional: AI_TIMEOUT_SECONDS=120, AI_MAX_RETRIES=2, LATEX_COMPILE_TIMEOUT=300
+```
+
+Resume-only: `ai-service/app/main.py` (`GET /health` + 5 `POST /ai/resume/{extract,analyze,match,optimize,generate}` at `main.py`). Scoring etc. are Node-native (`server/src/services/scoring.js`, `careerCatalog.js`, `github.service.js`, `profile.builder.js`).
+
+## Scripts — `scripts/.env.setup` (setup/seed/importer)
+
+```env
+APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=
+APPWRITE_API_KEY=                                      # Needs databases.* + storage.* + users.read
+APPWRITE_DATABASE_ID=
+APPWRITE_DATABASE_NAME=Skill_Guide
+APPWRITE_BUCKET_ID=resumes
+APPWRITE_BUCKET_NAME=Resumes
+APPWRITE_AVATAR_BUCKET_ID=resumes
+APPWRITE_AVATAR_BUCKET_NAME=Avatars
+# Internship importer (scripts/import-internships.mjs):
+SOURCE=file             # file (JSON) or remotive (API)
+FEED_FILE=              # JSON feed path (default scripts/feeds/internships.json)
+INTERNSHIP_TTL_DAYS=30  # TTL before auto-expiry
+IMPORT_MAX=50           # Max per run
 ```
 
 ---
@@ -441,7 +494,7 @@ Frontend runs at `http://localhost:5173` (Vite default).
 Run the AI service tests (from `ai-service/`):
 
 ```text
-cd ai-service && python -m pytest     # 44 tests: scoring, skill-gaps, resume, comparison, what-if
+cd ai-service && python -m pytest     # resume-only: health + resume pipeline/schema/scoring/ingest/latex + AI client (scoring/compare/what-if/GitHub are Node-native; no Python tests)
 ```
 
 ---
@@ -453,7 +506,7 @@ cd ai-service && python -m pytest     # 44 tests: scoring, skill-gaps, resume, c
 | 1 — Foundation | Repo setup, React, Appwrite Auth, Appwrite Databases, Node backend |
 | 2 — Profile | Education selection, onboarding, skills, interests, preferences, assessment |
 | 3 — Career Engine (complete) | Career/skill datasets, career-skill mapping, recommendation engine, skill-gap, explanations |
-| 4 — AI (complete) | Python/FastAPI skill matching, ranking, skill-gap (pytest suite + Node fallback scorer) |
+| 4 — AI (complete, resume-only) | Python/FastAPI resume-only (5 endpoints: /ai/resume/* + /health; LLM gateway) — scoring/catalog/GitHub/what-if/comparison are Node-native (`scoring.js`, `careerCatalog.js`, `github.service.js`, `profile.builder.js`); pytest resume-only; resume fallback `source:"fallback"` only |
 | 5 — Roadmap (complete) | Roadmap generator from skill gaps, tasks, progress tracking, dashboard wiring |
 | 6 — Advanced | Resume analysis (implemented), GitHub analysis (implemented), career comparison (implemented), what-if simulator (implemented), AI assistant |
 | 7 — Integrations | Courses, internships (implemented), notifications (implemented) |
@@ -508,3 +561,29 @@ Every feature must strengthen the central product loop. Do not build isolated fe
 - All user data persists in Appwrite Cloud — the stateless Node/Python services can be redeployed freely.
 - Render free tier services sleep after ~15 minutes of inactivity — keep them awake with two
   cron-job.org cron jobs (every 5 minutes) hitting the backend and AI service URLs.
+
+## Vercel env (frontend build-time)
+
+- Set in **Vercel → Project → Settings → Environment Variables** (all three envs), then **Redeploy** — `VITE_*` is baked at `npm run build` (`vite.config.js`), saving alone does nothing. `src/services/api.js` reads `VITE_API_BASE_URL`.
+- **Required:** `VITE_APPWRITE_ENDPOINT`, `VITE_APPWRITE_PROJECT_ID`, `VITE_APPWRITE_DATABASE_ID`, `VITE_APPWRITE_RESUME_BUCKET_ID`, `VITE_APPWRITE_AVATAR_BUCKET_ID`, `VITE_API_BASE_URL=https://YOUR-BACKEND.onrender.com` (NOT localhost). Leftover `localhost:5000` on Vercel → every `/api/*` fails with CORS/network.
+
+## Render env (backend)
+
+- Set in **Render → `skillsaarthi-node` → Environment** → Save → **Manual Deploy → Deploy latest commit**. Saving alone does not restart.
+- **Required:** `APPWRITE_ENDPOINT/PROJECT_ID/API_KEY/DATABASE_ID/RESUME_BUCKET_ID`, `FRONTEND_URL=https://YOUR-VERCEL-URL.vercel.app` (NOT localhost — used at `server/src/services/email.service.js,167`), `GITHUB_TOKEN` (optional, raises GitHub limit, enables GraphQL `contributionsCollection` at `server/src/services/github.service.js` + private count at `:138`), `AI_SERVICE_URL`, `ADMIN_EMAILS`, `RESEND_API_KEY` + `RESEND_FROM` (preferred over SMTP).
+- **Email:** Render free tier blocks `smtp.gmail.com:465` (ENETUNREACH). Use **Resend HTTPS** (`RESEND_API_KEY` + `RESEND_FROM=onboarding@resend.dev` free tier; auto-corrects `@gmail.com` → `onboarding@resend.dev` at `email.service.js`, `reply_to skillsaarthi.support@gmail.com` at `:81`, `fetch https://api.resend.com/emails` at `:75`). Check **Render → Logs** for `[email:resend] Sent` vs `ENETUNREACH`.
+- **Rate-limit & proxy:** `server/src/app.js` `trust proxy 1` + `app.js` limiter `30/min` on `/api/github|resume|admin`. Health checks `GET /` + `GET /health` at `app.js` are not rate-limited — point cron-job.org at `/health` (`server/src/app.js`, `ai-service/app/main.py`).
+- **Dev OTP when email OFF:** `email.service.js` `isEmailConfigured()` false → signup response contains `_dev_otp` field (mock at `:97`). Find it in DevTools → Network → signup JSON; verification banner (`src/components/common/VerificationBanner.jsx`) and guards (`src/components/common/RouteGuards.jsx`) are gated `EMAIL_VERIFICATION_ENABLED=false` so unverified users are not blocked.
+
+## Steps to redeploy & verify
+
+1. **Vercel:** Settings → Environment Variables → set `VITE_*` + `VITE_API_BASE_URL=https://YOUR-RENDER-URL.onrender.com` → Deployments → Redeploy → hard-refresh.
+2. **Render:** Environment → set `APPWRITE_*`, `FRONTEND_URL=https://YOUR-VERCEL-URL.vercel.app`, `RESEND_API_KEY` + `RESEND_FROM=onboarding@resend.dev` (or verified domain), `GITHUB_TOKEN` etc. → Manual Deploy → check Logs for `[email:resend] Sent`.
+3. **Health:** open `https://YOUR-BACKEND.onrender.com/health` and `https://YOUR-AI.onrender.com/health` — expect `{"status":"ok",...}`.
+4. **Auth check:** sign up → if email OFF, Network → signup response `_dev_otp` → `/verify-otp` banner; if ON, check inbox (Resend free tier only delivers to your own account email unless domain verified).
+
+## Today’s changes (26 Sept 2026) — rule reminder
+
+- GitHub is **Node-only** (`server/src/services/github.service.js` + `src/components/github/ContributionGrid.jsx`); no Python `POST /ai/github/analyze`.
+- TopBar 3 hubs at `src/components/layout/TopBar.jsx`, Admin in `ProfileMenu` at `:132-142`, hamburger fixed for iPhone (<460px: `gap-2 px-3`, logo `h-10 w-28 -ml-1`, `lg:hidden` not `min-[1070px]:hidden`) at `:342-343,347,400`, Homes merged (`src/pages/public/Home.jsx` + re-export `private/Home.jsx`), `CommunityFab` kept in `src/App.jsx`.
+- Onboarding `6→4` at `src/pages/onboarding/Onboarding.jsx` with tabs/sub-step, no silent proficiency-2; scoring moved to Node (`server/src/services/scoring.js` + `careerCatalog.js` + `profile.builder.js`); `ai-service/app/main.py` trimmed to `GET /health` + 5 resume endpoints; `app.set('trust proxy',1)` + 30/min limiter at `server/src/app.js`.

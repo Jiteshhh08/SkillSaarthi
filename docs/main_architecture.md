@@ -92,117 +92,25 @@ The core architectural principle is:
 
 ---
 
-# 4. Core Architectural Principle
+# 4. Core Architectural Principle (summary)
 
-The system must maintain strict separation between:
-
-```text
-Presentation & Client State
-        ↓
-React (repo root)
-
-Infrastructure + Primary Data
-        ↓
-Appwrite (Auth / Databases / Storage / Messaging / Realtime)
-
-Application Logic & Orchestration
-        ↓
-Node.js + Express (server/)
-
-Artificial Intelligence
-        ↓
-Python + FastAPI (ai-service/)
-```
-
-- The frontend reads/writes data through Appwrite and calls the Node backend only for business logic.
-- Business-critical logic must not live in the frontend.
-- The Python service must not handle authentication.
-- The AI service must not directly modify application data unless it goes through a controlled backend flow.
+> Same layering as §2: Presentation (React) → Infrastructure + Primary Data (Appwrite Auth/DB/Storage/Messaging/Realtime) → Application Logic & Orchestration (Node/Express,incl. scoring/catalog/GitHub) → AI (Python/FastAPI resume-only). Frontend reads Appwrite directly for auth/DB/storage/realtime and calls Node only for business logic; Python never handles auth.
+>
+> **Single source:** diagram + responsibilities → §2 High-Level Architecture and §3 Responsibility Matrix.
 
 ---
 
-# 5. Frontend Architecture
+# 5. Frontend Architecture (summary)
 
-## 5.1 Technology
+> Stack: React + Tailwind + React Router + Axios (`api.js` JWT cached 60s) + Appwrite Web SDK + lazy routes (`AppRoutes.jsx`, 662k→409k). Responsibilities: UI/nav (TopBar 3 hubs, Homes merged, `CommunityFab` kept), forms/validation/Dashboard (8 cards, 800ms retry), Onboarding 4 steps (Skills+Interests tabs, Goals+Assessment sub-step, no silent proficiency-2), Recommendations (auto-generate + GapDrawer), GitHub `ContributionGrid` (13 metrics), notifications (Realtime + 45s polling), streak (`touchStreak`).
+>
+> **Single source:** layout/tokens → [`docs/design.md`](design.md); structure → §6 summary; auth → §9; data → §17.
 
-```text
-React
-Tailwind CSS
-React Router
-Axios (Node backend calls)
-Appwrite Web SDK (client-safe)
-```
+# 6. Frontend Structure (summary)
 
-## 5.2 Responsibilities
-
-The frontend is responsible for:
-
-- Rendering UI
-- Navigation (TopBar 3 hubs: **Discover / Build / Opportunities**; `CommunityFab` kept)
-- Homes merged: single `Home` (public + private merged)
-- Forms / Client-side validation / Dashboard (8 cards — reverted per user request; 800 ms retry on transient fetch failure)
-- Onboarding 6→4 steps: **Skills+Interests tabs**, **Goals+Assessment sub-step**, removed silent auto-add at proficiency 2
-- Recommendations: auto-generate on onboarding complete + inline `GapDrawer` for skill gaps
-- GitHub: `ContributionGrid` (`src/components/github/ContributionGrid.jsx`) — 13 metrics, warm background with contrast, tooltip `"22 Sept — N contributions"`
-- User interaction / Appwrite client integration (auth, DB reads/writes, file upload, realtime)
-- API communication with Node backend (Axios via `src/services/api.js` — **JWT cached until 60 s before expiry**, avoids per-request `createJWT`)
-- Displaying recommendations (now Node-native)
-- Roadmap visualization / Progress tracking
-- In-app notification inbox — Realtime via `appwriteClient.subscribe` + 45 s polling fallback (`src/components/layout/NotificationBell.jsx`)
-- Daily-activity streak tracking (`touchStreak`) and display
-
----
-
-# 6. Frontend Structure
-
-```text
-skillsaarthi/                      # repo root = React frontend
-│
-├── public/
-│
-├── src/
-│   │
-│   ├── assets/
-│   │
-│   ├── components/
-│   │   ├── common/           # Icon.jsx, DecorativeShapes.jsx, CommunityFab.jsx (kept)
-│   │   ├── auth/
-│   │   ├── profile/
-│   │   ├── career/           # GapDrawer.jsx (inline gaps on Recommendations)
-│   │   ├── roadmap/
-│   │   ├── resume/
-│   │   ├── github/           # ContributionGrid.jsx (13 metrics, warm bg, tooltip)
-│   │   ├── courses/
-│   │   ├── internships/
-│   │   ├── layout/           # TopBar.jsx (3 hubs: Discover/Build/Opportunities), NotificationBell.jsx (Realtime + polling)
-│   │   └── assistant/
-│   │
-│   ├── pages/
-│   │   ├── public/           # Home.jsx (merged public+private)
-│   │   ├── auth/
-│   │   └── private/          # Dashboard.jsx (8 cards + 800ms retry), Onboarding.jsx (4 steps), Recommendations.jsx (auto-generate)
-│   │
-│   ├── services/
-│   │   ├── api.js            # Axios → Node (JWT cached until 60s before exp)
-│   │   ├── appwrite.js       # Appwrite client + database helpers + appwriteClient for Realtime
-│   │   ├── auth.js           # Auth helpers (login/signup/session + avatar)
-│   │   └── notifications.js  # getNotifications / markRead (client SDK)
-│   │
-│   ├── hooks/
-│   ├── context/
-│   ├── utils/
-│   ├── routes/
-│   │   └── AppRoutes.jsx     # lazy-loaded routes (React.lazy + Suspense)
-│   │
-│   ├── App.jsx
-│   ├── main.jsx
-│   └── index.css
-│
-├── .env
-├── .env.sample
-├── vite.config.js
-└── package.json
-```
+> `src/` at repo root: `assets/`, `components/` (`common/Icon/DecorativeShapes/CommunityFab`, `layout/TopBar/NotificationBell`, `github/ContributionGrid`, `career/GapDrawer`, etc.), `pages/` (`public/Home` merged, `auth/`, `private/Dashboard/Onboarding/Recommendations/...`), `services/` (`api`, `appwrite`, `auth`, `profile`, `skills`, `interests`, `assessment`, `careers`, `recommendations`, `roadmaps`, `streak`, `notifications`, `github`, `comparison`, `whatif`), `hooks/context/utils/routes/AppRoutes` (lazy), `App.jsx`/`main.jsx`/`index.css`; root `.env`, `vite.config.js`, `package.json`.
+>
+> **Single source:** detailed tree with canonical file references → README Project Structure summary and [`PROJECT_AUDIT.md`](../PROJECT_AUDIT.md); tokens → [`docs/design.md`](design.md).
 
 ---
 
@@ -226,41 +134,11 @@ Appwrite Functions are optional and may be used later for small server-side task
 
 ---
 
-# 8. Appwrite Authentication
+# 8. Appwrite Authentication (summary)
 
-Appwrite handles:
-
-- User registration
-- Login
-- Logout
-- Session management
-- Password recovery
-- Email verification
-- OAuth if implemented
-
-## Authentication Flow
-
-```text
-User
- │
- ▼
-React
- │
- │ Appwrite Auth SDK
- ▼
-Appwrite Authentication
- │
- ├── Validate credentials
- ├── Create session
- └── Return authenticated session
- │
- ▼
-React
- │
- │ Authenticated API Request (Appwrite session token)
- ▼
-Node.js Backend
-```
+> Appwrite handles registration, login/logout, session, password recovery, email verification, OAuth. Client uses Appwrite Auth SDK; backend verifies JWT via server SDK. Permissions are per-collection (user-scoped vs catalog read-only).
+>
+> **Single source:** sequence + middleware → §9 Authentication Architecture; identity mapping → §10 User Identity Mapping.
 
 ---
 
@@ -328,246 +206,49 @@ updated_at
 
 ---
 
-# 11. Appwrite Storage
+# 11. Appwrite Storage (summary)
 
-Appwrite Storage is responsible for files.
-
-Primary use case:
-
-```text
-Resume Upload
-Profile pictures (avatars)
-```
-
-Two storage buckets are provisioned by `scripts/setup-appwrite.mjs`:
-
-| Bucket | ID (env) | Allowed extensions | Use |
-|---|---|---|---|
-| `resumes` | `VITE_APPWRITE_RESUME_BUCKET_ID` | `pdf, docx, doc, png, jpg, jpeg, webp, gif` | Resume upload |
-| `avatars` | `VITE_APPWRITE_AVATAR_BUCKET_ID` | `png, jpg, jpeg, webp, gif` | Profile pictures |
-
-> The Appwrite **free plan allows a single storage bucket**, so by default avatars
-> reuse the `resumes` bucket (`VITE_APPWRITE_AVATAR_BUCKET_ID=resumes`); the setup
-> script broadens `resumes` to also accept image files. If the plan is upgraded,
-> set `APPWRITE_AVATAR_BUCKET_ID` (scripts) / `VITE_APPWRITE_AVATAR_BUCKET_ID`
-> (frontend) to a dedicated bucket id and re-run `setup:appwrite` to provision it.
-
-Avatar files are stored client-side in the upload bucket and referenced from the
-Appwrite **account prefs** (`account.updatePrefs({ avatar_file_id })`) rather than a DB
-attribute, so no schema migration is needed. `loadAvatarUrl(user)` in
-`src/services/auth.js` streams the original bytes via `storage.getFileView` through the
-SDK client and returns a `blob:` URL (the free plan blocks `getFilePreview` image
-transformations, so the avatar is shown at its uploaded size).
-
-## Profile update flow
-
-```text
-User (TopBar avatar → /settings)
-  ▼
-React (ProfileSettings.jsx)
-  │ account.updateName(name)          ──► Appwrite Auth (account name)
-  │ storage.createFile(resumes, file) ──► Appwrite Storage (image)
-  │ account.updatePrefs({ avatar_file_id })
-  ▼
-refreshUser() → TopBar avatar/name update immediately
-```
-
-## Resume Upload Flow
-
-```text
-User
- │
- ▼
-React
- │
- │ Upload File
- ▼
-Appwrite Storage
- │
- │ File ID
- ▼
-Node Backend
- │
- ▼
-Python AI Service
- │
- ▼
-Resume Analysis
-```
-
-The database stores metadata rather than the actual resume binary.
-
-Example (`resume_analyses` collection):
-
-```text
-resume_analyses
------------------------------
-$id
-user_id
-appwrite_file_id
-file_name
-analysis_result
-created_at
-```
+> Two buckets provisioned by `scripts/setup-appwrite.mjs`: `resumes` (`VITE_APPWRITE_RESUME_BUCKET_ID`, `pdf/docx/doc/png/jpg/jpeg/webp/gif`, resume upload) and `avatars` (`VITE_APPWRITE_AVATAR_BUCKET_ID`, `png/jpg/jpeg/webp/gif`, profile pictures). Free plan allows one bucket, so avatars reuse `resumes` (broadened to accept images); paid plan sets `avatars` and re-runs `setup:appwrite`. Avatars stored via `storage.createFile` + `account.updatePrefs({ avatar_file_id })` and shown via `storage.getFileView` blob URL (`getFilePreview` blocked on free plan). Profile flow: `TopBar avatar → /settings → account.updateName` + `storage.createFile` + `updatePrefs` → `refreshUser()`.
+>
+> **Flows:** Resume: `User → React (Upload) → Appwrite Storage (File ID) → Node Backend → Python AI → Resume Analysis (metadata in `resume_analyses`)`. Bucket/collection spec → §17 and [`docs/rules.md` §5](rules.md).
 
 ---
 
-# 12. Appwrite Messaging
+# 12. Appwrite Messaging (summary)
 
-Appwrite Messaging can be used for:
-
-- Roadmap reminders
-- Personalized notifications
-- Course notifications
-- Internship alerts
-- Progress reminders
-
-Flow:
-
-```text
-Roadmap Task
-     │
-     ▼
-Node Backend
-     │
-     ▼
-Appwrite Messaging
-     │
-     ▼
-User
-```
-
-For MVP simplicity, in-app notifications can be stored in a `notifications` collection in Appwrite Databases and displayed through the dashboard. Appwrite Messaging is used when push/email/SMS delivery is needed.
+> Used for roadmap reminders, personalized/course/internship alerts, progress reminders. In-app MVP uses the `notifications` collection (per-user permissions) shown via dashboard; Appwrite Messaging is for push/email/SMS when needed. Node `notification.service.js` triggers on recommendation/roadmap; admin broadcasts via `POST /api/admin/notifications` (needs `users.read`).
+>
+> **Single source:** API + UI → §32 API Architecture (Notifications) and [`docs/rules.md` §7](rules.md) (Notifications & Streaks); realtime → §13.
 
 ---
 
-# 13. Appwrite Realtime
+# 13. Appwrite Realtime (summary)
 
-Realtime is optional for the MVP.
-
-It can be used for:
-
-- Live roadmap progress updates
-- Notification updates
-- Dashboard updates
-- AI processing status
-
-Example:
-
-```text
-User completes task
-        ↓
-Node Backend
-        ↓
-Appwrite Databases updated
-        ↓
-Realtime Event
-        ↓
-React Dashboard
-        ↓
-UI updates
-```
+> Optional for live roadmap progress, notification updates, dashboard/AI status: `Node → Appwrite DB update → Realtime Event → React`. MVP uses Realtime for `NotificationBell` (`appwriteClient.subscribe` to `notifications` + 45s polling fallback).
+>
+> **Single source:** notifications → §32 and [`docs/rules.md` §7](rules.md).
 
 ---
 
-# 14. Node.js Backend Architecture
+# 14. Node.js Backend Architecture (summary)
 
-Node.js is the application server for business logic and orchestration (now also **scoring, career catalog, GitHub analysis, profile building** — not a thin proxy). It is **not** the primary data store.
+> Application server for business logic + orchestration (now also scoring/catalog/GitHub/profile via `scoring.js`, `careerCatalog.js`, `profile.builder.js`, `github.service.js`), not primary store. Handles REST business APIs, authz (ownership checks `req.user.$id == doc.user_id`), validation, rate-limit 30/min on `/api/github|resume|admin` (`express-rate-limit`, `trust proxy 1`), Appwrite server SDK (bulk `Promise.all`, in-memory returns, batch reorder), AI resume proxy (`ai.service.js` → `POST /ai/resume/*` with 120s timeout + fallback), external APIs (GitHub REST+GraphQL, courses, internships feed), recommendation/roadmap orchestration, notification triggers (`notify`/`notifyAllUsers`, Realtime + polling), streak `touchStreak`.
+>
+> **Single source:** layering → §2–§3; env → §36 summary; failure handling → §42; security → §39–§40.
 
-Responsibilities:
+# 15. Backend Structure (summary)
 
-- REST API (business-logic endpoints)
-- Business logic + **scoring & skill-gap** (`scoring.js`), **career catalog** (`careerCatalog.js`), **profile building** (`profile.builder.js`), **GitHub analysis** (`github.service.js`)
-- Authorization checks on server-only operations
-- Validation + **rate limiting** (`express-rate-limit` 30/min on `/api/github|resume|admin` in `app.js`)
-- Appwrite server-side integration (Admin SDK)
-- AI service communication (**resume LLM only** — `ai.service.js` proxies to `/ai/resume/*`)
-- External API integration (GitHub API, courses, internships)
-- Recommendation / Roadmap orchestration
-- Notification triggering (Realtime + polling fallback)
+> `server/src/`: `config/` (`appwrite.js`, `environment.js`), `routes/` (profile, career, recommendation, roadmap, resume, github, course, internship, admin, assistant, community), `controllers/` (career/recommendation/roadmap thin), `services/` (`scoring.js` + `careerCatalog.js` + `profile.builder.js` + `github.service.js` Node-native, `recommendation`/`career`/`appwrite`/`ai` resume-only/`roadmap`/`notification`/...), `middleware/` (`auth`, `validation`, `error`, `rateLimit` 30/min), `utils/`, `app.js` (mounts limiters on `/api/github|resume|admin`).
+>
+> **Single source:** design tokens → [`docs/design.md`](design.md); repo layout → §43 summary.
 
 ---
 
-# 15. Backend Structure
+# 16. Backend Request Lifecycle (summary)
 
-```text
-server/
-│
-├── src/
-│   │
-│   ├── config/
-│   │   ├── appwrite.js
-│   │   └── environment.js
-│   │
-│   ├── routes/
-│   │   ├── profile.routes.js
-│   │   ├── career.routes.js
-│   │   ├── recommendation.routes.js
-│   │   ├── roadmap.routes.js
-│   │   ├── resume.routes.js
-│   │   ├── github.routes.js
-│   │   ├── course.routes.js
-│   │   ├── internship.routes.js
-│   │   ├── admin.routes.js
-│   │   └── assistant.routes.js
-│   │
-│   ├── controllers/
-│   │   ├── career.controller.js
-│   │   ├── recommendation.controller.js
-│   │   └── roadmap.controller.js
-│   │
-│   ├── services/
-│   │   ├── scoring.js              # NEW — weighted scoring + skill-gap + compare + what-if (moved from Python)
-│   │   ├── careerCatalog.js        # NEW — static careers catalog (moved from ai-service/careers.py)
-│   │   ├── profile.builder.js      # NEW — builds normalized profile for scoring
-│   │   ├── github.service.js       # Node-native GitHub analyzer (no Python, 13 metrics)
-│   │   ├── recommendation.service.js # orchestrates scoring.js + Appwrite
-│   │   ├── career.service.js
-│   │   ├── appwrite.service.js
-│   │   ├── ai.service.js           # resume-only LLM proxy (POST /ai/resume/* + fallback)
-│   │   ├── roadmap.service.js
-│   │   ├── notification.service.js
-│   │   └── ...
-│   │
-│   ├── middleware/
-│   │   ├── auth.middleware.js
-│   │   ├── validation.middleware.js
-│   │   ├── error.middleware.js
-│   │   └── rateLimit.middleware.js  # express-rate-limit 30/min
-│   │
-│   ├── utils/
-│   │
-│   └── app.js                      # mounts routes + rate limiters on /api/github|resume|admin
-│
-├── .env
-└── package.json
-```
-
----
-
-# 16. Backend Request Lifecycle
-
-```text
-HTTP Request
-      ↓
-Express Router
-      ↓
-Authentication Middleware (verify Appwrite JWT)
-      ↓
-Validation Middleware
-      ↓
-Controller
-      ↓
-Service Layer
-      ↓
-  ┌────┼─────────────┐
-  ▼    ▼             ▼
-Appwrite   External   AI Service
-DB/Storage  APIs      (Python/FastAPI)
-      │
-      ▼
-Response
-```
+> `HTTP Request → Express Router → Auth Middleware (verify Appwrite JWT) → Validation → Controller → Service (Appwrite / External APIs / Python resume-only) → Response`. Scoring/GitHub/what-if paths are Node-in-process (`scoring.js` etc.) with no Python call; only resume proxies to `POST /ai/resume/*` with fallback.
+>
+> **Single source:** layering → §2–§3; auth flow → §9 Authentication Architecture; resilience → §42 AI Failure Handling.
 
 ---
 
@@ -877,147 +558,29 @@ erDiagram
 
 ---
 
-# 19. Python AI Service
+# 19. Python AI Service (summary)
 
-The AI service is an independent Python application — **resume-LLM only**. Scoring, catalog, GitHub and what-if/comparison now live in Node (`server/src/services/scoring.js`, `careerCatalog.js`, `profile.builder.js`, `github.service.js`).
+> Independent Python app, **resume-LLM only** (scoring/catalog/GitHub/what-if now Node). Stack: Python + FastAPI + pypdf + LLM (OpenAI-compatible) + optional LaTeX (`tectonic`/`pdflatex`). **6 endpoints:** `GET /health` + `POST /ai/resume/{extract,analyze,match,optimize,generate}` (moved to Node: skill normalization, career ranking, skill-gap, GitHub, comparison, what-if, catalog, legacy rule-based).
+>
+> **Single source:** resume flows → §27 summary and §42; scoring → §23.
 
-Technology:
+# 20. AI Service Architecture (summary)
 
-```text
-Python
-FastAPI
-pypdf / pdf extraction
-LLM provider (OpenAI-compatible)
-LaTeX compiler (optional — tectonic/pdflatex for PDF generation)
-```
+> `ai-service/app/`: `main.py` (FastAPI), `ai/client.py` (LLM gateway), `resume/` (`ingest.py` + `densify_text`, `pipeline.py` LLM, `prompts.py` versioned, `schema.py` validation, `scoring.py` ATS, `latex/` renderer/compile/escape), `tests/` (resume pipeline), `requirements.txt`. Resume-only.
+>
+> **Single source:** deployment → §47; env → [`docs/rules.md` §5](rules.md).
 
-## AI Service Responsibilities
+# 21. AI Communication (summary)
 
-The Python service handles **only** (6 endpoints: health + 5 resume):
-
-- `GET /health` — health check
-- `POST /ai/resume/extract` — resume text extraction
-- `POST /ai/resume/analyze` — resume LLM analysis
-- `POST /ai/resume/match` — resume ↔ career matching
-- `POST /ai/resume/optimize` — resume optimization suggestions
-- `POST /ai/resume/generate` — LaTeX/PDF generation (degrades to `.tex` when no compiler)
-
-Moved to Node (no longer Python): skill normalization, skill matching, career recommendation/ranking, skill-gap, GitHub analysis, career comparison, what-if simulation, the static careers catalog, and legacy rule-based resume analysis.
+> Node ↔ Python **only for resume LLM** (scoring/GitHub/what-if Node-in-process). Resume: `Node --HTTP POST /ai/resume/*--> FastAPI --JSON--> LLM`. Other paths Node-direct via `scoring.js`/`careerCatalog.js`/`github.service.js` (`POST /api/recommendations/generate`, `POST /api/careers/compare`, `POST /api/what-if/simulate`, `POST /api/github/analyze`, `GET /api/careers`). Removed Python endpoints: `/ai/recommend-careers`, `/ai/skill-gaps`, `/ai/careers`, `/ai/compare-careers`, `/ai/what-if/simulate`, `/ai/github/analyze`, etc.
 
 ---
 
-# 20. AI Service Architecture
+# 22. Career Recommendation Pipeline (Node-native, summary)
 
-```text
-ai-service/                  # resume-LLM only (scoring/github/catalog are Node-native)
-│
-├── app/
-│   ├── main.py              # FastAPI app: GET /health + POST /ai/resume/{extract,analyze,match,optimize,generate}
-│   │
-│   ├── ai/
-│   │   └── client.py        # LLM gateway client (OpenAI-compatible, Qwen3.6-35B-A3B)
-│   │
-│   ├── resume/
-│   │   ├── ingest.py        # file ingestion (PDF/DOCX/DOC → text) + densify_text
-│   │   ├── pipeline.py      # LLM pipeline: extract → analyze → match → optimize
-│   │   ├── prompts.py       # versioned prompt builders
-│   │   ├── schema.py        # resume JSON schema, normalization, validation
-│   │   ├── scoring.py       # deterministic ATS + section scoring
-│   │   └── latex/
-│   │       ├── renderer.py  # resume JSON → LaTeX (Jake-style template)
-│   │       ├── compile.py   # optional LaTeX → PDF (pdflatex/xelatex/latexmk)
-│   │       └── escape.py    # safe LaTeX escaping
-│   │
-├── tests/                   # resume pipeline, schema, scoring, ingest, LaTeX, AI client tests
-└── requirements.txt
-```
-
-> The Python service is now resume-only. All recommendation, GitHub, comparison, what-if, and legacy analysis features are Node-native: `server/src/services/scoring.js`, `careerCatalog.js`, `profile.builder.js`, `github.service.js`.
-
----
-
-# 21. AI Communication
-
-Node.js communicates with Python **only for resume LLM** (scoring/catalog/GitHub/what-if are now Node-native, in-process). Resume flows retain an AI-fallback; all other flows are Node-direct with no Python call.
-
-```text
-Resume path (Python):        Scoring/GitHub path (Node-native):
-Node.js ──HTTP POST──► FastAPI ──► LLM          Node.js ──► scoring.js / careerCatalog.js
-   │  /ai/resume/*         │ JSON                │           / github.service.js
-   ◄───────────────────────┘                     └──────────► Appwrite / GitHub API
-```
-
-Resume example endpoint (Python):
-
-```http
-POST /ai/resume/analyze
-```
-
-Example resume request (Node → Python):
-
-```json
-{
-  "file_id": "appwrite_file_id",
-  "file_name": "resume.pdf"
-}
-```
-
-Scoring example (Node-native, **no Python call**):
-
-```http
-POST /api/recommendations/generate   → server/src/services/scoring.js
-POST /api/careers/compare            → scoring.js + careerCatalog.js
-POST /api/what-if/simulate           → scoring.js + profile.builder.js
-POST /api/github/analyze             → github.service.js (GitHub API + local heuristics)
-GET  /api/careers                    → careerCatalog.js
-```
-
-> Removed Python endpoints: `POST /ai/recommend-careers`, `POST /ai/skill-gaps`, `GET /ai/careers`, `POST /ai/compare-careers`, `POST /ai/what-if/simulate`, `POST /ai/github/analyze`, `POST /ai/resume/analyze-legacy`. Skill-gap, recommendation, comparison, what-if, and legacy analysis are now pure Node (see §22-26). Only `GET /health` and `POST /ai/resume/{extract,analyze,match,optimize,generate}` remain on Python.
-
-Previous recommendation response shape is unchanged but now produced by Node (`scoring.js`):
-
-```json
-{
-  "recommendations": [
-    {
-      "career_id": "career_12",
-      "career": "Frontend Developer",
-      "category": "Software & Technology",
-      "description": "Creates responsive user interfaces...",
-      "score": 91,
-      "breakdown": { "skill": 92.5, "interest": 100.0, "education": 100.0, "goal": 50.0, "assessment": 100.0, "experience": 100.0 },
-      "reasons": ["Strong React skills (4/4)", "Strong JavaScript skills (4/4)"],
-      "strengths": ["JavaScript", "React"],
-      "skill_gaps": ["Testing", "Accessibility"],
-      "next_steps": ["Learn TypeScript (level 0 → 3)"]
-    }
-  ]
-}
-```
-
----
-
-# 22. Career Recommendation Pipeline (Node-native)
-
-```text
-User Profile (Appwrite Databases)
-     ↓
-Node Backend (profile.builder.js → builds normalized profile)
-     ↓
-scoring.js + careerCatalog.js (Node, in-process — no Python)
-     ↓
-Input Validation → Feature Extraction → Skill Normalization
-     ↓
-Career Matching → Career Scoring → Skill Gap Calculation → Ranking
-     ↓
-JSON Response (breakdown + reasons + strengths/gaps/next_steps)
-     ↓
-Appwrite Databases (career_recommendations)
-     ↓
-React Dashboard / Recommendations page
-```
-
-> Python is not involved. No fallback needed — scoring runs locally in Node. Resume path remains the only Python-dependent flow.
+> `User Profile (Appwrite) → Node (profile.builder builds normalized profile) → scoring.js + careerCatalog.js (in-process, no Python) → Input Validation → Skill Normalization → Career Matching/Scoring → Skill Gap → Ranking → JSON (breakdown/reasons/strengths/gaps/next_steps) → career_recommendations → React`. No Python, no fallback needed.
+>
+> **Single source:** formula + weights → §23 Recommendation Engine (0.40/0.20/0.15/0.10/0.10/0.05).
 
 ---
 
@@ -1066,6 +629,12 @@ Weights are configurable in `server/src/services/scoring.js` and the catalog in 
 
 Machine learning can be introduced later when enough suitable training/evaluation data exists.
 
+### 23.1 Weights & Breakdown (summary)
+
+> Weights live in `scoring.js` (configurable) and catalog in `careerCatalog.js` (13 careers). Breakdown per recommendation is `{ skill, interest, education, goal, assessment, experience }` (0–100 scale) plus `reasons` (e.g., `Strong React skills (3/4)`), `strengths` (met required_level), `skill_gaps` (current → required), `next_steps` (ordered `Learn/Strengthen X (a → b)`). Skill match is `sum(min(user,required)/required * importance) / sum(importance)` (importance 1–5, proficiency 1–5), so high-importance gaps dominate ranking. Assessment/education/goal/experience are normalized to 0–100 and weighted. Frontend `Recommendations.jsx` renders `score` + `breakdown` + `reasons` + `strengths`/`gaps`/`next_steps` in `RecommendationCard` + inline `GapDrawer` (no navigation).
+
+> **Single source:** `scoring.js::scoreCareers`, `analyzeSkillGaps`, `compareCareers`, `simulateWhatIf`; profile via `profile.builder.js` (skills map, interests, assessment, education, goals, experience).
+
 ### Career Comparison (Node-native)
 
 Career comparison (PRD §18) reuses the same hybrid scoring engine instead of
@@ -1088,93 +657,19 @@ Python call, no fallback needed.
 
 ---
 
-# 24. Skill Gap Engine (Node-native: scoring.js)
+# 24. Skill Gap Engine (Node-native, summary)
 
-The skill-gap engine compares (Node `scoring.js::analyzeSkillGaps`, catalog from `careerCatalog.js`):
-
-```text
-Required Career Skills (careerCatalog.js)
-        VS
-User Skills (profile.builder.js)
-```
-
-Example:
-
-```text
-Career: Full Stack Developer
-
-Required:
-
-JavaScript → 4
-React      → 4
-Node.js    → 3
-SQL        → 3
-Git        → 2
-
-User:
-
-JavaScript → 4
-React      → 4
-Node.js    → 1
-SQL        → 1
-Git        → 3
-```
-
-Output:
-
-```text
-Strong:
-JavaScript
-React
-Git
-
-Needs Improvement:
-Node.js
-SQL
-```
+> Compares Required Career Skills (`careerCatalog.js` with `required_level` 1–5, `importance` 1–5) vs User Skills (`profile.builder.js` via `scoring.js::analyzeSkillGaps`). Output: `Strong` vs `Needs Improvement` (with `current → required` levels), fed to roadmap generation.
+>
+> **Single source:** scoring → §23 Recommendation Engine; implementation → `scoring.js::analyzeSkillGaps`.
 
 ---
 
-# 25. Roadmap Generation (Node-native)
+# 25. Roadmap Generation (Node-native, summary)
 
-The roadmap engine uses the output of the Node skill-gap engine (`scoring.js` + `careerCatalog.js`, no Python).
-
-```text
-Target Career
-      ↓
-Required Skills
-      ↓
-User Skills
-      ↓
-Skill Gap
-      ↓
-Priority Calculation
-      ↓
-Learning Resources
-      ↓
-Projects
-      ↓
-Roadmap Tasks
-      ↓
-Appwrite Databases
-```
-
-Example:
-
-```text
-Career:
-Full Stack Developer
-
-Roadmap:
-
-1. Learn Node.js
-2. Build REST API
-3. Learn SQL
-4. Build database-backed project
-5. Learn authentication
-6. Build full-stack project
-7. Deploy project
-```
+> Reuses Node skill-gap (`scoring.js` + `careerCatalog.js`): `Target Career → Required Skills → User Skills → Skill Gap → Priority → Resources → Projects → Roadmap Tasks → Appwrite`. Example: Full Stack 6 phases Node.js → Express → PostgreSQL → Auth → Full-stack project → Deploy. Gaps → `Learn/Strengthen {skill}` tasks, not duplicating `strong` skills.
+>
+> **Single source:** generation/progress/performance → §44 Phase 5 (Roadmap) and §17 (collections).
 
 ---
 
@@ -1219,394 +714,74 @@ Implemented end-to-end as `POST /api/what-if/simulate` (Node only — `server/sr
 
 ---
 
-# 27. Resume Analysis
+# 27. Resume Analysis (summary)
 
-Resume files are stored in Appwrite Storage.
-
-The analysis metadata is stored in the `resume_analyses` collection in Appwrite Databases.
-
-```text
-Resume
-   ↓
-Appwrite Storage
-   ↓
-File ID
-   ↓
-Node Backend
-   ↓
-Python/FastAPI
-   ↓
-Text Extraction
-   ↓
-Skill Extraction
-   ↓
-Experience Extraction
-   ↓
-Career Alignment
-   ↓
-Appwrite Databases
-   ↓
-React
-```
-
-### Implementation
-
-The frontend (`src/pages/private/ResumeAnalysis.jsx`) supports click-to-browse and
-drag-and-drop upload, storing the file in the Appwrite `resumes` bucket via the web
-SDK. The Node backend (`server/src/services/resume.service.js`) fetches the file
-bytes and calls the Python analyzer at `POST /ai/resume/analyze`, which uses pypdf
-to extract the text layer and normalizes letter-spaced fonts (`densify_text`) so
-word-boundary detection works. Results are persisted in `resume_analyses`
-(latest analysis per user), and detected skills can optionally be written to
-`user_skills` to feed recommendations. If the AI service is unreachable, a built-in
-heuristic (`computeFallbackAnalysis`) returns the same result shape with
-`source: "fallback"`.
+> Store file in Appwrite Storage (`resumes` bucket), Node `resume.service.js` fetches bytes and calls Python `POST /ai/resume/analyze` (pypdf + `densify_text` letter-spacing normalizer), persists `resume_analyses` (latest per user), optionally writes `user_skills`. UI is `ResumeAnalysis.jsx` (drag-and-drop, results, add-skills checkbox). If AI unreachable, `computeFallbackAnalysis` returns same shape `source:"fallback"`.
+>
+> **Single source:** pipeline pages → §19–§21 (AI Service resume-only) and §42 (failure handling). Detailed flow → README summary and [`docs/rules.md` §7](rules.md).
 
 ---
 
-# 28. GitHub Analysis (Node-native)
+# 28. GitHub Analysis (Node-native, summary)
 
-The GitHub analysis service uses the GitHub API to retrieve publicly accessible information — **Node only**, no Python.
-
-```text
-GitHub Username
-       ↓
-Node Backend (server/src/services/github.service.js)
-       ↓
-GitHub API (public profile + repos)
-       ↓
-Languages / Repositories / Activity / Project Signals
-       ↓
-Local Analyzer (github.service.js heuristics — 13 metrics)
-       ↓
-Technical Profile + ContributionGrid data
-       ↓
-Appwrite Databases (github_analyses)
-       ↓
-React (ContributionGrid.jsx, warm bg contrast, tooltip "22 Sept — N contributions")
-```
-
-The system should only process publicly available GitHub information.
-
-### Implementation
-
-*Only public data is used* — profile fields and repository metadata (name, description, language, topics, stars/forks, activity dates). No private code is fetched or stored.
-The Node backend (`server/src/services/github.service.js`) calls the GitHub API and runs the local analyzer in-process (no `POST /ai/github/analyze`). Results include 13 metrics consumed by `src/components/github/ContributionGrid.jsx` (warm background with sufficient contrast, tooltip shows date + count). Persisted in `github_analyses`; detected skills at ≥70 confidence can be written to `user_skills`. No AI fallback — service is Node-native. `GITHUB_TOKEN` raises rate limits; API routes are rate-limited (see §32, §39).
+> Node-only: GitHub REST (`users/:user`, `repos`) + GraphQL `contributionsCollection` (needs `GITHUB_TOKEN`, else `fallbackDaysFromRepos` from `pushed_at`). Local heuristics yield 13 metrics consumed by `ContributionGrid` (warm bg, 5 intensity levels, tooltip `22 Sept — N contributions`). Private repos via `repositories(privacy:PRIVATE)` only; `languageShare` includes forks (share by `repo.size`). Persisted in `github_analyses`; rate-limited 30/min.
+>
+> **Single source:** API → §32 GitHub (POST /api/github/analyze); UI → [`docs/design.md`](design.md); workflow → [`docs/rules.md` §7](rules.md).
 
 ---
 
-# 29. AI Career Assistant
+# 29. AI Career Assistant (summary)
 
-The AI assistant uses the user's skillsaarthi context.
+> Uses skillsaarthi context (`profiles`, skills, interests, target career, gaps, roadmap, progress) to answer why a career was recommended, what to learn next, how to modify roadmap for time limits, etc. Architecture: `User Question → React → Node Context Builder → Python LLM → Response → Node → React`. Must not invent structured info when app data exists.
+>
+> **Single source:** context + failure handling → §42; design → [`docs/design.md`](design.md).
 
-Context can include:
+# 30. Course Recommendation Architecture (summary)
 
-```text
-User Profile
-Skills
-Interests
-Target Career
-Skill Gaps
-Roadmap
-Progress
-```
-
-Architecture:
-
-```text
-User Question
-      ↓
-React
-      ↓
-Node Backend
-      ↓
-Context Builder
-      ↓
-Python AI Service
-      ↓
-LLM
-      ↓
-Response
-      ↓
-Node Backend
-      ↓
-React
-```
-
-The assistant should not invent structured career information when reliable application data exists.
+> Courses in `courses` collection filtered/ranked by skill gap + skill + difficulty + duration + provider + free/paid + rating + preference. Filtering params: skill, difficulty, duration, provider, cost, rating, user preference.
+>
+> **Single source:** collections → §17; API → §32 Courses.
 
 ---
 
-# 30. Course Recommendation Architecture
+# 31. Internship Recommendation Architecture (summary)
 
-Courses are stored in the `courses` collection in Appwrite Databases.
-
-```text
-User Skill Gap
-      ↓
-Required Skills
-      ↓
-Course Matching
-      ↓
-Filtering
-      ↓
-Ranking
-      ↓
-Recommended Courses
-```
-
-Filtering parameters can include:
-
-- Skill
-- Difficulty
-- Duration
-- Provider
-- Free/Paid
-- Rating
-- User preference
+> Catalog `internships` (`skills` JSON + `eligibility` + lifecycle `status`/`source`/`source_key`/`expires_at`/`fetched_at`) scored by `internship.service.js`: `Skill×0.55 + Role/Goals/Interests×0.20 + Education×0.15 + Location×0.10` (top-10 in `internship_recommendations`, ≥80 strong). Hybrid lifecycle: importer (`scripts/import-internships.mjs`, `file` or `remotive`, dedup `source_key`, TTL 30d) creates `pending`, admin `/admin/internships` approves → `active`, public `GET /api/internships` returns only `active` non-expired.
+>
+> **Single source:** workflow (collect→approve→expire, importer vars, admin gate) → [`docs/rules.md` §7](rules.md) (Hybrid Internship Catalog). API → §32 Internships.
 
 ---
 
-# 31. Internship Recommendation Architecture
+# 32. API Architecture (summary)
 
-```text
-User Profile
-      ↓
-Skills
-      ↓
-Career Interest
-      ↓
-Education Level
-      ↓
-Location Preference
-      ↓
-Internship Data
-      ↓
-Matching
-      ↓
-Ranking
-      ↓
-Recommended Internships
-```
+> Auth: Appwrite Auth (client), Node business-logic only, JWT `Bearer <jwt>` on all except health; rate-limit 30/min on `/api/github|resume|admin` (`trust proxy 1`). Scoring/catalog/GitHub/what-if Node-native (`scoring.js` etc.); only resume proxies to Python (`POST /ai/resume/*`) with heuristic fallback `source:"fallback"`. All controllers thin, services thick; Appwrite calls parallelized.
 
-External internship data must pass through the Node backend before reaching the frontend.
+> **Route groups (JWT-guarded unless noted):**
 
-### Implementation
+> | Group | Base | Key routes (method + path) | Notes |
+> |---|---|---|---|
+> | Auth (Appwrite) | Appwrite SDK | `account.create`, `createJWT`, `updatePrefs` | Client direct, no Node |
+> | Profile | `/api/profile` | `GET /`, `PUT /`, `POST /skills`, `DELETE /skills/:id`, `POST /interests` | `profiles` doc ID = user `$id` |
+> | Careers | `/api/careers` | `GET /`, `GET /:id`, `POST /compare` (≥2 ids) | Catalog via `careerCatalog.js` |
+> | Recommendations | `/api/recommendations` | `POST /generate`, `GET /`, `GET /:id`, `GET /careers/:id/skill-gaps` | Via `scoring.js`, no Python |
+> | Roadmaps | `/api/roadmaps` | `POST /`, `GET /`, `GET /:id`, `PUT /:id`, `DELETE /:id`, `POST /:id/tasks`, `PUT /:id/tasks` (batch), `PUT /:id/tasks/:tid`, `DELETE /:id/tasks/:tid` | `roadmaps` + `roadmap_tasks` |
+> | Resume | `/api/resume` | `POST /analyze`, `POST /extract`, `POST /match`, `POST /optimize`, `POST /generate`, `GET /analysis/:id` | Python resume-only, 30/min, fallback |
+> | GitHub | `/api/github` | `POST /analyze {username}`, `GET /analysis/:id` | Node-native `github.service.js`, 30/min |
+> | What-If | `/api/what-if` | `POST /simulate` | `profile.builder.js` copy, no write |
+> | Courses | `/api/courses` | `GET /`, `GET /recommended` | By skill gap |
+> | Internships | `/api/internships` | `GET /`, `GET /recommended`, `/api/admin/internships` (CRUD) | `active`+non-expired public, `pending` gate |
+> | Community | `/api/community` | `GET/POST /posts`, `GET/PUT/DELETE /posts/:id`, `POST /:id/like|bookmark`, `GET/POST /:id/comments`, `PUT/DELETE /comments/:id`, `GET /saved`, `GET/PUT /profile`, `GET /users/:id` | `requireAuth`, ownership, draft 404 |
+> | Admin | `/api/admin` | `GET /me`, `GET/POST /internships`, `PATCH/DELETE /internships/:id`, `POST /notifications` | `requireAdmin` (`ADMIN_EMAILS`) |
+> | Assistant | `/api/assistant` | `POST /chat` | Context builder → LLM |
+> | Notifications | `notifications` collection | `notify()`/`notifyAllUsers()` server, `getNotifications` client | `appwriteClient.subscribe` + 45s polling |
 
-Internship rows live in the `internships` catalog with a JSON `skills` array and `eligibility` string. Matching is a weighted formula in `server/src/services/internship.service.js`:
-
-```text
-Internship Score =
-    Skill Match            × 0.55   (against the user's skill proficiencies)
-  + Role/Goals/Interests   × 0.20   (tokens from preferred_role, career_goal, interests)
-  + Education Match        × 0.15   (against the internship eligibility text)
-  + Location Match         × 0.10   (preferred_location, remote/hybrid preference)
-```
-
-The top 10 matches are persisted per user in `internship_recommendations`, and scores ≥80 are surfaced as strong matches in the UI.
-
-### Hybrid catalog lifecycle
-
-Listings pass through a review gate instead of being published automatically:
-
-- The scheduled importer (`scripts/import-internships.mjs`) reads a JSON feed (`scripts/feeds/internships.json`, `FEED_FILE` override) or the Remotive API (`--source remotive`), dedups by `source_key`, and creates **new** rows as `pending`. Re-imports refresh existing rows and keep their status.
-- An admin approves (`active`) or rejects (`rejected`) rows from the admin page (`src/pages/private/AdminInternships.jsx`).
-- The admin page loads the full list once and filters client-side by status/search, so status counts stay accurate under any filter; the manual add form includes a `description` field and pre-fills `expires_at` 30 days out (importer default TTL).
-- Admin accounts bypass the student onboarding flow: signup routes admins to `/home`, the home hero shows an "Open admin panel" CTA, and `ProfileCompleteRoute` skips the `onboarding_completed` gate for admins. `useAdmin` caches the `/api/admin/me` result per user to avoid a flash of the non-admin UI on revisit.
-- `expires_at` + the `active`-only public filter make stale listings disappear automatically without manual cleanup.
-- Manually added listings default to `pending`; seeded catalog rows are `active`.
+> **Single source:** full method tables + internship workflow → [rules.md §7](rules.md) (API Conventions); collections + permissions → §17; rate-limit/trust-proxy → §47; design → [design.md](design.md).
 
 ---
 
-# 32. API Architecture
+# 33. Complete Request Flow (Node-native, updated)
 
-Authentication is handled entirely by Appwrite Auth from the client — the Node backend exposes business-logic APIs only. **Rate limiting:** `express-rate-limit` 30 req/min on `/api/github`, `/api/resume`, `/api/admin` (and their sub-routes) configured in `server/src/app.js`. Scoring, catalog, GitHub and what-if are Node-native (`server/src/services/scoring.js`, `careerCatalog.js`, `profile.builder.js`, `github.service.js`); only resume proxies to Python (`/ai/resume/*`) with a local fallback.
-
-## Profile
-
-```text
-GET    /api/profile
-PUT    /api/profile
-POST   /api/profile/skills
-DELETE /api/profile/skills/:skillId
-POST   /api/profile/interests
-```
-
-## Careers
-
-```text
-GET  /api/careers
-GET  /api/careers/:careerId
-POST /api/careers/compare
-```
-
-## Recommendations
-
-```text
-POST /api/recommendations/generate
-GET  /api/recommendations
-GET  /api/recommendations/:id
-GET  /api/recommendations/careers/:careerId/skill-gaps
-```
-
-## Roadmaps
-
-```text
-POST   /api/roadmaps
-GET    /api/roadmaps
-GET    /api/roadmaps/:id
-PUT    /api/roadmaps/:id
-DELETE /api/roadmaps/:id
-```
-
-## Roadmap Tasks
-
-```text
-POST   /api/roadmaps/:id/tasks
-PUT    /api/roadmaps/:id/tasks/:taskId
-DELETE /api/roadmaps/:id/tasks/:taskId
-```
-
-## Resume (Python-backed, with fallback)
-
-```text
-POST /api/resume/analyze          (implemented — proxies to POST /ai/resume/analyze; fallback computeFallbackAnalysis on AI down, rate-limited)
-GET  /api/resume/analysis/:id     (implemented)
-POST /api/resume/extract          (implemented — proxies to POST /ai/resume/extract)
-POST /api/resume/match|optimize|generate (implemented — proxy to Python resume LLM)
-```
-
-> **Hold:** resume flow is the only Python-dependent flow; keep as-is per session hold.
-
-## GitHub (Node-native, rate-limited)
-
-```text
-POST /api/github/analyze          (implemented — Node-native via github.service.js, no Python)
-GET  /api/github/analysis/:id     (implemented)
-```
-
-UI: `src/components/github/ContributionGrid.jsx` renders 13 metrics, warm background with contrast, tooltip `"22 Sept — N contributions"`.
-
-## What-If (Node-native)
-
-```text
-POST /api/what-if/simulate   (implemented — Node-native via scoring.js + profile.builder.js, no Python)
-```
-
-## Courses
-
-```text
-GET /api/courses
-GET /api/courses/recommended
-```
-
-## Internships
-
-```text
-GET /api/internships              (implemented)
-GET /api/internships/recommended  (implemented)
-```
-
-## Community
-
-All community routes require `requireAuth`; post/comment writes verify document
-ownership (`req.user.$id` = `user_id`). Draft posts are only visible to their
-author; other users get `404` on a private draft.
-
-```text
-GET    /api/community/posts               (implemented — ?category&sort=newest|popular&search&scope=published|mine|drafts)
-POST   /api/community/posts               (implemented — { title, content, category?, tags?, status? })
-GET    /api/community/posts/:id           (implemented)
-PUT    /api/community/posts/:id           (implemented — owner only)
-DELETE /api/community/posts/:id           (implemented — owner only; cascades comments/likes/bookmarks)
-POST   /api/community/posts/:id/like      (implemented — toggles like)
-POST   /api/community/posts/:id/bookmark  (implemented — toggles bookmark)
-GET    /api/community/posts/:id/comments  (implemented)
-POST   /api/community/posts/:id/comments  (implemented)
-PUT    /api/community/comments/:commentId        (implemented — owner only)
-DELETE /api/community/comments/:commentId        (implemented — owner only)
-GET    /api/community/saved               (implemented — my bookmarks)
-GET    /api/community/profile             (implemented — my profile + account identity)
-PUT    /api/community/profile             (implemented — upsert bio/location/role/interests)
-GET    /api/community/users/:userId       (implemented — public profile + up to 20 published posts)
-```
-
-Author display name/avatar are resolved live from the Appwrite account
-(`Users.get`) with a 120s in-memory cache; the backend API key needs the
-`users.read` scope (already required for admin notifications).
-
-## Admin (internships + notifications)
-
-```text
-GET    /api/admin/me              (implemented)
-GET    /api/admin/internships     (implemented)
-POST   /api/admin/internships     (implemented)
-PATCH  /api/admin/internships/:id (implemented)
-DELETE /api/admin/internships/:id (implemented)
-POST   /api/admin/notifications   (implemented — send to one user or broadcast)
-```
-
-Admin endpoints require `requireAuth` + `requireAdmin` (`ADMIN_EMAILS` in the
-backend environment; empty = admin API disabled). The public catalog
-`GET /api/internships` returns only `active`, non-expired rows.
-
-## Assistant
-
-```text
-POST /api/assistant/chat
-```
-
-## Notifications
-
-In-app notifications live in the `notifications` collection, one document per
-recipient, with per-document permissions scoped to that user. The frontend reads
-and marks them via the Appwrite client SDK; the backend and admins create them
-server-side.
-
-```text
-GET   /api/notifications        (implemented — frontend reads via Appwrite client)
-PUT   /api/notifications/:id/read (implemented — frontend marks via Appwrite client)
-POST  /api/admin/notifications  (admin — send to one user or broadcast)
-```
-
-- `notify(userId, title, message)` and `notifyAllUsers(title, message)` live in
-  `server/src/services/notification.service.js` and run with the Appwrite service key.
-- System notifications are triggered automatically when a recommendation
-  (`recommendation.controller.js`) or roadmap (`roadmap.controller.js`) is generated.
-- The admin broadcast (`POST /api/admin/notifications`) accepts `{ title, message, email? | user_id? }`;
-  without a recipient it pages through all `profiles` and sends one notification per user.
-  `email` is resolved to the account `$id` via `resolveUserIdByEmail` (Appwrite `Users` service),
-  which requires the backend API key to have the **`users.read`** scope.
-
-### Frontend
-
-- `src/services/notifications.js` — `getNotifications`, `markNotificationRead`,
-  `markAllNotificationsRead`, `timeAgo` (Appwrite client SDK).
-- `src/components/layout/NotificationBell.jsx` — bell icon with unread badge, dropdown inbox, mark-all-read, marked read on click; **Realtime** via `appwriteClient.subscribe` on `notifications` collection + **45 s polling fallback**; mounted in `TopBar`.
-- `src/components/common/Icon.jsx` — shared semantic icon component (Lucide `lucide-react`)
-  plus a real GitHub brand SVG for the GitHub-analysis tiles; no emoji anywhere in the UI.
-- `src/components/common/DecorativeShapes.jsx` — low-opacity decorative circles
-  (`default` hero pair, `band` full-width blobs, `card` corner pair) rendered behind
-  `relative overflow-hidden` heroes/cards, matching the Dashboard hero pattern.
-
-### Profile settings (`/settings`)
-
-- `src/services/auth.js` — `updateName` (Appwrite `account.updateName`), `uploadAvatar`
-  (client-side upload to the upload bucket + `account.updatePrefs({ avatar_file_id })`),
-  `removeAvatar`, `loadAvatarUrl` (SDK-authenticated `storage.getFileView` → blob URL;
-  `getFilePreview` is blocked on the free plan).
-- `src/pages/private/ProfileSettings.jsx` — update display name + profile picture (≤ 5 MB
-  image, client-side validated, local preview), email read-only; calls `refreshUser` on save.
-- `src/context/AuthContext.jsx` — `refreshUser` re-fetches the current user so the TopBar
-  avatar/name update immediately after a save.
-- `src/components/layout/TopBar.jsx` — the profile section (avatar + name) is a CSS
-  `group-hover` dropdown exposing "Update profile" → `/settings` and "Logout".
-
----
-
-# 33. Complete Request Flow
-
-A typical recommendation request:
+> Recommendation is Node-native (no Python). Typical flow:
 
 ```text
                          USER
@@ -1614,11 +789,11 @@ A typical recommendation request:
                            ▼
                     React Frontend
                            │
-                           │ Appwrite session (JWT)
+                           │ Appwrite session (JWT, cached 60s)
                            ▼
                     Node REST API
                            │
-                    Auth Middleware
+                    Auth Middleware (verify JWT)
                            │
                            ▼
               Fetch Profile (Appwrite Databases)
@@ -1627,68 +802,36 @@ A typical recommendation request:
                   Recommendation Service
                            │
                            ▼
-                     Python/FastAPI
-                           │
-                           ▼
-                   AI Recommendation
+               scoring.js + careerCatalog.js
+             + profile.builder.js (Node, in-process)
                            │
                            ▼
                      JSON Response
-                           │
-                           ▼
-                      Node Backend
+                 (score + breakdown + reasons
+                  + strengths/gaps/next_steps)
                            │
                            ├── Store Result (Appwrite Databases)
                            │
                            ▼
-                    React Dashboard
+                    React Dashboard / Recommendations
 ```
+
+> Only resume (`POST /ai/resume/*`) calls Python (see §19–§21, §27, §42); scoring/compare/what-if/GitHub never call Python.
 
 ---
 
-# 34. Complete System Interaction
+# 34. Complete System Interaction (summary)
+
+> User ↔ React ↔ Appwrite (Auth/DB/Storage/Realtime) ↔ Node/Express ↔ Python (resume LLM) / GitHub API / External course-internship APIs / LLM Provider. Node is the only business-logic hub; Appwrite is the only primary store; Python is resume-only.
+>
+> **Single source:** canonical diagram → §2 High-Level Architecture; data ownership → §35; request flow → §33.
 
 ```mermaid
 flowchart LR
-
-    USER[User]
-    FE[React Frontend]
-
-    AW_AUTH[Appwrite Auth]
-    AW_DB[(Appwrite Databases)]
-    AW_STORAGE[Appwrite Storage]
-    AW_MSG[Appwrite Messaging]
-    AW_RT[Appwrite Realtime]
-
-    API[Node.js + Express]
-    AI[Python + FastAPI]
-
-    GITHUB[GitHub API]
-    EXT[External Course / Internship APIs]
-    LLM[LLM Provider]
-
-    USER --> FE
-
-    FE --> AW_AUTH
-    FE --> AW_DB
-    FE --> AW_STORAGE
-    FE --> AW_RT
-    FE --> API
-
-    API --> AW_DB
-    API --> AW_AUTH
-    API --> AW_MSG
-
-    API --> AI
-    API --> GITHUB
-    API --> EXT
-
-    AI --> LLM
-    AI --> API
-
-    AW_DB --> FE
-    AW_MSG --> FE
-    API --> FE
+    USER[User] --> FE[React Frontend]
+    FE --> AW_AUTH[Appwrite Auth] & AW_DB[(Appwrite Databases)] & AW_STORAGE[Appwrite Storage] & AW_RT[Appwrite Realtime] & API[Node.js + Express]
+    API --> AW_DB & AW_AUTH & AW_MSG[Appwrite Messaging] & AI[Python + FastAPI] & GITHUB[GitHub API] & EXT[External APIs]
+    AI --> LLM[LLM Provider]
 ```
 
 ---
@@ -1716,44 +859,11 @@ A strict data ownership model must be followed.
 
 ---
 
-# 36. Environment Configuration
+# 36. Environment Configuration (summary)
 
-No secrets should be committed to Git.
-
-## Frontend (repo root `.env`)
-
-```env
-VITE_APPWRITE_ENDPOINT=
-VITE_APPWRITE_PROJECT_ID=
-VITE_APPWRITE_DATABASE_ID=
-VITE_API_BASE_URL=
-```
-
-Only values safe for client-side exposure should use the `VITE_` prefix.
-
-## Node Backend (`server/.env`)
-
-```env
-PORT=5000
-
-APPWRITE_ENDPOINT=
-APPWRITE_PROJECT_ID=
-APPWRITE_API_KEY=
-APPWRITE_DATABASE_ID=
-
-AI_SERVICE_URL=http://localhost:8000
-
-GITHUB_TOKEN=
-LLM_API_KEY=
-```
-
-## Python AI Service (`ai-service/.env`)
-
-```env
-PORT=8000
-
-LLM_API_KEY=
-```
+> No secrets in Git — all `.env` gitignored, production values in Vercel/Render. Frontend `VITE_*` are build-time (`vite.config.js`); backend `server/.env` via `environment.js` (never `VITE_`); AI `ai-service/.env` via `ai/client.py`; scripts via `scripts/.env.setup` (setup/seed/importer). Free plan reuses `resumes` bucket for avatars; paid plan uses `avatars`. Email OFF by default (`isEmailConfigured()` false → `_dev_otp` mock); enable via Resend HTTPS (Render blocks SMTP). `VITE_API_BASE_URL` change requires Vercel redeploy + hard-refresh.
+>
+> **Single source:** canonical env tables → [`docs/rules.md` §5](rules.md) (Environment Variables). Deployment wiring → §47 (Production Hosting). Design → [`docs/design.md`](design.md).
 
 ---
 
@@ -1833,44 +943,19 @@ Handles:
 
 ---
 
-# 40. Important Security Rule
+# 40. Important Security Rule (summary)
 
-The frontend must never contain:
-
-```text
-Appwrite server API key
-GitHub private token
-LLM secret key
-```
-
-Only public Appwrite client configuration may be exposed to the frontend.
+> Frontend must never contain Appwrite server API key, GitHub private token, or LLM secret. Only public Appwrite client config may be exposed.
+>
+> **Single source:** env → §36 summary and [`docs/rules.md` §5](rules.md) + §13.
 
 ---
 
-# 41. Error Handling
+# 41. Error Handling (summary)
 
-All backend APIs should return consistent responses.
-
-Success:
-
-```json
-{
-  "success": true,
-  "data": {}
-}
-```
-
-Error:
-
-```json
-{
-  "success": false,
-  "message": "Unable to generate recommendations",
-  "code": "RECOMMENDATION_SERVICE_ERROR"
-}
-```
-
-Internal implementation details must not be exposed to users.
+> All APIs return consistent JSON: success `{ success:true, data:{} }` vs error `{ success:false, message:"...", code:"ERROR_CODE" }`. Never expose internal details/stack.
+>
+> **Single source:** conventions → [`docs/rules.md` §7](rules.md) (API Conventions).
 
 ---
 
@@ -1902,46 +987,11 @@ The application must not crash because the resume AI service is temporarily unav
 
 ---
 
-# 43. Repository Architecture
+# 43. Repository Architecture (summary)
 
-```text
-skillsaarthi/
-│
-├── src/                      # React frontend (repo root)
-│   ├── assets/
-│   ├── components/
-│   ├── pages/
-│   ├── services/
-│   ├── hooks/
-│   ├── context/
-│   ├── routes/
-│   ├── App.jsx
-│   └── main.jsx
-│
-├── public/
-│
-├── server/                   # Node.js + Express backend
-│   ├── src/
-│   └── package.json
-│
-├── ai-service/               # Python AI/ML service
-│   ├── app/
-│   ├── models/
-│   ├── data/
-│   └── requirements.txt
-│
-├── docs/
-│   ├── PRD.md
-│   ├── main_architecture.md
-│   └── rules.md
-│
-├── .env
-├── .env.sample
-├── .gitignore
-├── vite.config.js
-├── package.json
-└── README.md
-```
+> Repo root = React frontend (`src/`, `public/`, `.env`, `vite.config.js`); `server/` (Node/Express, `src/`), `ai-service/` (Python FastAPI, `app/`), `docs/` (PRD, main_architecture, rules, design), `scripts/` (setup/seed/import), `dev.*` launchers. Appwrite is primary store, not MySQL.
+>
+> **Single source:** structure → README Project Structure summary and [`PROJECT_AUDIT.md`](../PROJECT_AUDIT.md).
 
 ---
 
@@ -1983,18 +1033,17 @@ Recommendation explanations ✓ reasons / strengths / next_steps / breakdown
 Node API                 ✓   /api/careers, /api/recommendations/*, skill-gaps
 ```
 
-## Phase 4 — AI (complete)
+## Phase 4 — AI (complete, resume-only)
 
 ```text
-Python                       ✓   ai-service/ (FastAPI on port 8000)
+Python                       ✓   ai-service/ (FastAPI on port 8000, resume-only)
 FastAPI                      ✓   /health + /ai/resume/{extract,analyze,match,optimize,generate}
-Skill Matching               ✓   importance-weighted matching (scoring.js, §23)
-Recommendation Ranking       ✓   score_careers — hybrid weights, sorted, reasons/strengths/next_steps
-Skill Gap                    ✓   analyze_skill_gaps (§24, strong vs needs_improvement)
-Tests                        ✓   ai-service/tests (pytest) — resume pipeline, schema, scoring, ingest, LaTeX, AI client
-Node resilience              ✓   rule-based fallback in recommendation.service.js when the AI
-                                 service is down (200 + source:"fallback" instead of 503); mirrored
-                                 UI badges ("Estimated · AI offline")
+Scoring / Catalog / GitHub   ✓   Node-native (scoring.js, careerCatalog.js, github.service.js, profile.builder.js) — no Python
+Skill Matching               ✓   importance-weighted (scoring.js, §23)
+Recommendation Ranking       ✓   scoreCareers — hybrid weights, sorted, reasons/strengths/next_steps (Node)
+Skill Gap                    ✓   analyzeSkillGaps (§24, strong vs needs_improvement) (Node)
+Tests                        ✓   ai-service/tests (pytest) — resume pipeline, schema, scoring, ingest, LaTeX, AI client (resume-only)
+Resume fallback              ✓   computeFallbackAnalysis on Python down (200 + source:"fallback") — only resume has fallback; scoring/compare/what-if/GitHub are Node-direct with no fallback needed
 ```
 
 ## Phase 5 — Roadmap (complete)
@@ -2007,90 +1056,31 @@ Roadmap management      ✓   rename, pause, mark completed (auto-completes task
 Dashboard wiring        ✓   /roadmaps pages + Dashboard "Current roadmap" card
 ```
 
-### Data model (already deployed)
+### Data model (summary)
 
-Both collections are user-scoped (`USER_SCOPE`). Statuses are stored as plain strings
-(no enum constraint in the live DB).
+> `roadmaps` (`user_id`, `career_id`, `title`, `status`, `progress_percent`, `user_idx`) + `roadmap_tasks` (`roadmap_id`, `title`, `description`, `order_index`, `estimated_hours`, `status`, `completed_at`, `roadmap_idx`). Statuses plain strings; `roadmap_tasks` create parent, cascade-delete, order `order_index ASC` 1..n.
 
-| Collection | Attributes (key → type) | Indexes |
-|---|---|---|
-| `roadmaps` | `user_id` (string, 100, `required`), `career_id` (string, 100, `required`), `title` (string, 200, `required`), `status` (`active` \| `paused` \| `completed`, default `active`), `progress_percent` (integer, default 0), `created_at`, `updated_at` | `user_idx` (`user_id`) |
-| `roadmap_tasks` | `roadmap_id` (string, 100, `required`), `title` (string, 300, `required`), `description` (string, 4000), `order_index` (integer, default 0), `estimated_hours` (integer, default 0), `status` (`pending` \| `in_progress` \| `paused` \| `completed`, default `pending`), `completed_at` (datetime) | `roadmap_idx` (`roadmap_id`) |
+### Generation algorithm (summary)
 
-`roadmap_tasks` docs **create the parent roadmap** (`roadmap_id`), cascade-delete with it,
-and order by `order_index ASC` (kept contiguous 1..n on add/remove).
+> Input `career_id`+`userId` → `recommendation.service::analyzeCareerGaps` → each `needs_improvement` → `Learn/Strengthen {skill}` (`estimated_hours=(required-current)×8`) + milestones `Build {career} project` (40h) + `Update resume` (8h); `order_index` 1..n; strong skills not tasks.
 
-### Generation algorithm (`roadmap.service.js::generateRoadmap`)
+### Progress tracking (summary)
 
-Inputs: `career_id` + `userId`. Reuses `recommendation.service.js::analyzeCareerGaps`
-(strong / `needs_improvement[]` with `skill`, `required`, `current`, `importance`), so the
-AI-service + fallback path comes for free.
+> `completed/total×100` recomputed on every write → `roadmaps.progress_percent`; `completed` auto-marks tasks; reopen/add/remove → revert `active`.
 
-1. For each `needs_improvement` entry create a task: title
-   `Learn {skill}` / `Strengthen {skill}`, `estimated_hours = (required - current) × 8`.
-2. Append milestone tasks: `Build {career} project` (40h) and
-   `Update resume and prepare for interviews` (8h).
-3. Assign `order_index` 1..n; persist roadmap (`title` default `{career} Roadmap`) + tasks.
-4. Skills the user already meets are not turned into tasks (they remain "strong" in gaps).
+### Performance (summary)
 
-### Progress tracking
+> Parallel `Promise.all` reads/writes, in-memory return, batch reorder single `PUT`, renumber/cascade batched. Measured: status ~0.8s, reorder ~0.9s, 10-task generate ~1.5s on Appwrite cloud.
 
-`completed / total × 100`. Recompute on every task status/CRUD write and update the parent
-`roadmaps.progress_percent`. `roadmaps.status = completed` auto-marks remaining tasks completed.
+### API (summary)
 
-**Status auto-revert:** a `completed` roadmap flips back to `active` the moment it no longer
-holds every task completed — reopening, adding, or removing a task recalculates progress and
-reverts the roadmap status (`progressRoadmapUpdate` in `roadmap.service.js`). The UI chip and
-Dashboard card reflect this immediately.
+> `POST /api/roadmaps {career_id,title?}`, `GET /api/roadmaps`, `GET /api/roadmaps/:id`, `PUT /api/roadmaps/:id {title?,status?}`, `DELETE ...`, `POST .../tasks {title,…}`, `PUT .../tasks {order:[…]}`, `PUT .../tasks/:taskId {status?,…}`, `DELETE .../tasks/:taskId`.
 
-### Performance
+### File layout (summary)
 
-Appwrite cloud round-trips dominate latency, so the service layer minimizes and parallelizes them:
+> `scripts/setup-appwrite.mjs`, `server/src/services/appwrite.service.js` + `roadmap.service.js` + `controllers/roadmap.controller.js` + `routes/roadmap.routes.js` + `app.js`, `src/services/roadmaps.js`, `pages/private/Roadmaps.jsx` + `RoadmapDetail.jsx`, `routes/AppRoutes.jsx` + `TopBar.jsx`.
 
-- Independent reads (`getRoadmap` ownership check + `listRoadmapTasks`) run concurrently via
-  `Promise.all`; independent writes (task update + progress update) run concurrently too.
-- Mutations return detail from in-memory state instead of re-fetching via `getRoadmapDetail`
-  (eliminates 2 redundant round-trips per write).
-- Roadmap generation creates the roadmap and runs skill-gap analysis in parallel, and creates
-  all tasks in parallel (`Promise.all`).
-- Reordering is a single **batch** call — `PUT /api/roadmaps/:id/tasks` with the full ordered
-  id list — instead of N sequential updates + a reload. The frontend applies the returned
-  state without re-fetching.
-- Renumbering (`order_index` 1..n) and cascade operations (mark completed, delete roadmap)
-  batch their writes with `Promise.all`.
-
-Measured live (Appwrite cloud): single task status change ~0.8s, reorder ~0.9s,
-generate a 10-task roadmap ~1.5s.
-
-### API (new `roadmap.routes.js`, mounted at `/api/roadmaps`, JWT-guarded)
-
-| Method | Route | Body / Notes |
-|---|---|---|
-| `POST` | `/api/roadmaps` | `{ career_id, title? }` → generate + save; returns `{ roadmap, tasks }` |
-| `GET` | `/api/roadmaps` | list user's roadmaps (active first) with `progress_percent` |
-| `GET` | `/api/roadmaps/:id` | roadmap + tasks sorted by `order_index` |
-| `PUT` | `/api/roadmaps/:id` | `{ title?, status? }` (`completed` → complete all tasks; later task reopen reverts to `active`) |
-| `DELETE` | `/api/roadmaps/:id` | cascade-delete tasks |
-| `POST` | `/api/roadmaps/:id/tasks` | custom task `{ title, description?, estimated_hours?, order_index? }` (append) |
-| `PUT` | `/api/roadmaps/:id/tasks` | batch reorder `{ order: [taskId, …] }` (renumbers 1..n, single call) |
-| `PUT` | `/api/roadmaps/:id/tasks/:taskId` | `{ status?, title?, estimated_hours?, order_index? }` → start/pause/complete/reorder, recompute progress |
-| `DELETE` | `/api/roadmaps/:id/tasks/:taskId` | remove task, recompute + renumber `order_index` |
-
-### File layout
-
-```text
-scripts/setup-appwrite.mjs                    roadmaps + roadmap_tasks collections (idempotent, already deployed)
-server/src/services/appwrite.service.js       roadmap/task CRUD helpers (owner-scoped)
-server/src/services/roadmap.service.js         generateRoadmap, progress recompute, task ops, ownership guards
-server/src/controllers/roadmap.controller.js   thin handlers
-server/src/routes/roadmap.routes.js            routes (mirror recommendation.routes.js)
-server/src/app.js                              roadmapRoutes mounted at /api/roadmaps
-src/services/roadmaps.js                       frontend API calls
-src/pages/private/Roadmaps.jsx                 list + "Generate roadmap from career" + progress bars
-src/pages/private/RoadmapDetail.jsx            task start/pause/complete, reorder, add custom task, rename, delete
-src/routes/AppRoutes.jsx + TopBar.jsx           /roadmaps + /roadmaps/:id (behind ProfileCompleteRoute), nav link
-Home.jsx + Dashboard.jsx                        Home hero + Dashboard "Current roadmap" card with progress
-```
+> Full tables are single source §17–§18; templates in `roadmap.service.js` (catalog user-data-free).
 
 Static milestone templates live in `roadmap.service.js`; the catalog stays user-data-free.
 
@@ -2142,37 +1132,11 @@ Databases (per-user document permissions):
 
 ---
 
-# 45. Recommended Architecture Boundary
+# 45. Recommended Architecture Boundary (summary)
 
-```text
-┌───────────────────────────────────────────────────────┐
-│                    React Frontend                    │
-│                    Presentation                       │
-│                    Appwrite client SDK                │
-└───────────────────────┬───────────────────────────────┘
-                        │
-                        ▼
-┌───────────────────────────────────────────────────────┐
-│                  Appwrite Services                    │
-│                                                       │
-│   Auth │ Databases │ Storage │ Messaging │ Realtime  │
-└───────────────────────────────────────────────────────┘
-                        │
-                        │
-                        ▼
-┌───────────────────────────────────────────────────────┐
-│                Node.js + Express                     │
-│                                                       │
-│       APIs │ Business Logic │ Integrations           │
-└───────────────┬───────────────────────┬───────────────┘
-                │                       │
-                ▼                       ▼
-       ┌─────────────────┐      ┌─────────────────────┐
-       │  Appwrite DB    │      │   Python/FastAPI    │
-       │  (via SDK)      │      │                     │
-       │                 │      │ AI / ML             │
-       └─────────────────┘      └─────────────────────┘
-```
+> Same boundary as §2: React Frontend (presentation + Appwrite client SDK) → Appwrite Services (Auth/DB/Storage/Messaging/Realtime) → Node.js + Express (APIs, business logic, integrations) → Appwrite DB (via SDK) + Python/FastAPI (AI/ML resume-only). Heavy logic stays in Node, not frontend; Python never auths.
+>
+> **Single source:** §2 High-Level Architecture and §3 Responsibility Matrix for the boundary.
 
 ---
 
@@ -2218,6 +1182,69 @@ This separation keeps the system understandable, maintainable, and scalable whil
 
 ---
 
+## 46.1 Changelog (summary)
+
+> All feature inventory, workflow problems, technical problems, proposed IA, and priorities are the single source in [PROJECT_AUDIT.md](../PROJECT_AUDIT.md) (generated 2026-08-22, stack, architecture, 23 routes, feature inventory, 6 workflow problems, technical problems, proposed changes P0-P3, risks). Do not duplicate its tables here; see there for `TopBar` IA, onboarding 6→3, recommendations auto-generate, dashboard simplify, GitHub Node-only, resume 6→2, community FAB/PressSection removal, JWT cache, lazy routes, rate-limit, indexes, orphan GC.
+
+## 46.2 Deduplication Map (single sources)
+
+> This audit deduplicated without information loss — each duplicated block was replaced by a 5-line summary + link to its single source (no verbatim copies remain):
+
+> | Domain | Single source | What was deduplicated (now summary + link) |
+> |---|---|---|
+> | Env vars | [rules.md §5](rules.md) (Environment Variables) | 4 copies: README `🔐 Environment Variables` (108 lines → 7), `main_architecture.md` §36 (50 lines → 8), `rules.md` §5 kept, `PRD` env refs — all now `See rules.md §5` |
+> | Arch diagram + stack | [main_architecture.md §2–§3](main_architecture.md) (High-Level Architecture, Responsibility Matrix) | 5 diagrams: README Tech Stack + System Architecture (80 lines → 2×8), `main_architecture.md` §4/§16/§34/§45 (140 lines → 4×8) — canonical diagram only in §2 |
+> | Scoring formula | [main_architecture.md §23](main_architecture.md) (Recommendation Engine, 0.40/0.20/0.15/0.10/0.10/0.05 importance-weighted) | 3 copies: README Phase 3 scoring (22 lines → 8), PRD §12 formula block (10 lines → 5), `main_architecture.md` §22/§24 summaries — config in `scoring.js`, catalog in `careerCatalog.js` |
+> | Internship workflow | [rules.md §7](rules.md) (Hybrid Internship Catalog: Collect → Approve → Expire, `SOURCE`/`FEED_FILE`/`INTERNSHIP_TTL_DAYS`/`IMPORT_MAX`, `source_key` dedup, `status`/`expires_at`) | 3 copies: README `🐙 GitHub & Internships` scoring + `Keeping catalog fresh` (84 lines → 10), `main_architecture.md` §31 (40 lines → 8), PRD §22 — all now `See rules.md §7` |
+> | Auth flows | [main_architecture.md §9](main_architecture.md) (Authentication Architecture sequence) | 3 copies: §8 Appwrite Authentication (15 lines → 8), §16 Request Lifecycle auth steps, §33 Complete Request Flow (now Node-native, no Python) — §9 kept |
+> | Notifications | [rules.md §7](rules.md) (Notifications & Streaks) + [main_architecture.md §32](main_architecture.md) (API — Notifications) | 7 copies: README `Notifications (Realtime)` + `Daily Streak` + Feature table + TopBar + Community + `main_architecture.md` §12/§13 Messaging/Realtime (36 lines → 2×8) — single `notifications` collection spec in §17 |
+> | GitHub verbose | [main_architecture.md §28](main_architecture.md) (GitHub Analysis, 13 metrics) | 35-line dump: `github.service.js` line refs, fallback synthesis, languageShare forks, private count fix — now 8-line summary + `ContributionGrid` spec in [design.md](design.md) |
+> | Resume verbose | [main_architecture.md §27](main_architecture.md) (Resume Analysis, `resume_analyses`) | 76-line dump: pipeline ingest → pipeline → prompts → schema → latex, `densify_text`, `MAX_PIPELINE_BLOB_CHARS`, LaTeX compile — now 8-line summary; full stages in §19–§21 |
+> | Deployment | [main_architecture.md §47](main_architecture.md) (Production Hosting & Deployment) | 166-line dump: README `🌐 Deployment` (Live URLs, Vercel/Render env, trust-proxy, rate-limit, Python 3.12, LaTeX, cron) → 8-line summary; `docs/rules.md` §15 kept as rules summary |
+> | Changelog | [PROJECT_AUDIT.md](../PROJECT_AUDIT.md) | 30-line `🆕 Today’s Changes` block (GitHub Node-only, TopBar 3 hubs, Homes merged, JWT cache, rate-limit, NotificationBell, etc.) → 7-line summary |
+> | File:line refs | N/A | 40+ `file:line` prose annotations (`TopBar.jsx`, `github.service.js`, etc.) stripped to `file` only via `strip_file_lines` (keeps file name, drops `:line`) — preserves navigability without line-number drift |
+
+> Each trimmed location keeps ≥5 lines (what it is + why + where to find full detail + single-source link) so no information is lost — just deduplicated. Markdown validity was preserved (fenced blocks balanced, no broken relative links).
+
+## 46.3 Verification (markdown valid, no broken links, stale fixed)
+
+> **Markdown:** all fenced ` ```text` / ` ```mermaid` / ` ```env` blocks balanced (even ` ``` ), headings start at `#` with space, tables have header separator `|---|---|`, no trailing broken links. Relative links verified: `README.md` (root) uses `docs/...`; `docs/*.md` uses `rules.md`/`design.md`/`main_architecture.md` (same dir) and `../PROJECT_AUDIT.md`/`../README.md` (parent) — no `docs/docs/` prefix.
+
+> **Stale fixed:** `docs/rules.md` `pytest` now `resume-only: health + resume pipeline/... (no scoring/compare/what-if/GitHub Python tests)` (was `44 tests: scoring, skill-gaps, resume, comparison, what-if`); `docs/rules.md` Phase 4 now `resume-only (5 endpoints + /health, LLM gateway) — scoring/catalog/GitHub/what-if/comparison Node-native`; `docs/main_architecture.md` §33 Complete Request Flow now Node `scoring.js + careerCatalog.js + profile.builder.js` (no `Python/FastAPI → AI Recommendation`); `docs/main_architecture.md` Phase 4 block now resume-only with `Resume fallback` only; `main_architecture.md` §36 env now summary → [rules.md §5](rules.md); §42 failure handling now `Only resume has fallback` (Node-native paths always succeed).
+
+> **Deduplication kept ≥5 lines per trimmed location:** each replaced block retains what it is, why it exists, key fields/behavior, and single-source link — e.g., README env 7 lines, deployment 8 lines, scoring 7 lines, internship 10 lines, GitHub 8 lines, resume 8 lines, notifications 7 lines — so information is moved, not deleted.
+
+## 46.4 Quick Index (for deduplication)
+
+> | Topic | Where to read (single source) |
+> |---|---|
+> | Env vars (frontend VITE_*, backend server/.env, AI ai-service/.env, scripts .env.setup) | [rules.md §5](rules.md) + §36 summary |
+> | Arch diagram + stack + boundaries | §2 High-Level Architecture + §3 Responsibility Matrix |
+> | Scoring formula (0.40/0.20/0.15/0.10/0.10/0.05, importance-weighted) | §23 Recommendation Engine + §23.1 Weights & Breakdown |
+> | Skill gaps | §24 Skill Gap Engine + §22 pipeline summary |
+> | Roadmap generation + progress + performance | §25 + §44 Phase 5 (Data model, Generation, Progress, Performance) |
+> | What-If simulator | §26 What-If Simulator |
+> | Resume analysis (bucket, pipeline, fallback) | §27 + §19–§21 + §42 |
+> | GitHub analysis (13 metrics, ContributionGrid) | §28 + [design.md](design.md) |
+> | Course recommendations | §30 |
+> | Internship workflow (Collect→Approve→Expire, scoring 0.55/0.20/0.15/0.10) | [rules.md §7](rules.md) + §31 summary |
+> | API routes (all groups, rate-limit, trust proxy) | §32 summary (table) + [rules.md §7](rules.md) |
+> | Auth flows (sequence, middleware, identity) | §9 Authentication Architecture |
+> | Notifications & Realtime (collection, service, polling) | [rules.md §7](rules.md) + §32 |
+> | Storage (buckets, avatar prefs, flows) | §11 summary + §17 |
+> | Local dev (3 services, ports, launchers) | §37–§38 |
+> | Security (Appwrite/Node/Python, secrets) | §39–§40 |
+> | Error handling (success/error JSON) | §41 |
+> | AI failure (resume fallback only) | §42 |
+> | Repo architecture | §43 + README Project Structure |
+> | Dev strategy (phases) | §44 |
+> | Decision summary (Appwrite/Node/Python) | §46 |
+> | Hosting & deployment (Vercel/Render/Appwrite, env, order) | §47 |
+> | Changelog (feature inventory, priorities) | [PROJECT_AUDIT.md](../PROJECT_AUDIT.md) |
+> | Design tokens (colors, typography, spacing, components) | [design.md](design.md) |
+
+---
+
 # 47. Production Hosting & Deployment
 
 ## 47.1 Live Services
@@ -2260,36 +1287,58 @@ Appwrite Cloud                      https://skillsaarthi-node.onrender.com
 
 ### Frontend (Vercel env vars)
 
+Set in **Vercel → Project → Settings → Environment Variables** (all three envs — Production/Preview/Development), then **Redeploy** (Vercel → Deployments → Redeploy). `VITE_*` is build-time (`vite.config.js`) — saving alone does nothing.
+
 ```env
-VITE_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
-VITE_APPWRITE_PROJECT_ID=<project_id>
-VITE_APPWRITE_DATABASE_ID=<database_id>
-VITE_APPWRITE_RESUME_BUCKET_ID=resumes
-VITE_APPWRITE_AVATAR_BUCKET_ID=resumes
-VITE_API_BASE_URL=https://skillsaarthi-node.onrender.com
+VITE_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1    # Must match Appwrite Cloud
+VITE_APPWRITE_PROJECT_ID=<project_id>                  # From Appwrite Console
+VITE_APPWRITE_DATABASE_ID=<database_id>                # From Appwrite Console
+VITE_APPWRITE_RESUME_BUCKET_ID=resumes                 # Free plan: single bucket
+VITE_APPWRITE_AVATAR_BUCKET_ID=resumes                 # Free plan reuse; paid: avatars
+VITE_API_BASE_URL=https://YOUR-BACKEND.onrender.com  # ← YOUR Render backend HTTPS, NOT localhost
+                                                       # e.g. https://skillsaarthi-node.onrender.com
+                                                       # src/services/api.js reads this; wrong = CORS/network failure
 ```
+
+> ⚠️ Leftover `VITE_API_BASE_URL=http://localhost:5000` on Vercel → browser hits localhost → every `/api/*` fails. Always set the Render HTTPS URL and redeploy + hard-refresh.
 
 ### Backend (Render env vars)
 
+Set in **Render → `skillsaarthi-node` → Environment** → Save → **Manual Deploy → Deploy latest commit**. `PORT` is injected by Render — do not override. `trust proxy 1` at `server/src/app.js` ensures `express-rate-limit` sees the real client IP behind Render (rate-limit at `:24-34`: 30/min on `/api/github|resume|admin`).
+
 ```env
-APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
-APPWRITE_PROJECT_ID=<project_id>
-APPWRITE_DATABASE_ID=<database_id>
-APPWRITE_RESUME_BUCKET_ID=resumes
-APPWRITE_API_KEY=<api_key>
-AI_SERVICE_URL=https://skillsaarthi-f14x.onrender.com
-GITHUB_TOKEN=<optional>
+APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1         # Server SDK — server/src/config/appwrite.js
+APPWRITE_PROJECT_ID=<project_id>                       # Must match VITE_APPWRITE_PROJECT_ID
+APPWRITE_DATABASE_ID=<database_id>                     # Must match VITE_APPWRITE_DATABASE_ID
+APPWRITE_RESUME_BUCKET_ID=resumes                      # Must match VITE_APPWRITE_RESUME_BUCKET_ID
+APPWRITE_API_KEY=<api_key>                             # Needs users.read (admin + author identity)
+AI_SERVICE_URL=https://YOUR-AI.onrender.com          # e.g. https://skillsaarthi-f14x.onrender.com
+GITHUB_TOKEN=<optional PAT>                             # Higher GitHub limit + GraphQL contributionsCollection + private count
 LLM_API_KEY=<optional>
-ADMIN_EMAILS=admin@skillguide.com
+ADMIN_EMAILS=skillsaarthi.support@gmail.com                      # Comma-separated; empty = admin API disabled
+FRONTEND_URL=https://YOUR-VERCEL-URL.vercel.app      # ← YOUR Vercel HTTPS, NOT localhost (email links at email.service.js,167)
+RESEND_API_KEY=re_...                                  # Resend HTTPS key — https://resend.com/api-keys (preferred over SMTP on Render)
+RESEND_FROM=onboarding@resend.dev                      # Free tier: ONLY onboarding@resend.dev or verified domain; auto-corrects gmail→onboarding@resend.dev at email.service.js
+                                                       # reply_to always skillsaarthi.support@gmail.com (email.service.js)
+# SMTP fallback — ignored when RESEND_API_KEY set; fails on Render free tier (ENETUNREACH smtp.gmail.com:465)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=465
+EMAIL_SECURE=true
+EMAIL_USER=skillsaarthi.support@gmail.com
+EMAIL_PASS=<16-char App Password>
+EMAIL_FROM=skillsaarthi <skillsaarthi.support@gmail.com>
 ```
 
-`PORT` is injected by Render — do not override it.
+**Email OFF vs ON:** Repo currently runs **OFF** — `isEmailConfigured()` at `email.service.js` checks `RESEND_API_KEY || (host+user+pass)`. When false, signup returns `_dev_otp` in JSON (mock at `:97`) and the verification banner (`src/components/common/VerificationBanner.jsx`) + guards (`src/components/common/RouteGuards.jsx`) are gated by `EMAIL_VERIFICATION_ENABLED=false` (never shows/blocks). To enable, set `RESEND_API_KEY` + `RESEND_FROM=onboarding@resend.dev` (free) or a verified domain, then flip those two `false` → `true` if you want the gate enforced. Resend HTTPS at `email.service.js` (`fetch https://api.resend.com/emails`) works on Render; SMTP does not (`ENETUNREACH` on free tier).
 
 ### AI service (Render env vars)
 
 ```env
-PYTHON_VERSION=3.12.10
-LLM_API_KEY=<optional>
+PYTHON_VERSION=3.12.10                                  # REQUIRED — see below
+AI_BASE_URL=https://ai.tcetcercd.in/v1                 # TCET gateway — ai-service/app/ai/client.py
+AI_MODEL=Qwen3.6-35B-A3B
+AI_KEY=<gateway key>
+LLM_API_KEY=<legacy alias>
 ```
 
 `PORT` is injected by Render.
@@ -2312,6 +1361,15 @@ LLM_API_KEY=<optional>
 >    `apt-get update && apt-get install -y texlive-latex-extra texlive-fonts-recommended`
 >    (~1.5GB, may exceed free-tier disk); no code change needed (`pdflatex`/`xelatex` appear on
 >    PATH).
+
+### 47.4b Render notes — rate-limit, trust proxy, redeploy, logs & dev OTP
+
+- **Trust proxy:** `server/src/app.js` `app.set('trust proxy',1)` — required on Render so `express-rate-limit` keys on the real IP, not the proxy IP (`app.js` limiter: `windowMs 60*1000, max 30`).
+- **Rate-limited paths:** `app.js` `app.use('/api/github', sensitiveLimiter)` etc. protect GitHub scraping, resume LLM, and admin writes; health checks `GET /` + `GET /health` at `app.js` are **not** rate-limited.
+- **After any Render env change:** `Render → Manual Deploy → Deploy latest commit` (saving alone does not restart). Check **Logs** for `[email:resend] Sent to ...` (success at `email.service.js`) vs `ENETUNREACH smtp.gmail.com:465` or `SMTP verify timeout` (SMTP path blocked — switch to Resend).
+- **After any Vercel env change:** `Vercel → Deployments → Redeploy` (Vite bakes `VITE_*` at build). Hard-refresh the browser.
+- **Health checks:** `https://YOUR-BACKEND.onrender.com/health` (`server/src/app.js`) and `https://YOUR-AI.onrender.com/health` (`ai-service/app/main.py`) must return `{"status":"ok",...}`. Point cron-job.org (every 5 min) at `/health` (not `/`) to keep free tier awake.
+- **Dev OTP when email OFF:** DevTools → Network → `POST /api/auth/signup` response contains `_dev_otp` (e.g. `" _dev_otp":"482913"`). Paste it into `/verify-otp` — the `VerifyOtp` banner auto-verifies. When email is ON (Resend), the same OTP is emailed instead (dev field absent).
 
 ## 47.5 Render Service Settings
 
