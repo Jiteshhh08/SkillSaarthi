@@ -5,14 +5,16 @@ import { requireAuth } from '../middleware/auth.middleware.js'
 import { rateLimit } from '../middleware/rateLimit.middleware.js'
 import { ApiError } from '../utils/ApiError.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
-import { isEmailConfigured, sendOtpEmail, sendPasswordResetEmail, sendVerificationEmail } from '../services/email.service.js'
+import { isEmailConfigured, sendOtpEmail, sendPasswordResetEmail, sendPasswordResetOtpEmail, sendVerificationEmail } from '../services/email.service.js'
 import {
-  createPasswordResetToken,
+  createPasswordResetOtp,
+  consumePasswordResetOtp,
   createVerificationToken,
   consumePasswordResetToken,
   findUserByEmail,
   getVerificationStatus,
   markEmailVerified,
+  verifyPasswordResetOtp,
   verifyPasswordResetToken,
   verifyVerificationToken,
 } from '../services/authToken.service.js'
@@ -353,8 +355,8 @@ router.get(
 )
 
 // ============================================================
-// POST /api/auth/forgot-password (public)
-// Always returns generic success — does not reveal if email exists.
+// POST /api/auth/forgot-password (public) — OTP flow
+// Sends 6-digit OTP, stored as hash; generic success to avoid enumeration.
 // ============================================================
 router.post(
   '/forgot-password',
@@ -368,49 +370,76 @@ router.post(
     const normalizedEmail = String(email).trim().toLowerCase()
     const user = await findUserByEmail(normalizedEmail)
 
-    // Always return generic success to avoid email enumeration
     if (!user) {
       return res.json({
         success: true,
-        message: 'If an account exists for this email, a password reset link has been sent.',
+        message: 'If an account exists for this email, a password reset code has been sent.',
       })
     }
 
-    const { token } = await createPasswordResetToken(user.$id, user.email)
+    const { otp, expiresAt } = await createPasswordResetOtp(user.$id, user.email)
     try {
-      await sendPasswordResetEmail({ to: user.email, name: user.name || '', token })
+      await sendPasswordResetOtpEmail({ to: user.email, name: user.name || '', otp })
     } catch (err) {
-      console.error('[auth] sendPasswordResetEmail failed:', err.message)
+      console.error('[auth] sendPasswordResetOtpEmail failed:', err.message)
     }
 
     const response = {
       success: true,
-      message: 'If an account exists for this email, a password reset link has been sent.',
+      message: 'If an account exists for this email, a password reset code has been sent.',
+      expires_at: expiresAt,
       email_configured: isEmailConfigured(),
     }
     if (!isEmailConfigured()) {
-      response._dev_token = token
-      response._dev_note = 'Email not configured — token exposed for dev only'
-      console.log(`[auth:mock] Password reset token for ${user.email}: ${token}`)
-      console.log(`[auth:mock] Reset URL: ${config.frontendUrl.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}`)
+      response._dev_otp = otp
+      response._dev_note = 'Email not configured — OTP exposed for dev only'
+      console.log(`[auth:mock] Password reset OTP for ${user.email}: ${otp}`)
     }
     res.json(response)
   }),
 )
 
 // ============================================================
+// POST /api/auth/verify-reset-otp (public)
+// Body: { email, otp } — verifies OTP before allowing reset
+// ============================================================
+router.post(
+  '/verify-reset-otp',
+  verifyLimiter,
+  asyncHandler(async (req, res) => {
+    const { email, otp } = req.body || {}
+    if (!email || !isValidEmail(email)) {
+      throw new ApiError(400, 'A valid email is required.', 'INVALID_EMAIL')
+    }
+    if (!otp || String(otp).trim().length < 4) {
+      throw new ApiError(400, 'A valid OTP is required.', 'INVALID_OTP')
+    }
+    const result = await verifyPasswordResetOtp(String(email).trim(), String(otp).trim())
+    if (!result.valid) {
+      const messages = {
+        missing_params: 'Email and OTP are required.',
+        invalid_otp: 'Invalid code. Please check and try again.',
+        expired: 'Code has expired. Please request a new one.',
+        already_used: 'This code has already been used. Please request a new one.',
+        lookup_failed: 'Unable to verify at this time.',
+      }
+      throw new ApiError(400, messages[result.reason] || 'Invalid code.', 'OTP_FAILED')
+    }
+    res.json({ success: true, message: 'OTP verified. You can now reset your password.' })
+  }),
+)
+
+// ============================================================
 // POST /api/auth/reset-password (public)
-// Body: { token, password, confirmPassword }
+// Body: { token, password, confirmPassword }  — legacy link
+//    or { email, otp, password, confirmPassword } — OTP flow (preferred)
 // ============================================================
 router.post(
   '/reset-password',
   verifyLimiter,
   asyncHandler(async (req, res) => {
-    const { token, password, confirmPassword } = req.body || {}
+    const { token, email, otp, password, confirmPassword } = req.body || {}
 
-    if (!token || typeof token !== 'string' || token.trim().length < 10) {
-      throw new ApiError(400, 'A valid reset token is required.', 'INVALID_TOKEN')
-    }
     if (!isStrongPassword(password)) {
       throw new ApiError(400, 'Password must be at least 8 characters.', 'WEAK_PASSWORD')
     }
@@ -418,19 +447,45 @@ router.post(
       throw new ApiError(400, 'Passwords do not match.', 'PASSWORD_MISMATCH')
     }
 
-    const result = await verifyPasswordResetToken(token.trim())
-    if (!result.valid) {
-      const messages = {
-        missing_token: 'Reset token is missing.',
-        invalid_token: 'Invalid reset link. It may have been corrupted or already used.',
-        already_used: 'This reset link has already been used. Please request a new one.',
-        expired: 'This reset link has expired. Please request a new one.',
-        lookup_failed: 'Unable to reset password at this time. Please try again.',
-      }
-      throw new ApiError(400, messages[result.reason] || 'Invalid reset token.', 'RESET_FAILED')
-    }
+    let userId
 
-    const userId = result.doc.user_id
+    if (email && otp) {
+      // OTP flow — email must be verified via OTP
+      if (!isValidEmail(email) || String(otp).trim().length < 4) {
+        throw new ApiError(400, 'A valid email and OTP are required.', 'INVALID_OTP')
+      }
+      const result = await verifyPasswordResetOtp(String(email).trim(), String(otp).trim())
+      if (!result.valid) {
+        const messages = {
+          missing_params: 'Email and OTP are required.',
+          invalid_otp: 'Invalid code. Please check and try again.',
+          expired: 'Code has expired. Please request a new one.',
+          already_used: 'This code has already been used. Please request a new one.',
+          lookup_failed: 'Unable to verify at this time.',
+        }
+        throw new ApiError(400, messages[result.reason] || 'Invalid code.', 'OTP_FAILED')
+      }
+      userId = result.doc.user_id
+      // Consume OTP after successful verification
+      await consumePasswordResetOtp(String(email).trim(), String(otp).trim())
+    } else if (token && typeof token === 'string' && token.trim().length >= 10) {
+      // Legacy link flow
+      const result = await verifyPasswordResetToken(token.trim())
+      if (!result.valid) {
+        const messages = {
+          missing_token: 'Reset token is missing.',
+          invalid_token: 'Invalid reset link. It may have been corrupted or already used.',
+          already_used: 'This reset link has already been used. Please request a new one.',
+          expired: 'This reset link has expired. Please request a new one.',
+          lookup_failed: 'Unable to reset password at this time. Please try again.',
+        }
+        throw new ApiError(400, messages[result.reason] || 'Invalid reset token.', 'RESET_FAILED')
+      }
+      userId = result.doc.user_id
+      await consumePasswordResetToken(token.trim())
+    } else {
+      throw new ApiError(400, 'A valid reset token or email+OTP is required.', 'INVALID_TOKEN')
+    }
 
     // Update password via Appwrite Users API
     try {
@@ -439,9 +494,6 @@ router.post(
       console.error('[auth] users.updatePassword failed:', err.message)
       throw new ApiError(500, 'Failed to update password. Please try again.', 'PASSWORD_UPDATE_FAILED')
     }
-
-    // Consume token
-    await consumePasswordResetToken(token.trim())
 
     res.json({ success: true, message: 'Password has been reset successfully. You can now log in.' })
   }),

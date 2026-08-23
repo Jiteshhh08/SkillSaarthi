@@ -141,6 +141,24 @@ export async function sendPasswordResetEmail({ to, name, token }) {
   })
 }
 
+export async function sendPasswordResetOtpEmail({ to, name, otp }) {
+  const subject = `Your password reset code is ${otp} — skillsaarthi`
+  const body = `
+    <p style="margin:0 0 12px;font-size:14px;color:#5b5e6b;">Hi ${escapeHtml(name || 'there')},</p>
+    <p style="margin:0 0 16px;font-size:14px;color:#5b5e6b;">We received a request to reset the password for your <strong>skillsaarthi</strong> account. Use the code below. It expires in 10 minutes.</p>
+    <p style="margin:0 0 20px;text-align:center;">
+      <span style="display:inline-block;background:#f0fdf9;border:1px solid #14bf96;color:#0a7d63;padding:16px 24px;border-radius:12px;font-weight:800;font-size:28px;letter-spacing:0.2em;">${escapeHtml(otp)}</span>
+    </p>
+    <p style="margin:16px 0 0;font-size:12px;color:#797d8a;">This code expires in 10 minutes and can only be used once. If you did not request a reset, no action is needed.</p>
+  `
+  return sendEmail({
+    to,
+    subject,
+    html: wrapHtml('Reset your password — OTP', body),
+    text: `Hi ${name || 'there'},\n\nYour password reset code is: ${otp}\nExpires in 10 minutes.`,
+  })
+}
+
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, '&amp;')
