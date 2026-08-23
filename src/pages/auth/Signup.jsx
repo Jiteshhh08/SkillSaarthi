@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signupPending } from '../../services/authApi'
-import { signUp } from '../../services/auth'
+import { useAuth } from '../../hooks/useAuth'
 import TopBar from '../../components/layout/TopBar'
 
 const EMAIL_VERIFICATION_ENABLED = false // hidden until domain + SMTP/Resend ready — backend stays present
@@ -13,6 +13,7 @@ export default function Signup() {
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const { signUp } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (event) => {
@@ -30,10 +31,10 @@ export default function Signup() {
     setSubmitting(true)
     try {
       if (!EMAIL_VERIFICATION_ENABLED) {
-        // Direct create — no OTP, email verification hidden until SMTP/Resend ready
+        // Direct create — no OTP, auto-login via AuthContext
         await signUp(name.trim(), email.trim(), password)
-        setInfo('Account created — you can now log in.')
-        setTimeout(() => navigate('/login'), 800)
+        setInfo('Account created — redirecting…')
+        setTimeout(() => navigate('/home'), 800)
         return
       }
       const res = await signupPending({ name: name.trim(), email: email.trim(), password })
