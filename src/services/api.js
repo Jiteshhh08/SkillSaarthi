@@ -16,11 +16,23 @@ function getJwtExp(token) {
   }
 }
 
+const PUBLIC_AUTH_PATHS = ['/api/auth/signup', '/api/auth/verify-otp', '/api/auth/resend-otp', '/api/auth/forgot-password', '/api/auth/verify-reset-otp', '/api/auth/reset-password', '/api/auth/check-reset-token']
+
 api.interceptors.request.use(async (config) => {
   try {
+    const url = String(config.url || '')
+    if (PUBLIC_AUTH_PATHS.some((p) => url.includes(p))) {
+      return config
+    }
     const now = Date.now()
     if (jwtCache.token && jwtCache.exp - 60_000 > now) {
       config.headers.Authorization = `Bearer ${jwtCache.token}`
+      return config
+    }
+    // Only try JWT if we have a session — avoids 401 noise for anonymous
+    try {
+      await account.get()
+    } catch {
       return config
     }
     const { jwt } = await account.createJWT()
@@ -29,7 +41,7 @@ api.interceptors.request.use(async (config) => {
       config.headers.Authorization = `Bearer ${jwt}`
     }
   } catch {
-    // no active session: let the request proceed and fail auth downstream
+    // no active session: let the request proceed
   }
   return config
 })
