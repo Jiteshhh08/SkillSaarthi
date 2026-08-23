@@ -5,6 +5,8 @@ import { getVerificationStatus } from '../../services/authApi'
 import { getAdminStatus } from '../../services/admin'
 import TopBar from '../../components/layout/TopBar'
 
+const FORGOT_PASSWORD_ENABLED = false // hidden until SMTP/Resend + domain — backend stays present at /forgot-password
+
 export default function Login() {
   const [searchParams] = useSearchParams()
   const location = useLocation()
@@ -46,14 +48,16 @@ export default function Login() {
         navigate('/home')
         return
       }
-      try {
-        const v = await getVerificationStatus()
-        if (!v.verified) {
-          navigate('/verify-pending')
-          return
+      if (FORGOT_PASSWORD_ENABLED) {
+        try {
+          const v = await getVerificationStatus()
+          if (!v.verified) {
+            navigate('/verify-pending')
+            return
+          }
+        } catch {
+          // If verification service is down/unavailable, don't block — let RouteGuards handle
         }
-      } catch {
-        // If verification service is down/unavailable, don't block — let RouteGuards handle
       }
       navigate('/home')
     } catch (err) {
@@ -102,7 +106,7 @@ export default function Login() {
           <label className="mt-4 block text-sm font-bold text-ink" htmlFor="password">
             Password
           </label>
-          <div className="mt-1 flex items-center justify-between gap-2">
+          <div className="mt-1 flex items-center gap-2">
             <input
               id="password"
               type="password"
@@ -111,12 +115,14 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               className="input-base flex-1"
             />
-            <Link
-              to="/forgot-password"
-              className="shrink-0 text-xs font-bold text-brand-deep hover:underline"
-            >
-              Forgot?
-            </Link>
+            {FORGOT_PASSWORD_ENABLED && (
+              <Link
+                to="/forgot-password"
+                className="shrink-0 text-xs font-bold text-brand-deep hover:underline"
+              >
+                Forgot?
+              </Link>
+            )}
           </div>
 
           <button type="submit" disabled={submitting} className="btn-primary mt-6 w-full disabled:opacity-50">
