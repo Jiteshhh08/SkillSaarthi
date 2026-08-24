@@ -21,11 +21,11 @@ function shiftDateKey(key, days) {
  * - Last visit was yesterday -> streak + 1
  * - Otherwise (first time or streak broken) -> streak resets to 1
  */
-export async function touchStreak(userId) {
+export async function touchStreak(userId, cachedProfile = null) {
   const fallback = { current: 0, best: 0 }
   if (!userId) return fallback
   try {
-    const profile = await getProfile(userId)
+    const profile = cachedProfile && cachedProfile.$id === userId ? cachedProfile : await getProfile(userId)
     const today = dateKey()
     const last = profile?.last_active_date || ''
 
