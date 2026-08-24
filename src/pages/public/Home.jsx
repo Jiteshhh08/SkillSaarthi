@@ -42,11 +42,30 @@ const SUBJECTS = [
 ]
 
 export default function Home() {
-  const { user, profile } = useAuth()
-  const { isAdmin } = useAdmin()
+  const { user, profile, profileLoading, loading: authLoading } = useAuth()
+  const { isAdmin, loading: adminLoading } = useAdmin()
 
   // Logged-in view merged into same Home (so / and /home share one component)
   if (user) {
+    const isChecking = authLoading || profileLoading || adminLoading
+    if (isChecking) {
+      return (
+        <div className="min-h-screen">
+          <TopBar />
+          <section className="relative overflow-hidden bg-warm">
+            <DecorativeShapes variant="band" />
+            <div className="relative mx-auto flex max-w-7xl flex-col items-center px-6 py-16 text-center">
+              <div className="h-4 w-28 animate-pulse rounded-full bg-black/[0.06]" />
+              <div className="mt-4 h-10 w-64 animate-pulse rounded-lg bg-black/[0.06]" />
+              <div className="mt-4 h-6 w-96 max-w-full animate-pulse rounded-full bg-black/[0.04]" />
+              <div className="mt-8 h-11 w-40 animate-pulse rounded-full bg-black/[0.06]" />
+            </div>
+          </section>
+          <WhatWeDo mode="user" />
+          <Footer />
+        </div>
+      )
+    }
     const complete = isProfileComplete(profile)
     const cta = isAdmin
       ? { label: 'Open admin panel', to: '/admin/internships' }
