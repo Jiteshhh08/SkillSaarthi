@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   getCurrentUser,
   login as loginApi,
@@ -16,8 +16,10 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(true)
   const [streak, setStreak] = useState({ current: 0, best: 0 })
+  const [streakLoading, setStreakLoading] = useState(false)
   const [emailVerified, setEmailVerified] = useState(null) // null = unknown/loading, true/false = known
   const [verificationLoading, setVerificationLoading] = useState(false)
+  const lastStreakUserId = useRef(null)
 
   const refreshProfile = useCallback(async (userId) => {
     const id = userId || user?.$id
@@ -125,14 +127,36 @@ export function AuthProvider({ children }) {
     setStreak({ current: 0, best: 0 })
   }, [])
 
+  // Streak: runs once per user per session, reuses already-fetched profile to save 1 DB read
+  useEffect(() => {
+    let active = true
+    if (user?.$id) {
+      if (lastStreakUserId.current === user.$id) return // already touched this session
+      const cached = profile && profile.$id === user.$id ? profile : null
+      if (profileLoading && !cached) return // wait for boot profile to avoid extra read
+      setStreakLoading(true)
+      touchStreak(user.$id, cached).then((result) => {
+        if (active) {
+          setStreak(result)
+          setStreakLoading(false)
+          lastStreakUserId.current = user.$id
+        }
+      }).catch(() => {
+        if (active) setStreakLoading(false)
+      })
+    } else {
+      lastStreakUserId.current = null
+      setStreakLoading(false)
+    }
+    return () => {
+      active = false
+    }
+  }, [user?.$id, profile, profileLoading])
+
+  // Email verification: non-blocking, uses profile fallback
   useEffect(() => {
     let active = true
     if (user) {
-      setStreak({ current: 0, best: 0 })
-      touchStreak(user.$id).then((result) => {
-        if (active) setStreak(result)
-      })
-      // Fetch verification status (non-blocking)
       setVerificationLoading(true)
       getVerificationStatus()
         .then((res) => {
@@ -140,7 +164,6 @@ export function AuthProvider({ children }) {
         })
         .catch(() => {
           if (!active) return
-          // Fallback logic
           const appwriteVerified = Boolean(user.emailVerification)
           const profileVerified = profile?.is_email_verified
           if (profileVerified === false) setEmailVerified(false)
@@ -167,6 +190,7 @@ export function AuthProvider({ children }) {
         profileLoading,
         loading,
         streak,
+        streakLoading,
         emailVerified,
         verificationLoading,
         login,

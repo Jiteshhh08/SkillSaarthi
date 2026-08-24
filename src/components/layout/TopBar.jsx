@@ -67,7 +67,7 @@ function NavDropdown({ label, items, active }) {
   )
 }
 
-function ProfileMenu({ user, onLogout, isAdmin }) {
+function ProfileMenu({ user, onLogout, isAdmin, isAdminLoading }) {
   const avatarSrc = useAvatarUrl(user)
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -129,7 +129,12 @@ function ProfileMenu({ user, onLogout, isAdmin }) {
             <Icon name="settings" size={16} className="text-ink-muted" />
             Update profile
           </Link>
-          {isAdmin && (
+          {isAdminLoading ? (
+            <span className="flex items-center gap-2 px-3 py-2">
+              <span className="h-4 w-4 animate-pulse rounded bg-surface-soft" />
+              <span className="h-4 w-20 animate-pulse rounded bg-surface-soft" />
+            </span>
+          ) : isAdmin ? (
             <Link
               to="/admin/internships"
               role="menuitem"
@@ -139,7 +144,7 @@ function ProfileMenu({ user, onLogout, isAdmin }) {
               <Icon name="shield-check" size={16} className="text-ink-muted" />
               Admin panel
             </Link>
-          )}
+          ) : null}
           <button
             type="button"
             role="menuitem"
@@ -158,7 +163,7 @@ function ProfileMenu({ user, onLogout, isAdmin }) {
   )
 }
 
-function MobileMenu({ user, navItems, isAdmin, isActive, open, onNavigate, onClose, onLogout }) {
+function MobileMenu({ user, navItems, isAdmin, isAdminLoading, isActive, open, onNavigate, onClose, onLogout }) {
   const avatarSrc = useAvatarUrl(user)
 
   useEffect(() => {
@@ -243,7 +248,9 @@ function MobileMenu({ user, navItems, isAdmin, isActive, open, onNavigate, onClo
               ),
             )}
 
-            {isAdmin && (
+            {isAdminLoading ? (
+              <span className="block h-9 animate-pulse rounded-md bg-surface-soft" />
+            ) : isAdmin ? (
               <Link
                 to="/admin/internships"
                 onClick={onNavigate}
@@ -253,7 +260,7 @@ function MobileMenu({ user, navItems, isAdmin, isActive, open, onNavigate, onClo
               >
                 Admin
               </Link>
-            )}
+            ) : null}
 
             <div className="border-t border-line pt-4">
               <button
@@ -290,8 +297,8 @@ function MobileMenu({ user, navItems, isAdmin, isActive, open, onNavigate, onClo
 }
 
 export default function TopBar() {
-  const { user, loading, logout, streak } = useAuth()
-  const { isAdmin } = useAdmin()
+  const { user, loading, logout, streak, streakLoading } = useAuth()
+  const { isAdmin, loading: adminLoading } = useAdmin()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -376,11 +383,15 @@ export default function TopBar() {
           {loading ? null : user ? (
             <>
               <NotificationBell />
-              <span className="hidden items-center gap-1 rounded-sm border border-accent-orange bg-orange-50 px-3 py-2 text-sm font-bold text-orange-800 sm:inline-flex">
-                <Icon name="flame" size={16} className="text-accent-orange" />
-                {streak.current} {streak.current === 1 ? 'day' : 'days'} streak
-              </span>
-              <ProfileMenu user={user} onLogout={handleLogout} isAdmin={isAdmin} />
+              {streakLoading ? (
+                <span className="hidden h-9 w-28 animate-pulse rounded-sm bg-surface-soft sm:inline-flex" />
+              ) : (
+                <span className="hidden items-center gap-1 rounded-sm border border-accent-orange bg-orange-50 px-3 py-2 text-sm font-bold text-orange-800 sm:inline-flex">
+                  <Icon name="flame" size={16} className="text-accent-orange" />
+                  {streak.current} {streak.current === 1 ? 'day' : 'days'} streak
+                </span>
+              )}
+              <ProfileMenu user={user} onLogout={handleLogout} isAdmin={isAdmin} isAdminLoading={adminLoading} />
             </>
           ) : (
             <>
@@ -430,6 +441,7 @@ export default function TopBar() {
         user={user}
         navItems={navItems}
         isAdmin={isAdmin}
+        isAdminLoading={adminLoading}
         isActive={isActive}
         open={mobileOpen}
         onNavigate={() => setMobileOpen(false)}
