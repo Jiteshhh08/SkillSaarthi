@@ -90,7 +90,12 @@ function StatCard({ icon, label, value, sub, loading, index = 0 }) {
     <div className="card relative overflow-hidden">
       <DecorativeShapes variant="card" index={index} />
       {loading ? (
-        <div className="h-6 w-24 animate-pulse rounded-md bg-surface-soft" />
+        <div className="relative">
+          <div className="absolute -right-4 -top-4 h-16 w-16 animate-pulse rounded-full bg-surface-soft" />
+          <div className="h-8 w-20 animate-pulse rounded-md bg-surface-soft" />
+          <div className="mt-2 h-4 w-28 animate-pulse rounded bg-surface-soft" />
+          <div className="mt-2 h-3 w-32 animate-pulse rounded bg-surface-soft" />
+        </div>
       ) : (
         <div className="relative">
           <div className="absolute -right-4 -top-4 grid h-16 w-16 place-items-center rounded-full bg-surface-soft">
@@ -106,15 +111,16 @@ function StatCard({ icon, label, value, sub, loading, index = 0 }) {
 }
 
 export default function Dashboard() {
-  const { user, profile, streak } = useAuth()
+  const { user, profile, profileLoading, streak, streakLoading } = useAuth()
   const [skills, setSkills] = useState([])
   const [interests, setInterests] = useState([])
   const [roadmaps, setRoadmaps] = useState([])
   const [loading, setLoading] = useState(true)
-
   useEffect(() => {
+    if (!user?.$id) return
     let mounted = true
     let retryTimer = null
+    let initTimer = null
 
     const fetchAll = async (isRetry = false) => {
       try {
@@ -127,11 +133,14 @@ export default function Dashboard() {
         setSkills(skillsData)
         setInterests(interestsData)
         setRoadmaps(roadmapDocs || [])
-        // If first load returns empty but user likely has data (onboarding completed), retry once after session settles
-        if (!isRetry && skillsData.length === 0 && interestsData.length === 0) {
+        // Only retry once, not quickly — keep skeleton instead of showing 0 if data should exist
+        const shouldRetry = !isRetry && (skillsData.length === 0 || interestsData.length === 0) && Boolean(profile?.onboarding_completed)
+        if (shouldRetry) {
           retryTimer = setTimeout(() => {
+            retryTimer = null
             if (mounted) fetchAll(true)
-          }, 800)
+          }, 1500)
+          return
         }
       } catch {
         if (mounted) {
@@ -140,13 +149,15 @@ export default function Dashboard() {
           setRoadmaps([])
         }
       } finally {
-        if (mounted) setLoading(false)
+        if (mounted && !retryTimer) setLoading(false)
       }
     }
 
-    fetchAll()
+    // Small initial delay lets Appwrite session settle so first attempt succeeds — no rapid retry
+    initTimer = setTimeout(() => fetchAll(false), 400)
     return () => {
       mounted = false
+      if (initTimer) clearTimeout(initTimer)
       if (retryTimer) clearTimeout(retryTimer)
     }
   }, [user.$id])
@@ -239,10 +250,14 @@ export default function Dashboard() {
               )}
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-deep bg-white px-3 py-1.5 text-sm font-bold text-brand-deep">
-                <Icon name="flame" size={16} className="text-accent-orange" />
-                {streak.current} day{streak.current === 1 ? '' : 's'} streak
-              </span>
+              {streakLoading ? (
+                <span className="inline-flex h-8 w-28 animate-pulse rounded-full bg-surface-soft" />
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-deep bg-white px-3 py-1.5 text-sm font-bold text-brand-deep">
+                  <Icon name="flame" size={16} className="text-accent-orange" />
+                  {streak.current} day{streak.current === 1 ? '' : 's'} streak
+                </span>
+              )}
               {educationLabel && (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-bold text-ink">
                   <Icon name="graduation-cap" size={16} className="text-brand-deep" />
@@ -265,7 +280,7 @@ export default function Dashboard() {
             label="Profile setup"
             value={`${completion}%`}
             sub={`${completed} of ${checklist.length} steps`}
-            loading={false}
+            loading={loading}
             index={1}
           />
           <StatCard
@@ -289,7 +304,7 @@ export default function Dashboard() {
             label="Best streak"
             value={`${streak.best} days`}
             sub={streak.current > 0 ? `currently on ${streak.current}` : 'start today'}
-            loading={false}
+            loading={loading || streakLoading}
             index={9}
           />
         </section>
