@@ -1,3 +1,4 @@
+import { memo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Avatar from './Avatar'
 import Icon from '../common/Icon'
@@ -8,7 +9,28 @@ function toUserShape(author) {
   return { name: author.name, prefs: { avatar_file_id: author.avatar_file_id || '' } }
 }
 
-export default function PostCard({ post, onLike, onBookmark, onDelete, onEdit }) {
+function PostCard({ post, onLike, onBookmark, onDelete, onEdit }) {
+  const [likeBusy, setLikeBusy] = useState(false)
+  const [bookmarkBusy, setBookmarkBusy] = useState(false)
+
+  const handleLike = async () => {
+    if (likeBusy) return
+    setLikeBusy(true)
+    try {
+      await onLike?.(post)
+    } finally {
+      setLikeBusy(false)
+    }
+  }
+  const handleBookmark = async () => {
+    if (bookmarkBusy) return
+    setBookmarkBusy(true)
+    try {
+      await onBookmark?.(post)
+    } finally {
+      setBookmarkBusy(false)
+    }
+  }
   const excerpt = (post.content || '').length > 280
     ? `${post.content.slice(0, 280)}…`
     : post.content
@@ -53,9 +75,10 @@ export default function PostCard({ post, onLike, onBookmark, onDelete, onEdit })
       <div className="mt-5 flex items-center gap-1 border-t border-line-soft pt-4">
         <button
           type="button"
-          onClick={() => onLike?.(post)}
+          onClick={handleLike}
+          disabled={likeBusy}
           aria-pressed={post.liked_by_me}
-          className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-bold transition-colors ${
+          className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-bold transition-colors disabled:opacity-50 ${
             post.liked_by_me ? 'text-danger' : 'text-ink-muted hover:text-danger'
           }`}
         >
@@ -73,9 +96,10 @@ export default function PostCard({ post, onLike, onBookmark, onDelete, onEdit })
 
         <button
           type="button"
-          onClick={() => onBookmark?.(post)}
+          onClick={handleBookmark}
+          disabled={bookmarkBusy}
           aria-pressed={post.bookmarked_by_me}
-          className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-bold transition-colors ml-auto ${
+          className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-bold transition-colors ml-auto disabled:opacity-50 ${
             post.bookmarked_by_me ? 'text-accent-purple' : 'text-ink-muted hover:text-accent-purple'
           }`}
         >
@@ -107,3 +131,5 @@ export default function PostCard({ post, onLike, onBookmark, onDelete, onEdit })
     </article>
   )
 }
+
+export default memo(PostCard)
