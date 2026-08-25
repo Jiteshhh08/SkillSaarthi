@@ -39,6 +39,16 @@ const MAX_POST_CONTENT = 20000
 const MAX_COMMENT_CONTENT = 4000
 const FEED_PAGE_SIZE = 20
 
+function sanitizeContent(text, max) {
+  let t = String(text || '')
+  // strip script/style tags and angle brackets to prevent XSS if ever rendered as HTML
+  t = t.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+  t = t.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+  // trim and enforce max
+  t = t.trim().slice(0, max)
+  return t
+}
+
 const authorCache = new Map()
 const AUTHOR_CACHE_TTL = 120_000
 
@@ -88,13 +98,18 @@ function mapAuthor(user) {
 async function loadProfilesForUsers(userIds) {
   if (userIds.length === 0) return {}
   try {
-    const profiles = await databases.listDocuments(
-      config.appwrite.databaseId,
-      COLLECTIONS.communityProfiles,
-      [Query.equal('user_id', userIds)],
-    )
+    // Deduplicate and batch — Appwrite Query.equal with array does OR; limit batch to 20 ids per request to avoid URL length limits
+    const unique = [...new Set(userIds)].slice(0, 100)
     const byUser = {}
-    for (const profile of profiles.documents) byUser[profile.user_id] = profile
+    for (let i = 0; i < unique.length; i += 50) {
+      const batch = unique.slice(i, i + 50)
+      const res = await databases.listDocuments(
+        config.appwrite.databaseId,
+        COLLECTIONS.communityProfiles,
+        [Query.equal('user_id', batch), Query.limit(50)],
+      )
+      for (const profile of res.documents) byUser[profile.user_id] = profile
+    }
     return byUser
   } catch {
     return {}
@@ -124,12 +139,16 @@ async function decoratePosts(posts, viewerId) {
   if (posts.length === 0) return []
 
   const userIds = [...new Set(posts.map((post) => post.user_id))]
+  const postIds = posts.map((p) => p.$id)
+  // Only fetch likes/bookmarks for visible postIds — avoids N+1 and fetching entire user history
   const [authors, profiles, likedRows, bookmarkedRows] = await Promise.all([
     Promise.all(userIds.map((id) => cacheKeyedGet(id))),
     loadProfilesForUsers(userIds),
-    viewerId ? listCommunityLikes([Query.equal('user_id', viewerId)]) : Promise.resolve([]),
     viewerId
-      ? listCommunityBookmarks([Query.equal('user_id', viewerId)])
+      ? listCommunityLikes([Query.equal('user_id', viewerId), Query.equal('post_id', postIds)])
+      : Promise.resolve([]),
+    viewerId
+      ? listCommunityBookmarks([Query.equal('user_id', viewerId), Query.equal('post_id', postIds)])
       : Promise.resolve([]),
   ])
   const authorById = {}
@@ -157,6 +176,10 @@ function paginate(items, offset, limit) {
 
 export async function listPosts(userId, filters = {}) {
   const { category, sort = 'newest', search = '', scope = 'published', offset = 0, limit = FEED_PAGE_SIZE } = filters
+  const q = String(search || '').trim()
+  const normalizedOffset = Math.max(0, Number(offset) || 0)
+  const normalizedLimit = Math.min(Math.max(Number(limit) || FEED_PAGE_SIZE, 1), 50)
+  const hasSearch = q.length > 0
 
   const queries = []
   if (scope === 'drafts') {
@@ -170,28 +193,65 @@ export async function listPosts(userId, filters = {}) {
     queries.push(Query.equal('category', category))
   }
 
-  let posts = await listCommunityPosts(queries)
-
-  const q = String(search || '').trim().toLowerCase()
-  if (q) {
+  // When there is a search query we must fetch a larger window and filter in-memory
+  // because Appwrite fulltext requires an index; otherwise use DB pagination directly.
+  if (hasSearch) {
+    // Fetch up to 100 candidates then filter/sort/paginate in memory
+    let posts = await listCommunityPosts([...queries, Query.limit(100)])
+    const lower = q.toLowerCase()
+    const terms = lower.split(/\s+/).filter(Boolean)
     posts = posts.filter((post) => {
       const haystack = `${post.title} ${post.content} ${post.category} ${post.tags || ''}`.toLowerCase()
-      return q.split(/\s+/).every((term) => haystack.includes(term))
+      return terms.every((term) => haystack.includes(term))
     })
+    posts.sort((a, b) => {
+      if (sort === 'popular') {
+        const score = (post) => (post.likes_count || 0) * 2 + (post.comments_count || 0)
+        const diff = score(b) - score(a)
+        if (diff !== 0) return diff
+      }
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0)
+    })
+    const { items, total } = paginate(posts, normalizedOffset, normalizedLimit)
+    const decorated = await decoratePosts(items, userId)
+    return { posts: decorated, total, offset: normalizedOffset, limit: normalizedLimit }
   }
 
-  posts.sort((a, b) => {
+  // No search — use DB-level pagination and ordering for efficiency
+  const orderAttr = sort === 'popular' ? 'likes_count' : 'created_at'
+  queries.push(Query.orderDesc(orderAttr), Query.limit(normalizedLimit), Query.offset(normalizedOffset))
+  let posts = []
+  let total = 0
+  try {
+    const result = await databases.listDocuments(config.appwrite.databaseId, COLLECTIONS.communityPosts, queries)
+    posts = result.documents
+    total = result.total
+    // For popular sort, secondary sort by created_at is done in-memory for tie-breaker
     if (sort === 'popular') {
-      const score = (post) => (post.likes_count || 0) * 2 + (post.comments_count || 0)
-      const diff = score(b) - score(a)
-      if (diff !== 0) return diff
+      posts.sort((a, b) => {
+        const score = (post) => (post.likes_count || 0) * 2 + (post.comments_count || 0)
+        const diff = score(b) - score(a)
+        if (diff !== 0) return diff
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0)
+      })
     }
-    return new Date(b.created_at || 0) - new Date(a.created_at || 0)
-  })
-
-  const { items, total } = paginate(posts, offset, limit)
-  const decorated = await decoratePosts(items, userId)
-  return { posts: decorated, total, offset: Number(offset) || 0, limit }
+  } catch {
+    // Fallback to previous in-memory method if query fails
+    posts = await listCommunityPosts(queries.slice(0, -3))
+    posts.sort((a, b) => {
+      if (sort === 'popular') {
+        const score = (post) => (post.likes_count || 0) * 2 + (post.comments_count || 0)
+        const diff = score(b) - score(a)
+        if (diff !== 0) return diff
+      }
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0)
+    })
+    const page = paginate(posts, normalizedOffset, normalizedLimit)
+    posts = page.items
+    total = page.total
+  }
+  const decorated = await decoratePosts(posts, userId)
+  return { posts: decorated, total, offset: normalizedOffset, limit: normalizedLimit }
 }
 
 export async function getPostDetail(userId, postId) {
@@ -205,8 +265,8 @@ export async function getPostDetail(userId, postId) {
   const [author, profile, likedRows, bookmarkedRows] = await Promise.all([
     cacheKeyedGet(post.user_id),
     getCommunityProfile(post.user_id),
-    viewerId ? listCommunityLikes([Query.equal('user_id', viewerId)]) : Promise.resolve([]),
-    viewerId ? listCommunityBookmarks([Query.equal('user_id', viewerId)]) : Promise.resolve([]),
+    viewerId ? listCommunityLikes([Query.equal('user_id', viewerId), Query.equal('post_id', postId)]) : Promise.resolve([]),
+    viewerId ? listCommunityBookmarks([Query.equal('user_id', viewerId), Query.equal('post_id', postId)]) : Promise.resolve([]),
   ])
 
   const likedSet = new Set(likedRows.map((row) => row.post_id))
@@ -221,17 +281,11 @@ export async function getPostDetail(userId, postId) {
 }
 
 export async function createPost(userId, input = {}) {
-  const title = String(input.title || '').trim()
-  const content = String(input.content || '').trim()
+  const title = sanitizeContent(input.title, MAX_POST_TITLE)
+  const content = sanitizeContent(input.content, MAX_POST_CONTENT)
 
   if (!title) throw new ApiError(400, 'Title is required', 'VALIDATION_ERROR')
-  if (title.length > MAX_POST_TITLE) {
-    throw new ApiError(400, `Title must be ${MAX_POST_TITLE} characters or fewer`, 'VALIDATION_ERROR')
-  }
   if (!content) throw new ApiError(400, 'Post content is required', 'VALIDATION_ERROR')
-  if (content.length > MAX_POST_CONTENT) {
-    throw new ApiError(400, `Post content must be ${MAX_POST_CONTENT} characters or fewer`, 'VALIDATION_ERROR')
-  }
 
   const category = input.category && POST_CATEGORIES.includes(input.category) ? input.category : 'General'
   const status = POST_STATUSES.includes(input.status) ? input.status : 'published'
@@ -259,19 +313,13 @@ export async function updatePost(userId, postId, input = {}) {
 
   const update = {}
   if (input.title !== undefined) {
-    const title = String(input.title).trim()
+    const title = sanitizeContent(input.title, MAX_POST_TITLE)
     if (!title) throw new ApiError(400, 'Title is required', 'VALIDATION_ERROR')
-    if (title.length > MAX_POST_TITLE) {
-      throw new ApiError(400, `Title must be ${MAX_POST_TITLE} characters or fewer`, 'VALIDATION_ERROR')
-    }
     update.title = title
   }
   if (input.content !== undefined) {
-    const content = String(input.content).trim()
+    const content = sanitizeContent(input.content, MAX_POST_CONTENT)
     if (!content) throw new ApiError(400, 'Post content is required', 'VALIDATION_ERROR')
-    if (content.length > MAX_POST_CONTENT) {
-      throw new ApiError(400, `Post content must be ${MAX_POST_CONTENT} characters or fewer`, 'VALIDATION_ERROR')
-    }
     update.content = content
   }
   if (input.category !== undefined) {
@@ -330,7 +378,15 @@ export async function toggleLike(userId, postId) {
     return { liked: false, likes_count: likesCount }
   }
 
-  await createCommunityLike(userId, postId)
+  try {
+    await createCommunityLike(userId, postId)
+  } catch (err) {
+    // Race: unique index violation means another request already liked
+    if (String(err.message || '').includes('already exists') || err.code === 409) {
+      return { liked: true, likes_count: post.likes_count || 0 }
+    }
+    throw err
+  }
   const likesCount = (post.likes_count || 0) + 1
   await updateCommunityPost(postId, { likes_count: likesCount })
 
@@ -373,21 +429,33 @@ export async function toggleBookmark(userId, postId) {
     return { bookmarked: false }
   }
 
-  await createCommunityBookmark(userId, postId)
+  try {
+    await createCommunityBookmark(userId, postId)
+  } catch (err) {
+    if (String(err.message || '').includes('already exists') || err.code === 409) {
+      return { bookmarked: true }
+    }
+    throw err
+  }
   return { bookmarked: true }
 }
 
 export async function listSavedPosts(userId) {
-  const bookmarks = await listCommunityBookmarks([Query.equal('user_id', userId)])
+  const bookmarks = await listCommunityBookmarks([Query.equal('user_id', userId), Query.limit(100), Query.orderDesc('created_at')])
   if (bookmarks.length === 0) return { posts: [], total: 0 }
 
   const sorted = bookmarks.slice().sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-  const postIds = sorted.map((row) => row.post_id)
-  const posts = await listCommunityPosts([Query.equal('$id', postIds)])
-  const ordered = postIds
-    .map((id) => posts.find((post) => post.$id === id))
-    .filter(Boolean)
-    .filter((post) => post.status === 'published')
+  const postIds = sorted.map((row) => row.post_id).slice(0, 50)
+  if (postIds.length === 0) return { posts: [], total: 0 }
+  // Batch fetch — Appwrite Query.equal('$id', array) handles OR; chunk to avoid URL limits
+  const posts = []
+  for (let i = 0; i < postIds.length; i += 20) {
+    const chunk = postIds.slice(i, i + 20)
+    const batch = await listCommunityPosts([Query.equal('$id', chunk)])
+    posts.push(...batch)
+  }
+  const postMap = new Map(posts.map((p) => [p.$id, p]))
+  const ordered = postIds.map((id) => postMap.get(id)).filter(Boolean).filter((post) => post.status === 'published')
 
   const decorated = await decoratePosts(ordered, userId)
   return { posts: decorated, total: decorated.length }
@@ -417,11 +485,8 @@ export async function listComments(userId, postId) {
 }
 
 export async function addComment(userId, postId, input = {}) {
-  const content = String(input.content || '').trim()
+  const content = sanitizeContent(input.content, MAX_COMMENT_CONTENT)
   if (!content) throw new ApiError(400, 'Comment cannot be empty', 'VALIDATION_ERROR')
-  if (content.length > MAX_COMMENT_CONTENT) {
-    throw new ApiError(400, `Comment must be ${MAX_COMMENT_CONTENT} characters or fewer`, 'VALIDATION_ERROR')
-  }
 
   const post = await getCommunityPost(postId)
   if (!post || post.status !== 'published') {
@@ -445,11 +510,8 @@ async function assertCommentOwner(userId, commentId) {
 }
 
 export async function updateComment(userId, commentId, input = {}) {
-  const content = String(input.content || '').trim()
+  const content = sanitizeContent(input.content, MAX_COMMENT_CONTENT)
   if (!content) throw new ApiError(400, 'Comment cannot be empty', 'VALIDATION_ERROR')
-  if (content.length > MAX_COMMENT_CONTENT) {
-    throw new ApiError(400, `Comment must be ${MAX_COMMENT_CONTENT} characters or fewer`, 'VALIDATION_ERROR')
-  }
   await assertCommentOwner(userId, commentId)
   await updateCommunityComment(commentId, content)
   return getCommunityComment(commentId)
@@ -479,14 +541,14 @@ export async function getMyProfile(userId) {
 export async function updateMyProfile(userId, input = {}) {
   const update = {}
   if (input.bio !== undefined) {
-    const bio = String(input.bio).trim().slice(0, 2000)
+    const bio = sanitizeContent(input.bio, 2000)
     update.bio = bio
   }
   if (input.location !== undefined) {
-    update.location = String(input.location).trim().slice(0, 200)
+    update.location = sanitizeContent(input.location, 200)
   }
   if (input.role !== undefined) {
-    update.role = String(input.role).trim().slice(0, 200)
+    update.role = sanitizeContent(input.role, 200)
   }
   if (input.interests !== undefined) {
     update.interests = sanitizeTags(input.interests).join(',')
