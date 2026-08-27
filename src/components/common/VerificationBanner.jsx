@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { sendVerificationEmail } from '../../services/authApi'
 import { useAuth } from '../../hooks/useAuth'
 
-const EMAIL_VERIFICATION_ENABLED = false // hidden until domain ready — keep component but not visible
+const EMAIL_VERIFICATION_ENABLED = true // enabled — Mailjet HTTPS active
 
 export default function VerificationBanner() {
   if (!EMAIL_VERIFICATION_ENABLED) return null

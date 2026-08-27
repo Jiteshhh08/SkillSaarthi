@@ -4,7 +4,7 @@ import { signupPending } from '../../services/authApi'
 import { useAuth } from '../../hooks/useAuth'
 import TopBar from '../../components/layout/TopBar'
 
-const EMAIL_VERIFICATION_ENABLED = false // hidden until domain + SMTP/Resend ready — backend stays present
+const EMAIL_VERIFICATION_ENABLED = true // enabled — Mailjet HTTPS active on Render
 
 export default function Signup() {
   const [name, setName] = useState('')
