@@ -62,30 +62,56 @@ function wrapHtml(title, body) {
 </html>`
 }
 
-export async function sendEmail({ to, subject, html, text }) {
-  // 1) Resend HTTPS (preferred on Render - not blocked like SMTP)
-  const resendKey = config.email.resendApiKey
-  let from = config.email.resendFrom || config.email.from
-  // Resend only allows verified domains — gmail.com can never be verified. Force test sender when needed.
-  if (resendKey && from && from.toLowerCase().includes('@gmail.com')) {
-    from = 'onboarding@resend.dev'
+function parseSender(from) {
+  // from can be "Name <email@domain>" or "email@domain"
+  const match = String(from).match(/^(.*)<(.+)>\s*$/)
+  if (match) {
+    const name = match[1].trim().replace(/^["']|["']$/g, '') || 'skillsaarthi'
+    const email = match[2].trim()
+    return { name, email }
   }
-  if (resendKey) {
+  return { name: 'skillsaarthi', email: String(from).trim() }
+}
+
+export async function sendEmail({ to, subject, html, text }) {
+  // 1) Mailjet HTTPS (preferred on Render - not blocked like SMTP, no domain needed)
+  const { mailjetApiKey, mailjetSecretKey } = config.email
+  if (mailjetApiKey && mailjetSecretKey) {
+    const sender = parseSender(config.email.mailjetSender || config.email.from)
+    const recipients = Array.isArray(to) ? to : [to]
+    // Mailjet requires verified sender — must match exactly what you verified in Mailjet dashboard
+    // For free tier without domain, verify a single sender at https://app.mailjet.com/account/sender
+    const auth = Buffer.from(`${mailjetApiKey}:${mailjetSecretKey}`).toString('base64')
     try {
-      const res = await fetch('https://api.resend.com/emails', {
+      const res = await fetch('https://api.mailjet.com/v3.1/send', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${resendKey}`,
+          Authorization: `Basic ${auth}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ from, to: Array.isArray(to) ? to : [to], subject, html, text, reply_to: 'skillsaarthi.support@gmail.com' }),
+        body: JSON.stringify({
+          Messages: [
+            {
+              From: { Email: sender.email, Name: sender.name },
+              To: recipients.map((email) => ({ Email: email })),
+              ReplyTo: { Email: sender.email, Name: sender.name },
+              Subject: subject,
+              TextPart: text || undefined,
+              HTMLPart: html || undefined,
+            },
+          ],
+        }),
       })
       const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.message || `Resend ${res.status}`)
-      console.log(`[email:resend] Sent to ${to} — ${body.id}`)
-      return { mocked: false, messageId: body.id }
+      if (!res.ok) {
+        const msg = body.ErrorMessage || body.Messages?.[0]?.Errors?.[0]?.ErrorMessage || `Mailjet ${res.status}`
+        throw new Error(msg)
+      }
+      const messageId = body.Messages?.[0]?.To?.[0]?.MessageID || body.Messages?.[0]?.MessageID || 'sent'
+      console.log(`[email:mailjet] Sent to ${to} — ${messageId}`)
+      return { mocked: false, messageId: String(messageId) }
     } catch (err) {
-      console.warn(`[email:resend] Send failed to ${to}:`, err.message)
+      console.warn(`[email:mailjet] Send failed to ${to}:`, err.message)
       throw err
     }
   }
@@ -97,6 +123,7 @@ export async function sendEmail({ to, subject, html, text }) {
     return { mocked: true }
   }
 
+  const from = config.email.from
   // Don't block signup on SMTP verify — fire-and-forget with 5s cap
   try {
     await Promise.race([
@@ -211,6 +238,6 @@ function escapeHtml(value) {
 }
 
 export function isEmailConfigured() {
-  const { host, user, pass, resendApiKey } = config.email
-  return Boolean(resendApiKey || (host && user && pass))
+  const { host, user, pass, mailjetApiKey, mailjetSecretKey } = config.email
+  return Boolean((mailjetApiKey && mailjetSecretKey) || (host && user && pass))
 }
