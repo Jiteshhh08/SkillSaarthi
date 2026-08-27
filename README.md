@@ -4,17 +4,6 @@
 
 ---
 
-## 🏆 Smart India Hackathon
-
-**Problem Statement:** One-Stop Personalized Career & Education Advisor
-**PS ID:** SIH25094
-**Theme:** Education & Skill Development
-**Institution:** Thakur College of Engineering and Technology, Kandivali, Mumbai
-
-The project is being developed as a Smart India Hackathon solution based on the provided problem statement document.
-
----
-
 # 📌 Table of Contents
 
 * [About the Project](#-about-the-project)
