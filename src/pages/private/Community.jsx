@@ -6,6 +6,7 @@ import PostCard from '../../components/community/PostCard'
 import PostComposer from '../../components/community/PostComposer'
 import Icon from '../../components/common/Icon'
 import { useAuth } from '../../hooks/useAuth'
+import { APPWRITE_DATABASE_ID, COLLECTIONS, appwriteClient } from '../../services/appwrite'
 import {
   POST_CATEGORIES,
   deletePost,
@@ -24,15 +25,20 @@ function Community() {
   const [sort, setSort] = useState('newest')
   const [search, setSearch] = useState('')
   const [offset, setOffset] = useState(0)
+  const offsetRef = useRef(0)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
   const [composerOpen, setComposerOpen] = useState(false)
   const abortRef = useRef(0)
 
+  useEffect(() => {
+    offsetRef.current = offset
+  }, [offset])
+
   const load = useCallback(
-    async (reset = true) => {
-      const currentOffset = reset ? 0 : offset
+    async (reset = true, offsetOverride) => {
+      const currentOffset = typeof offsetOverride === 'number' ? offsetOverride : reset ? 0 : offsetRef.current
       if (reset) setLoading(true)
       else setLoadingMore(true)
       setError('')
@@ -46,14 +52,16 @@ function Community() {
           setPosts((prev) => [...prev, ...(result.posts || [])])
         }
         setTotal(result.total || 0)
-        setOffset(reset ? (result.posts?.length || 0) : currentOffset + (result.posts?.length || 0))
-      } catch {
+        const nextOffset = reset ? (result.posts?.length || 0) : currentOffset + (result.posts?.length || 0)
+        setOffset(nextOffset)
+        offsetRef.current = nextOffset
+      } catch (err) {
         if (requestId !== abortRef.current) return
         if (reset) {
           setPosts([])
           setTotal(0)
         }
-        setError('Could not load the community feed. Please try again shortly.')
+        setError(err?.response?.data?.message || 'Could not load the community feed. Please try again shortly.')
       } finally {
         if (requestId === abortRef.current) {
           setLoading(false)
@@ -61,47 +69,79 @@ function Community() {
         }
       }
     },
-    [category, sort, search, offset],
+    [category, sort, search],
   )
 
   // Debounced search + filter changes reset pagination
   useEffect(() => {
     setOffset(0)
-    const handle = setTimeout(() => load(true), search ? 350 : 0)
+    offsetRef.current = 0
+    const handle = setTimeout(() => load(true, 0), search ? 350 : 0)
     return () => clearTimeout(handle)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, sort, search])
+  }, [category, sort, search, load])
 
   const handleCreated = async () => {
     setComposerOpen(false)
     setOffset(0)
-    await load(true)
+    offsetRef.current = 0
+    await load(true, 0)
   }
 
   const handleLike = useCallback(async (post) => {
-    const result = await toggleLike(post.$id)
-    setPosts((prev) =>
-      prev.map((item) =>
-        item.$id === post.$id ? { ...item, liked_by_me: result.liked, likes_count: result.likes_count } : item,
-      ),
-    )
+    try {
+      const result = await toggleLike(post.$id)
+      setPosts((prev) =>
+        prev.map((item) =>
+          item.$id === post.$id ? { ...item, liked_by_me: result.liked, likes_count: result.likes_count } : item,
+        ),
+      )
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Could not update like. Please try again.')
+    }
   }, [])
 
   const handleBookmark = useCallback(async (post) => {
-    const result = await toggleBookmark(post.$id)
-    setPosts((prev) =>
-      prev.map((item) =>
-        item.$id === post.$id ? { ...item, bookmarked_by_me: result.bookmarked } : item,
-      ),
-    )
+    try {
+      const result = await toggleBookmark(post.$id)
+      setPosts((prev) =>
+        prev.map((item) =>
+          item.$id === post.$id ? { ...item, bookmarked_by_me: result.bookmarked } : item,
+        ),
+      )
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Could not update bookmark. Please try again.')
+    }
   }, [])
 
   const handleDelete = async (post) => {
     if (!window.confirm('Delete this post? This cannot be undone.')) return
-    await deletePost(post.$id)
-    setPosts((prev) => prev.filter((item) => item.$id !== post.$id))
-    setTotal((prev) => Math.max(0, prev - 1))
+    try {
+      await deletePost(post.$id)
+      setPosts((prev) => prev.filter((item) => item.$id !== post.$id))
+      setTotal((prev) => Math.max(0, prev - 1))
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Could not delete post. Please try again.')
+    }
   }
+
+  // Realtime: refresh feed when a new post is created elsewhere
+  useEffect(() => {
+    if (!APPWRITE_DATABASE_ID) return
+    let unsub = null
+    try {
+      unsub = appwriteClient.subscribe(
+        `databases.${APPWRITE_DATABASE_ID}.collections.${COLLECTIONS.communityPosts}.documents`,
+        (event) => {
+          if (event.events?.some((e) => e.includes('create'))) {
+            load(true, 0)
+          }
+        },
+      )
+    } catch {}
+    return () => {
+      try { unsub?.() } catch {}
+    }
+  }, [load])
 
   const hasMore = posts.length < total
 
@@ -221,7 +261,7 @@ function Community() {
             <p className="text-sm text-ink-muted">
               {total} post{total === 1 ? '' : 's'}
             </p>
-            <button onClick={load} disabled={loading} className="btn-text !text-sm">
+            <button onClick={() => load(true, 0)} disabled={loading} className="btn-text !text-sm">
               Refresh
             </button>
           </div>
@@ -240,7 +280,7 @@ function Community() {
         </div>
         {hasMore && !loading && (
           <div className="mt-6 flex justify-center">
-            <button onClick={() => load(false)} disabled={loadingMore} className="btn-secondary !h-10 !px-6 !text-sm disabled:opacity-50">
+            <button onClick={() => load(false, offsetRef.current)} disabled={loadingMore} className="btn-secondary !h-10 !px-6 !text-sm disabled:opacity-50">
               {loadingMore ? 'Loading…' : `Load more (${total - posts.length} remaining)`}
             </button>
           </div>
