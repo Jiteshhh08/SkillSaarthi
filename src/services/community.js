@@ -48,9 +48,12 @@ export async function getSavedPosts() {
   return data.data
 }
 
-export async function getComments(postId) {
-  const { data } = await api.get(`/api/community/posts/${postId}/comments`)
-  return data.data.comments
+export async function getComments(postId, params = {}) {
+  const { data } = await api.get(`/api/community/posts/${postId}/comments`, { params })
+  // Handle both array (legacy) and object {comments, total}
+  if (Array.isArray(data.data.comments)) return data.data.comments
+  if (Array.isArray(data.data)) return data.data
+  return data.data.comments || []
 }
 
 export async function addComment(postId, content) {

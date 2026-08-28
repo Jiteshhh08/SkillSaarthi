@@ -52,9 +52,12 @@ export default function CommentSection({ postId, currentUserId, onCountChange })
     setFormError('')
     try {
       const created = await addComment(postId, text)
-      setComments((prev) => [...prev, created])
+      setComments((prev) => {
+        const next = [...prev, created]
+        onCountChange?.(next.length)
+        return next
+      })
       setContent('')
-      onCountChange?.(comments.length + 1)
     } catch (err) {
       const msg = err?.response?.data?.message || 'Could not post your comment. Please try again.'
       setFormError(msg)
@@ -65,24 +68,31 @@ export default function CommentSection({ postId, currentUserId, onCountChange })
 
   const handleEdit = async (commentId) => {
     const text = editingContent.trim()
-    if (!text) return
+    if (!text) {
+      setFormError('Comment cannot be empty.')
+      return
+    }
     try {
       const updated = await updateComment(commentId, text)
       setComments((prev) => prev.map((comment) => (comment.$id === commentId ? { ...comment, content: updated.content } : comment)))
       setEditingId(null)
       setEditingContent('')
-    } catch {
-      // best-effort: keep the list intact
+      setFormError('')
+    } catch (err) {
+      setFormError(err?.response?.data?.message || 'Could not update comment. Please try again.')
     }
   }
 
   const handleDelete = async (commentId) => {
     try {
       await deleteComment(commentId)
-      setComments((prev) => prev.filter((comment) => comment.$id !== commentId))
-      onCountChange?.(Math.max(0, comments.length - 1))
-    } catch {
-      // best-effort
+      setComments((prev) => {
+        const next = prev.filter((comment) => comment.$id !== commentId)
+        onCountChange?.(next.length)
+        return next
+      })
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Could not delete comment. Please try again.')
     }
   }
 

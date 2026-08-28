@@ -56,6 +56,8 @@ function CommunityPostDetail() {
     try {
       const result = await toggleLike(post.$id)
       setPost((prev) => ({ ...prev, liked_by_me: result.liked, likes_count: result.likes_count }))
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Could not update like. Please try again.')
     } finally {
       setLikeBusy(false)
     }
@@ -67,6 +69,8 @@ function CommunityPostDetail() {
     try {
       const result = await toggleBookmark(post.$id)
       setPost((prev) => ({ ...prev, bookmarked_by_me: result.bookmarked }))
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Could not update bookmark. Please try again.')
     } finally {
       setBookmarkBusy(false)
     }
@@ -74,20 +78,28 @@ function CommunityPostDetail() {
 
   const handleDelete = async () => {
     if (!window.confirm('Delete this post? This cannot be undone.')) return
-    await deletePost(post.$id)
-    navigate('/community')
+    try {
+      await deletePost(post.$id)
+      navigate('/community')
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Could not delete post. Please try again.')
+    }
   }
 
   const handleUpdated = async (updated) => {
-    const saved = await updatePost(post.$id, {
-      title: updated.title,
-      content: updated.content,
-      category: updated.category,
-      tags: updated.tags,
-      status: updated.status,
-    })
-    setPost(saved)
-    setEditing(false)
+    try {
+      const saved = await updatePost(post.$id, {
+        title: updated.title,
+        content: updated.content,
+        category: updated.category,
+        tags: updated.tags,
+        status: updated.status,
+      })
+      setPost(saved)
+      setEditing(false)
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Could not update post. Please try again.')
+    }
   }
 
   if (loading) {
