@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
@@ -14,6 +14,8 @@ import {
   toggleLike,
 } from '../../services/community'
 
+const PAGE_SIZE = 20
+
 function Community() {
   const { user } = useAuth()
   const [posts, setPosts] = useState([])
@@ -21,53 +23,78 @@ function Community() {
   const [category, setCategory] = useState('')
   const [sort, setSort] = useState('newest')
   const [search, setSearch] = useState('')
+  const [offset, setOffset] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
   const [composerOpen, setComposerOpen] = useState(false)
+  const abortRef = useRef(0)
 
-  const load = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const result = await getPosts({ category, sort, search })
-      setPosts(result.posts || [])
-      setTotal(result.total || 0)
-    } catch {
-      setPosts([])
-      setTotal(0)
-      setError('Could not load the community feed. Please try again shortly.')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const load = useCallback(
+    async (reset = true) => {
+      const currentOffset = reset ? 0 : offset
+      if (reset) setLoading(true)
+      else setLoadingMore(true)
+      setError('')
+      const requestId = ++abortRef.current
+      try {
+        const result = await getPosts({ category, sort, search, offset: currentOffset, limit: PAGE_SIZE })
+        if (requestId !== abortRef.current) return
+        if (reset) {
+          setPosts(result.posts || [])
+        } else {
+          setPosts((prev) => [...prev, ...(result.posts || [])])
+        }
+        setTotal(result.total || 0)
+        setOffset(reset ? (result.posts?.length || 0) : currentOffset + (result.posts?.length || 0))
+      } catch {
+        if (requestId !== abortRef.current) return
+        if (reset) {
+          setPosts([])
+          setTotal(0)
+        }
+        setError('Could not load the community feed. Please try again shortly.')
+      } finally {
+        if (requestId === abortRef.current) {
+          setLoading(false)
+          setLoadingMore(false)
+        }
+      }
+    },
+    [category, sort, search, offset],
+  )
 
+  // Debounced search + filter changes reset pagination
   useEffect(() => {
-    const handle = setTimeout(load, search ? 300 : 0)
+    setOffset(0)
+    const handle = setTimeout(() => load(true), search ? 350 : 0)
     return () => clearTimeout(handle)
-  }, [category, sort, search]) // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category, sort, search])
 
   const handleCreated = async () => {
     setComposerOpen(false)
-    await load()
+    setOffset(0)
+    await load(true)
   }
 
-  const handleLike = async (post) => {
+  const handleLike = useCallback(async (post) => {
     const result = await toggleLike(post.$id)
     setPosts((prev) =>
       prev.map((item) =>
         item.$id === post.$id ? { ...item, liked_by_me: result.liked, likes_count: result.likes_count } : item,
       ),
     )
-  }
+  }, [])
 
-  const handleBookmark = async (post) => {
+  const handleBookmark = useCallback(async (post) => {
     const result = await toggleBookmark(post.$id)
     setPosts((prev) =>
       prev.map((item) =>
         item.$id === post.$id ? { ...item, bookmarked_by_me: result.bookmarked } : item,
       ),
     )
-  }
+  }, [])
 
   const handleDelete = async (post) => {
     if (!window.confirm('Delete this post? This cannot be undone.')) return
@@ -75,6 +102,8 @@ function Community() {
     setPosts((prev) => prev.filter((item) => item.$id !== post.$id))
     setTotal((prev) => Math.max(0, prev - 1))
   }
+
+  const hasMore = posts.length < total
 
   return (
     <div className="min-h-screen">
@@ -209,6 +238,13 @@ function Community() {
             />
           ))}
         </div>
+        {hasMore && !loading && (
+          <div className="mt-6 flex justify-center">
+            <button onClick={() => load(false)} disabled={loadingMore} className="btn-secondary !h-10 !px-6 !text-sm disabled:opacity-50">
+              {loadingMore ? 'Loading…' : `Load more (${total - posts.length} remaining)`}
+            </button>
+          </div>
+        )}
         </section>
       </main>
 

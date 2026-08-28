@@ -48,14 +48,28 @@ function CommunityPostDetail() {
     load()
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const [likeBusy, setLikeBusy] = useState(false)
+  const [bookmarkBusy, setBookmarkBusy] = useState(false)
   const handleLike = async () => {
-    const result = await toggleLike(post.$id)
-    setPost((prev) => ({ ...prev, liked_by_me: result.liked, likes_count: result.likes_count }))
+    if (likeBusy || !post) return
+    setLikeBusy(true)
+    try {
+      const result = await toggleLike(post.$id)
+      setPost((prev) => ({ ...prev, liked_by_me: result.liked, likes_count: result.likes_count }))
+    } finally {
+      setLikeBusy(false)
+    }
   }
 
   const handleBookmark = async () => {
-    const result = await toggleBookmark(post.$id)
-    setPost((prev) => ({ ...prev, bookmarked_by_me: result.bookmarked }))
+    if (bookmarkBusy || !post) return
+    setBookmarkBusy(true)
+    try {
+      const result = await toggleBookmark(post.$id)
+      setPost((prev) => ({ ...prev, bookmarked_by_me: result.bookmarked }))
+    } finally {
+      setBookmarkBusy(false)
+    }
   }
 
   const handleDelete = async () => {
@@ -133,10 +147,11 @@ function CommunityPostDetail() {
               <button
                 type="button"
                 onClick={handleLike}
+                disabled={likeBusy}
                 aria-pressed={post.liked_by_me}
                 aria-label="Like this post"
                 title="Like this post"
-                className={`rounded-lg p-2 transition-colors ${
+                className={`rounded-lg p-2 transition-colors disabled:opacity-50 ${
                   post.liked_by_me ? 'text-danger' : 'text-ink-soft hover:text-danger'
                 }`}
               >
@@ -161,10 +176,11 @@ function CommunityPostDetail() {
               <button
                 type="button"
                 onClick={handleBookmark}
+                disabled={bookmarkBusy}
                 aria-pressed={post.bookmarked_by_me}
                 aria-label="Save post"
                 title="Save post"
-                className={`mt-4 rounded-lg p-2 transition-colors ${
+                className={`mt-4 rounded-lg p-2 transition-colors disabled:opacity-50 ${
                   post.bookmarked_by_me ? 'text-accent-purple' : 'text-ink-soft hover:text-accent-purple'
                 }`}
               >
@@ -224,8 +240,9 @@ function CommunityPostDetail() {
                   <button
                     type="button"
                     onClick={handleLike}
+                    disabled={likeBusy}
                     aria-pressed={post.liked_by_me}
-                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-bold transition-colors ${
+                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-bold transition-colors disabled:opacity-50 ${
                       post.liked_by_me ? 'text-danger' : 'text-ink-muted hover:text-danger'
                     }`}
                   >
@@ -239,8 +256,9 @@ function CommunityPostDetail() {
                   <button
                     type="button"
                     onClick={handleBookmark}
+                    disabled={bookmarkBusy}
                     aria-pressed={post.bookmarked_by_me}
-                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-bold transition-colors ml-auto ${
+                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-bold transition-colors ml-auto disabled:opacity-50 ${
                       post.bookmarked_by_me ? 'text-accent-purple' : 'text-ink-muted hover:text-accent-purple'
                     }`}
                   >

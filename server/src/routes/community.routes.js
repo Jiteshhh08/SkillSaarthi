@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.middleware.js'
+import { rateLimit } from '../middleware/rateLimit.middleware.js'
 import {
   addCommentHandler,
   createPostHandler,
@@ -22,18 +23,22 @@ const router = Router()
 
 router.use(requireAuth)
 
+// Prevent spam: 30 posts/comments per minute, 60 likes/bookmarks per minute
+const writeLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: 'Too many requests. Slow down.' })
+const interactionLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: 'Too many likes/bookmarks. Slow down.' })
+
 router.get('/posts', listPostsHandler)
-router.post('/posts', createPostHandler)
+router.post('/posts', writeLimiter, createPostHandler)
 router.get('/saved', listSavedHandler)
 router.get('/profile', getMyProfileHandler)
-router.put('/profile', updateMyProfileHandler)
+router.put('/profile', writeLimiter, updateMyProfileHandler)
 router.get('/users/:userId', getUserProfileHandler)
-router.put('/comments/:commentId', updateCommentHandler)
+router.put('/comments/:commentId', writeLimiter, updateCommentHandler)
 router.delete('/comments/:commentId', deleteCommentHandler)
 router.get('/posts/:id/comments', listCommentsHandler)
-router.post('/posts/:id/comments', addCommentHandler)
-router.post('/posts/:id/like', toggleLikeHandler)
-router.post('/posts/:id/bookmark', toggleBookmarkHandler)
+router.post('/posts/:id/comments', writeLimiter, addCommentHandler)
+router.post('/posts/:id/like', interactionLimiter, toggleLikeHandler)
+router.post('/posts/:id/bookmark', interactionLimiter, toggleBookmarkHandler)
 router.get('/posts/:id', getPostHandler)
 router.put('/posts/:id', updatePostHandler)
 router.delete('/posts/:id', deletePostHandler)

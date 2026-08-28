@@ -38,9 +38,14 @@ export default function CommentSection({ postId, currentUserId, onCountChange })
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    if (submitting) return
     const text = content.trim()
     if (!text) {
       setFormError('Write a comment before posting.')
+      return
+    }
+    if (text.length > 4000) {
+      setFormError('Comment is too long (max 4000 characters).')
       return
     }
     setSubmitting(true)
@@ -50,8 +55,9 @@ export default function CommentSection({ postId, currentUserId, onCountChange })
       setComments((prev) => [...prev, created])
       setContent('')
       onCountChange?.(comments.length + 1)
-    } catch {
-      setFormError('Could not post your comment. Please try again.')
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Could not post your comment. Please try again.'
+      setFormError(msg)
     } finally {
       setSubmitting(false)
     }
