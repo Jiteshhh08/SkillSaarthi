@@ -74,8 +74,14 @@ export const listSavedHandler = asyncHandler(async (req, res) => {
 })
 
 export const listCommentsHandler = asyncHandler(async (req, res) => {
-  const comments = await listComments(req.user.$id, req.params.id)
-  res.json({ success: true, data: { comments } })
+  const { limit, offset } = req.query
+  const result = await listComments(req.user.$id, req.params.id, { limit: Number(limit) || 50, offset: Number(offset) || 0 })
+  // Backward compat: if result is array, wrap; if object, return as is
+  if (Array.isArray(result)) {
+    res.json({ success: true, data: { comments: result, total: result.length } })
+  } else {
+    res.json({ success: true, data: result })
+  }
 })
 
 export const addCommentHandler = asyncHandler(async (req, res) => {

@@ -12,7 +12,8 @@ function prune(bucket, windowMs) {
 
 export function rateLimit({ windowMs = 60 * 1000, max = 5, keyGenerator, message } = {}) {
   return (req, res, next) => {
-    const key = keyGenerator ? keyGenerator(req) : `${req.ip}:${req.path}`
+    const defaultKey = req.user?.$id ? `${req.user.$id}:${req.path}` : `${req.ip}:${req.path}`
+    const key = keyGenerator ? keyGenerator(req) : defaultKey
     const bucket = getBucket(key)
     prune(bucket, windowMs)
     if (bucket.length >= max) {
@@ -35,7 +36,6 @@ setInterval(() => {
   for (const [key, bucket] of buckets.entries()) {
     prune(bucket, 60 * 1000)
     if (bucket.length === 0) buckets.delete(key)
-    // also prune if all entries older than 1h
     if (bucket.length && bucket[0] < now - 60 * 60 * 1000) buckets.delete(key)
   }
 }, 5 * 60 * 1000).unref?.()
