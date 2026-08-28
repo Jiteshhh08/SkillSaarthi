@@ -102,7 +102,7 @@ The core architectural principle is:
 
 # 5. Frontend Architecture (summary)
 
-> Stack: React + Tailwind + React Router + Axios (`api.js` JWT cached 60s) + Appwrite Web SDK + lazy routes (`AppRoutes.jsx`, 662k→409k). Responsibilities: UI/nav (TopBar 3 hubs, Homes merged, `CommunityFab` kept), forms/validation/Dashboard (8 cards, 800ms retry), Onboarding 4 steps (Skills+Interests tabs, Goals+Assessment sub-step, no silent proficiency-2), Recommendations (auto-generate + GapDrawer), GitHub `ContributionGrid` (13 metrics), notifications (Realtime + 45s polling), streak (`touchStreak`).
+> Stack: React + Tailwind + React Router + Axios (`api.js` JWT cached 60s) + Appwrite Web SDK + lazy routes (`AppRoutes.jsx`, 662k→409k). Responsibilities: UI/nav (TopBar 3 hubs, Homes merged, `CommunityFab` kept), forms/validation/Dashboard (8 cards, `400ms` delay + `1500ms` single retry, same-size `StatCard` skeletons `h-8 w-20` + `h-4 w-28`, `streakLoading` skeletons, `Home` `bg-black/[0.06]` on `bg-warm`), Onboarding 4 steps (Skills+Interests tabs, Goals+Assessment sub-step, no silent proficiency-2), Recommendations (auto-generate + GapDrawer), GitHub `ContributionGrid` (13 metrics), notifications (Realtime + 45s polling), streak (`touchStreak` cached profile), Community `offsetRef` pagination + realtime `subscribe`.
 >
 > **Single source:** layout/tokens → [`docs/design.md`](design.md); structure → §6 summary; auth → §9; data → §17.
 
@@ -770,7 +770,7 @@ Implemented end-to-end as `POST /api/what-if/simulate` (Node only — `server/sr
 > | What-If | `/api/what-if` | `POST /simulate` | `profile.builder.js` copy, no write |
 > | Courses | `/api/courses` | `GET /`, `GET /recommended` | By skill gap |
 > | Internships | `/api/internships` | `GET /`, `GET /recommended`, `/api/admin/internships` (CRUD) | `active`+non-expired public, `pending` gate |
-> | Community | `/api/community` | `GET/POST /posts`, `GET/PUT/DELETE /posts/:id`, `POST /:id/like|bookmark`, `GET/POST /:id/comments`, `PUT/DELETE /comments/:id`, `GET /saved`, `GET/PUT /profile`, `GET /users/:id` | `requireAuth`, ownership, draft 404 |
+> | Community | `/api/community` | `GET /posts?category&sort&search&offset&limit` → `{posts,total,offset,limit}` (DB `limit/offset/orderDesc`, `offsetRef` + `PAGE_SIZE 20` + `350ms` debounce + `abortRef`, search `200` in-memory), `GET/POST /posts`, `GET/PUT/DELETE /posts/:id` (`writeLimiter 30/min` user-scoped), `POST /:id/like|bookmark` (`interaction 60/min`), `GET/POST /:id/comments?limit&offset` → `{comments,total}` (`50` paginated, not `listAll`), `PUT/DELETE /comments/:id` (`writeLimiter`), `GET /saved`, `GET/PUT /profile`, `GET /users/:id` (`readLimiter 120/min`, LRU `500` + `inflight` dedup, chunked deletes `5`, realtime `subscribe` on `community_posts`) | `requireAuth` + user-scoped `rateLimit`, ownership, draft 404 |
 > | Admin | `/api/admin` | `GET /me`, `GET/POST /internships`, `PATCH/DELETE /internships/:id`, `POST /notifications` | `requireAdmin` (`ADMIN_EMAILS`) |
 > | Assistant | `/api/assistant` | `POST /chat` | Context builder → LLM |
 > | Notifications | `notifications` collection | `notify()`/`notifyAllUsers()` server, `getNotifications` client | `appwriteClient.subscribe` + 45s polling |

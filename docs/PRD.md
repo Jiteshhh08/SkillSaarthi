@@ -2,11 +2,6 @@
 
 # One-Stop Personalized Career & Education Advisor
 
-**Project Type:** Smart India Hackathon
-**Problem Statement:** PS-09 — One-Stop Personalized Career & Education Advisor
-**PS ID:** SIH25094
-**Source listed in provided problem-statement document:** Smart India Hackathon 2025 — Government of Jammu & Kashmir.
-
 ---
 
 # 1. Product Overview
@@ -193,7 +188,7 @@ Login / Signup
  ↓
 Personal Career Profile (auto-generates 6 recommendations via Node scoring.js)
  ↓
-Dashboard (8 cards, 800ms retry) — TopBar 3 hubs: Discover / Build / Opportunities
+Dashboard (8 cards, 400ms delay + 1500ms single retry, same-size StatCard skeletons) — TopBar 3 hubs: Discover / Build / Opportunities
  ↓
 Career Recommendations (GapDrawer in-page) → Skill Gap Analysis (Node) → Personalized Roadmap
  ↓
@@ -363,7 +358,7 @@ Select `high_school` / `college` / `job_seeker` (fields adapt by level; admin by
 
 * Career preferences: preferred industry / role / work preference / location / goals
 * Embedded 10-question assessment as a sub-step (interests, aptitude, work preferences, problem-solving, technical inclination, creativity, communication, career preferences). `/assessment` remains available to retake.
-* On complete: auto-generates 6 recommendations (Node `scoring.js`) and routes to `/dashboard` (8 cards, 800ms retry to avoid 0-skills flash)
+* On complete: auto-generates 6 recommendations (Node `scoring.js`) and routes to `/dashboard` (8 cards, 400ms delay + 1500ms single retry, same-size skeletons)
 
 ---
 
@@ -702,7 +697,7 @@ The assistant should use the user's structured profile and roadmap context where
 
 # 25. Dashboard (8 cards — reverted per user, updated)
 
-The dashboard acts as the user's career command center (reverted to 8 cards per user request; `src/pages/private/Dashboard.jsx` with 800ms retry to avoid 0-skills flash; lazy-loaded via `src/routes/AppRoutes.jsx`).
+The dashboard acts as the user's career command center (reverted to 8 cards per user request; `src/pages/private/Dashboard.jsx` with 400ms delay + 1500ms single retry + same-size `StatCard` skeletons `h-8 w-20`; `loading` for skills/interests + `profileLoading`/`streakLoading`; lazy-loaded via `src/routes/AppRoutes.jsx`).
 
 It should show (8 cards):
 
