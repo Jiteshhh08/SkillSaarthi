@@ -51,6 +51,17 @@ function sanitizeContent(text, max) {
 
 const authorCache = new Map()
 const AUTHOR_CACHE_TTL = 120_000
+const AUTHOR_CACHE_MAX = 500
+const inflightAuthor = new Map()
+
+function lruSet(key, value) {
+  if (authorCache.has(key)) authorCache.delete(key)
+  authorCache.set(key, value)
+  if (authorCache.size > AUTHOR_CACHE_MAX) {
+    const first = authorCache.keys().next().value
+    authorCache.delete(first)
+  }
+}
 
 export function sanitizeTags(tags) {
   const raw = Array.isArray(tags) ? tags : []
@@ -77,12 +88,19 @@ function parseTags(csv) {
 function cacheKeyedGet(userId) {
   const cached = authorCache.get(userId)
   if (cached && Date.now() - cached.fetchedAt < AUTHOR_CACHE_TTL) {
+    // refresh LRU order
+    authorCache.delete(userId)
+    authorCache.set(userId, cached)
     return Promise.resolve(cached.user)
   }
-  return getAppwriteUser(userId).then((user) => {
-    if (user) authorCache.set(userId, { user, fetchedAt: Date.now() })
+  if (inflightAuthor.has(userId)) return inflightAuthor.get(userId)
+  const p = getAppwriteUser(userId).then((user) => {
+    if (user) lruSet(userId, { user, fetchedAt: Date.now() })
+    inflightAuthor.delete(userId)
     return user
-  })
+  }).catch((e) => { inflightAuthor.delete(userId); throw e })
+  inflightAuthor.set(userId, p)
+  return p
 }
 
 function mapAuthor(user) {
@@ -193,11 +211,10 @@ export async function listPosts(userId, filters = {}) {
     queries.push(Query.equal('category', category))
   }
 
-  // When there is a search query we must fetch a larger window and filter in-memory
-  // because Appwrite fulltext requires an index; otherwise use DB pagination directly.
+  // When there is a search query we filter in-memory; ideally add a fulltext index on title/content/tags/category
+  // and use Query.search. For now fetch larger window (200) and document limit.
   if (hasSearch) {
-    // Fetch up to 100 candidates then filter/sort/paginate in memory
-    let posts = await listCommunityPosts([...queries, Query.limit(100)])
+    let posts = await listCommunityPosts([...queries, Query.limit(200)])
     const lower = q.toLowerCase()
     const terms = lower.split(/\s+/).filter(Boolean)
     posts = posts.filter((post) => {
@@ -351,12 +368,17 @@ export async function deletePost(userId, postId) {
     listCommunityBookmarks([Query.equal('post_id', postId)]),
   ])
 
-  await Promise.all([
-    ...comments.map((comment) => deleteCommunityComment(comment.$id)),
-    ...likes.map((like) => deleteCommunityLike(like.$id)),
-    ...bookmarks.map((bookmark) => deleteCommunityBookmark(bookmark.$id)),
-    deleteCommunityPost(postId),
-  ])
+  const allDeletes = [
+    ...comments.map((c) => () => deleteCommunityComment(c.$id)),
+    ...likes.map((l) => () => deleteCommunityLike(l.$id)),
+    ...bookmarks.map((b) => () => deleteCommunityBookmark(b.$id)),
+  ]
+  // Chunk deletes 5 at a time to avoid bursting Appwrite rate limit
+  for (let i = 0; i < allDeletes.length; i += 5) {
+    const chunk = allDeletes.slice(i, i + 5).map((fn) => fn().catch(() => {}))
+    await Promise.all(chunk)
+  }
+  await deleteCommunityPost(postId)
   return true
 }
 
@@ -461,15 +483,32 @@ export async function listSavedPosts(userId) {
   return { posts: decorated, total: decorated.length }
 }
 
-export async function listComments(userId, postId) {
+export async function listComments(userId, postId, { limit = 50, offset = 0 } = {}) {
   const post = await getCommunityPost(postId)
   if (!post) throw new ApiError(404, 'Post not found', 'POST_NOT_FOUND')
   if (post.status !== 'published' && post.user_id !== userId) {
     throw new ApiError(404, 'Post not found', 'POST_NOT_FOUND')
   }
 
-  const comments = await listCommunityComments(postId)
-  comments.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
+  const normalizedLimit = Math.min(Math.max(Number(limit) || 50, 1), 100)
+  const normalizedOffset = Math.max(0, Number(offset) || 0)
+  let comments = []
+  let total = 0
+  try {
+    const result = await databases.listDocuments(config.appwrite.databaseId, COLLECTIONS.communityComments, [
+      Query.equal('post_id', postId),
+      Query.orderAsc('created_at'),
+      Query.limit(normalizedLimit),
+      Query.offset(normalizedOffset),
+    ])
+    comments = result.documents
+    total = result.total
+  } catch {
+    const all = await listCommunityComments(postId)
+    all.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
+    total = all.length
+    comments = all.slice(normalizedOffset, normalizedOffset + normalizedLimit)
+  }
 
   const userIds = [...new Set(comments.map((comment) => comment.user_id))]
   const authors = {}
@@ -478,10 +517,11 @@ export async function listComments(userId, postId) {
     if (rows[i]) authors[id] = mapAuthor(rows[i])
   })
 
-  return comments.map((comment) => ({
+  const decorated = comments.map((comment) => ({
     ...comment,
     author: authors[comment.user_id] || null,
   }))
+  return { comments: decorated, total, limit: normalizedLimit, offset: normalizedOffset }
 }
 
 export async function addComment(userId, postId, input = {}) {
@@ -562,11 +602,22 @@ export async function getUserProfile(userId, targetUserId) {
   if (!targetUserId) throw new ApiError(400, 'user_id is required', 'VALIDATION_ERROR')
   const [user, profile] = await Promise.all([cacheKeyedGet(targetUserId), getCommunityProfile(targetUserId)])
 
-  const postsResult = await listCommunityPosts([Query.equal('user_id', targetUserId)])
-  const published = postsResult
-    .filter((post) => post.status === 'published')
-    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-    .slice(0, 20)
+  let published = []
+  try {
+    const result = await databases.listDocuments(config.appwrite.databaseId, COLLECTIONS.communityPosts, [
+      Query.equal('user_id', targetUserId),
+      Query.equal('status', 'published'),
+      Query.orderDesc('created_at'),
+      Query.limit(20),
+    ])
+    published = result.documents
+  } catch {
+    const postsResult = await listCommunityPosts([Query.equal('user_id', targetUserId)])
+    published = postsResult
+      .filter((post) => post.status === 'published')
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+      .slice(0, 20)
+  }
 
   const decorated = await decoratePosts(published, userId)
 

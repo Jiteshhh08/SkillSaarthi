@@ -8,6 +8,7 @@ const client = new Client()
 
 export const databases = new Databases(client)
 export const users = new Users(client)
+export { client }
 
 export const COLLECTIONS = {
   profiles: 'profiles',
