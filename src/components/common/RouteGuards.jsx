@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useAdmin } from '../../hooks/useAdmin'
 import { isProfileComplete } from '../../services/profile'
+import AnimatedLoader from './AnimatedLoader'
 
 const EMAIL_VERIFICATION_ENABLED = true // enabled — Mailjet HTTPS active
 
@@ -10,11 +11,7 @@ export function ProtectedRoute({ children, allowUnverified = false }) {
   const { isAdmin, loading: adminLoading } = useAdmin()
 
   if (loading || (EMAIL_VERIFICATION_ENABLED && !allowUnverified && verificationLoading) || (!allowUnverified && adminLoading)) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-canvas text-ink-muted">
-        Loading…
-      </div>
-    )
+    return <AnimatedLoader message="Preparing your workspace…" />
   }
 
   if (!user) {
@@ -33,11 +30,7 @@ export function PublicOnlyRoute({ children }) {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-canvas text-ink-muted">
-        Loading…
-      </div>
-    )
+    return <AnimatedLoader message="Getting things ready…" />
   }
 
   if (user) {
@@ -52,11 +45,7 @@ export function ProfileCompleteRoute({ children }) {
   const { isAdmin, loading: adminLoading } = useAdmin()
 
   if (loading || (EMAIL_VERIFICATION_ENABLED && verificationLoading) || adminLoading || profileLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-canvas text-ink-muted">
-        Loading…
-      </div>
-    )
+    return <AnimatedLoader message="Loading your career hub…" />
   }
 
   if (!user) {
@@ -80,11 +69,7 @@ export function VerifiedRoute({ children }) {
   const { isAdmin, loading: adminLoading } = useAdmin()
 
   if (loading || (EMAIL_VERIFICATION_ENABLED && verificationLoading) || adminLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-canvas text-ink-muted">
-        Loading…
-      </div>
-    )
+    return <AnimatedLoader />
   }
 
   if (!user) {
