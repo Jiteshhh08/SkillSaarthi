@@ -32,8 +32,9 @@ const VerifyEmail = lazy(() => import('../pages/auth/VerifyEmail'))
 const VerifyOtp = lazy(() => import('../pages/auth/VerifyOtp'))
 const VerifyPending = lazy(() => import('../pages/auth/VerifyPending'))
 
+import AnimatedLoader from '../components/common/AnimatedLoader'
 function PageFallback() {
-  return <div className="flex min-h-screen items-center justify-center bg-canvas text-ink-muted">Loading…</div>
+  return <AnimatedLoader />
 }
 
 export default function AppRoutes() {
