@@ -74,47 +74,46 @@ function parseSender(from) {
 }
 
 export async function sendEmail({ to, subject, html, text }) {
-  // 1) Mailjet HTTPS (preferred on Render - not blocked like SMTP, no domain needed)
-  const { mailjetApiKey, mailjetSecretKey } = config.email
-  if (mailjetApiKey && mailjetSecretKey) {
-    const sender = parseSender(config.email.mailjetSender || config.email.from)
+  // 1) SendGrid HTTPS (preferred on Render — no domain needed via Single Sender, not blocked like SMTP)
+  const { sendgridApiKey } = config.email
+  if (sendgridApiKey) {
+    const sender = parseSender(config.email.sendgridSender || config.email.from)
     const recipients = Array.isArray(to) ? to : [to]
-    // Mailjet requires verified sender — must match exactly what you verified in Mailjet dashboard
-    // For free tier without domain, verify a single sender at https://app.mailjet.com/account/sender
-    const auth = Buffer.from(`${mailjetApiKey}:${mailjetSecretKey}`).toString('base64')
+    // Single Sender must be verified at https://app.sendgrid.com/settings/sender_auth/senders
     try {
-      const res = await fetch('https://api.mailjet.com/v3.1/send', {
+      const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
         method: 'POST',
         headers: {
-          Authorization: `Basic ${auth}`,
+          Authorization: `Bearer ${sendgridApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          Messages: [
-            {
-              From: { Email: sender.email, Name: sender.name },
-              To: recipients.map((email) => ({ Email: email })),
-              ReplyTo: { Email: sender.email, Name: sender.name },
-              Subject: subject,
-              TextPart: text || undefined,
-              HTMLPart: html || undefined,
-            },
+          personalizations: [{ to: recipients.map((email) => ({ email })) }],
+          from: { email: sender.email, name: sender.name },
+          reply_to: { email: sender.email, name: sender.name },
+          subject,
+          content: [
+            ...(text ? [{ type: 'text/plain', value: text }] : []),
+            ...(html ? [{ type: 'text/html', value: html }] : []),
           ],
         }),
       })
-      const body = await res.json().catch(() => ({}))
       if (!res.ok) {
-        const msg = body.ErrorMessage || body.Messages?.[0]?.Errors?.[0]?.ErrorMessage || `Mailjet ${res.status}`
+        const body = await res.text().catch(() => '')
+        let msg = `SendGrid ${res.status}`
+        try { const j = JSON.parse(body); msg = j.errors?.[0]?.message || msg } catch {}
         throw new Error(msg)
       }
-      const messageId = body.Messages?.[0]?.To?.[0]?.MessageID || body.Messages?.[0]?.MessageID || 'sent'
-      console.log(`[email:mailjet] Sent to ${to} — ${messageId}`)
+      const messageId = res.headers.get('x-message-id') || 'sent'
+      console.log(`[email:sendgrid] Sent to ${to} — ${messageId}`)
       return { mocked: false, messageId: String(messageId) }
     } catch (err) {
-      console.warn(`[email:mailjet] Send failed to ${to}:`, err.message)
+      console.warn(`[email:sendgrid] Send failed to ${to}:`, err.message)
       throw err
     }
   }
+
+
 
   const t = getTransporter()
 
@@ -238,6 +237,6 @@ function escapeHtml(value) {
 }
 
 export function isEmailConfigured() {
-  const { host, user, pass, mailjetApiKey, mailjetSecretKey } = config.email
-  return Boolean((mailjetApiKey && mailjetSecretKey) || (host && user && pass))
+  const { host, user, pass, sendgridApiKey } = config.email
+  return Boolean(sendgridApiKey || (host && user && pass))
 }

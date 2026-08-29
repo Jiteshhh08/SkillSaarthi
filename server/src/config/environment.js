@@ -26,9 +26,8 @@ export const config = {
     user: process.env.EMAIL_USER || '',
     pass: process.env.EMAIL_PASS || '',
     from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@skillsaarthi.vercel.app',
-    mailjetApiKey: process.env.MAILJET_API_KEY || '',
-    mailjetSecretKey: process.env.MAILJET_SECRET_KEY || '',
-    mailjetSender: process.env.MAILJET_SENDER || process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@skillsaarthi.vercel.app',
+    sendgridApiKey: process.env.SENDGRID_API_KEY || '',
+    sendgridSender: process.env.SENDGRID_SENDER || process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@skillsaarthi.vercel.app',
   },
   auth: {
     verificationTokenExpiryMs: Number(process.env.VERIFICATION_TOKEN_EXPIRY_MS) || 24 * 60 * 60 * 1000,
