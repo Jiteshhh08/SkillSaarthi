@@ -34,7 +34,7 @@ export default function SkillSaarthiLoader({ onDone }) {
   if (reducedRef.current) {
     return (
       <div className="fixed inset-0 z-[9999] grid place-items-center bg-[#fafafa]">
-        <img src={compactLogo} alt="SkillSaarthi" className="h-16 w-16 object-contain" />
+        <img src={compactLogo} alt="SkillSaarthi" className="h-20 w-20 md:h-24 md:w-24 object-contain" />
       </div>
     )
   }
@@ -98,7 +98,7 @@ export default function SkillSaarthiLoader({ onDone }) {
         className={`absolute grid place-items-center transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${showCompact ? 'opacity-100 scale-100 duration-600' : exiting ? 'opacity-100 scale-[22] duration-700' : 'opacity-0 scale-75 duration-600'}`}
         style={{ transformOrigin: 'center' }}
       >
-        <img src={compactLogo} alt="SkillSaarthi compact" className="h-16 w-16 md:h-20 md:w-20 object-contain drop-shadow-sm" />
+        <img src={compactLogo} alt="SkillSaarthi compact" className="h-30 w-30 md:h-28 md:w-28 object-contain drop-shadow-sm" />
       </div>
 
       <style>{`
