@@ -5,7 +5,7 @@ import { useAdmin } from '../../hooks/useAdmin'
 import NotificationBell from './NotificationBell'
 import Icon from '../common/Icon'
 import { useAvatarUrl } from '../../hooks/useAvatarUrl'
-import logo from '../../assets/skillsaarthi_logo.jpeg'
+import logo from '../../assets/skillsaarthi_logo.webp'
 
 function NavDropdown({ label, items, active }) {
   const [open, setOpen] = useState(false)

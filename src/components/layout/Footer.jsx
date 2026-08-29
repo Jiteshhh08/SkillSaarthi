@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import logo from '../../assets/skillsaarthi_logo.jpeg'
+import logo from '../../assets/skillsaarthi_logo.webp'
 
 export default function Footer() {
   const { user } = useAuth()

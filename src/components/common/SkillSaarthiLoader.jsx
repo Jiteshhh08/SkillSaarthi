@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import compactLogo from '../../assets/skillsaarthi_logo2.png'
+import compactLogo from '../../assets/skillsaarthi_logo2.webp'
 
 export default function SkillSaarthiLoader({ onDone }) {
   const [phase, setPhase] = useState(0)
