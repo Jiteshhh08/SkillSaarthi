@@ -4,7 +4,7 @@ import { useAdmin } from '../../hooks/useAdmin'
 import { isProfileComplete } from '../../services/profile'
 import AnimatedLoader from './AnimatedLoader'
 
-const EMAIL_VERIFICATION_ENABLED = true // enabled — Mailjet HTTPS active
+const EMAIL_VERIFICATION_ENABLED = true // enabled — SendGrid HTTPS active
 
 export function ProtectedRoute({ children, allowUnverified = false }) {
   const { user, loading, emailVerified, verificationLoading } = useAuth()

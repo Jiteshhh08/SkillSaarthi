@@ -4,7 +4,7 @@ import { signupPending } from '../../services/authApi'
 import { useAuth } from '../../hooks/useAuth'
 import TopBar from '../../components/layout/TopBar'
 
-const EMAIL_VERIFICATION_ENABLED = true // enabled — Mailjet HTTPS active on Render
+const EMAIL_VERIFICATION_ENABLED = true // enabled — SendGrid HTTPS active on Render
 
 export default function Signup() {
   const [name, setName] = useState('')

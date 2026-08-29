@@ -5,7 +5,7 @@ import { getVerificationStatus } from '../../services/authApi'
 import { getAdminStatus } from '../../services/admin'
 import TopBar from '../../components/layout/TopBar'
 
-const FORGOT_PASSWORD_ENABLED = true // enabled — Mailjet HTTPS active
+const FORGOT_PASSWORD_ENABLED = true // enabled — SendGrid HTTPS active
 
 export default function Login() {
   const [searchParams] = useSearchParams()
