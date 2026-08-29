@@ -11,15 +11,16 @@ export default function SkillSaarthiLoader({ onDone }) {
       const t = setTimeout(() => onDone?.(), 380)
       return () => clearTimeout(t)
     }
-    // S 350, kill 600, Saarthi 700, hold 400, compact 600, hold 250, exit 400
+    // S 350, kill 600, Saarthi 700, flourish 500, hold 300, compact 600, hold 250, exit 400
     const timers = [
       setTimeout(() => setPhase(1), 360),
       setTimeout(() => setPhase(2), 980),
       setTimeout(() => setPhase(3), 1700),
-      setTimeout(() => setPhase(4), 2100),
-      setTimeout(() => setPhase(5), 2700),
-      setTimeout(() => setPhase(6), 2950),
-      setTimeout(() => onDone?.(), 3350),
+      setTimeout(() => setPhase(4), 2200),
+      setTimeout(() => setPhase(5), 2500),
+      setTimeout(() => setPhase(6), 3100),
+      setTimeout(() => setPhase(7), 3350),
+      setTimeout(() => onDone?.(), 3750),
     ]
     return () => timers.forEach(clearTimeout)
   }, [onDone])
@@ -38,56 +39,57 @@ export default function SkillSaarthiLoader({ onDone }) {
     )
   }
 
-  const showCompact = phase >= 4 && phase < 6
-  const showWordmark = phase < 4
-  const exiting = phase === 6
+  const showCompact = phase >= 5 && phase < 7
+  const showWordmark = phase < 5
+  const exiting = phase === 7
 
   return (
     <div
       className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#fafafa] px-6 transition-opacity ${exiting ? 'opacity-0 pointer-events-none duration-700' : 'opacity-100 duration-400'}`}
       aria-label="Loading SkillSaarthi"
     >
-      {/* Wordmark: S -> kill -> Saarthi — Skill dark blue, Saarthi light green per logo */}
+      {/* Wordmark — Skill + सारथी perfectly aligned as in reference image */}
       <div
-        className={`flex items-baseline justify-center transition-all duration-600 ease-[cubic-bezier(0.22,1,0.36,1)] ${showWordmark ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.88]'}`}
-        style={{ fontFamily: 'Lato, sans-serif', fontWeight: 900, letterSpacing: '0.02em' }}
+        className={`flex items-baseline justify-center gap-0 text-[36px] md:text-[44px] leading-none transition-all duration-600 ease-[cubic-bezier(0.22,1,0.36,1)] ${showWordmark ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.88]'}`}
+        style={{ letterSpacing: '0.02em' }}
       >
-        {/* Skill = dark blue #0a2e2e */}
-        <span className="relative inline-block overflow-hidden text-[36px] md:text-[44px] leading-none text-[#0a2e2e]">
+        {/* Skill — dark blue #0a2e2e, EN */}
+        <span className="inline-flex items-baseline overflow-x-hidden overflow-y-visible py-3 text-[#0a2e2e]" style={{ fontFamily: 'Lato, sans-serif', fontWeight: 900 }}>
           <span
-            className="inline-block overflow-hidden whitespace-nowrap border-r-[2px] border-brand-deep"
+            className="inline-block whitespace-nowrap border-r-[2px] border-brand-deep pr-[1px] overflow-hidden align-baseline text-[#0a2e2e]"
             style={{
-              maxWidth: phase >= 0 ? '1ch' : 0,
+              maxWidth: phase === 0 ? '1ch' : phase >= 1 ? '1ch' : 0,
+              display: 'inline-block',
               animation: phase === 0 ? 'typeS 360ms steps(1, end) forwards' : undefined,
               borderRightColor: phase === 0 ? '#0f766e' : 'transparent',
             }}
           >
             S
           </span>
-        </span>
-        <span className="relative inline-block overflow-hidden text-[36px] md:text-[44px] leading-none text-[#0a2e2e]">
           <span
-            className="inline-block overflow-hidden whitespace-nowrap"
+            className="inline-block whitespace-nowrap overflow-hidden align-baseline text-[#0a2e2e]"
             style={{
-              maxWidth: phase < 1 ? 0 : phase === 1 ? '4ch' : '4ch',
+              maxWidth: phase < 1 ? 0 : '4ch',
+              display: 'inline-block',
               transition: phase === 1 ? 'max-width 600ms steps(4, end)' : undefined,
             }}
           >
             kill
           </span>
         </span>
-        {/* Saarthi = light green/teal #14bf96 as per logo */}
-        <span className="relative inline-block overflow-hidden text-[36px] md:text-[44px] leading-none text-[#14bf96] ml-[0.04em]">
+        {/* सारथी — Hindi light green, same baseline/size */}
+        <span className="inline-flex items-baseline overflow-x-hidden overflow-y-visible py-3 ml-0 text-[#14bf96]" style={{ fontFamily: '"Noto Sans Devanagari", Lato, sans-serif', fontWeight: 900 }}>
           <span
-            className="inline-block overflow-hidden whitespace-nowrap"
+            className="inline-block whitespace-nowrap overflow-visible align-baseline"
             style={{
-              maxWidth: phase < 2 ? 0 : '7ch',
-              transition: phase === 2 ? 'max-width 720ms steps(7, end)' : undefined,
+              maxWidth: phase < 2 ? 0 : '6ch',
+              display: 'inline-block',
+              transition: phase === 2 ? 'max-width 720ms steps(6, end)' : undefined,
             }}
           >
-            Saarthi
+            सारथी
           </span>
-          {phase === 2 && <span className="inline-block h-[0.9em] w-[2px] translate-y-1 bg-[#14bf96] animate-[blink_0.7s_step-end_infinite] ml-1" />}
+          {phase === 2 && <span className="inline-block h-[0.9em] w-[2px] bg-[#14bf96] animate-[blink_0.7s_step-end_infinite] ml-1 align-baseline" />}
         </span>
       </div>
 
