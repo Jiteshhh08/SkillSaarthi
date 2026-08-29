@@ -155,13 +155,13 @@ export async function sendVerificationEmail({ to, name, token }) {
     </p>
     <p style="margin:0 0 8px;font-size:13px;color:#5b5e6b;">Or copy and paste this link into your browser:</p>
     <p style="margin:0;word-break:break-all;"><a href="${verifyUrl}" style="color:#0a7d63;font-size:13px;">${verifyUrl}</a></p>
-    <p style="margin:16px 0 0;font-size:12px;color:#797d8a;">This link expires in 24 hours. If you already verified, you can ignore this email.</p>
-  `
+    <p style="margin:16px 0 0;font-size:12px;color:#797d8a;">This link expires in 10 minutes. If you already verified, you can ignore this email.</p>
+   `
   return sendEmail({
     to,
     subject,
     html: wrapHtml('Verify your email', body),
-    text: `Hi ${name || 'there'},\n\nVerify your email: ${verifyUrl}\n\nThis link expires in 24 hours.`,
+    text: `Hi ${name || 'there'},\n\nVerify your email: ${verifyUrl}\n\nThis link expires in 10 minutes.`,
   })
 }
 

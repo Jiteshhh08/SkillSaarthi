@@ -30,7 +30,7 @@ export const config = {
     sendgridSender: process.env.SENDGRID_SENDER || process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@skillsaarthi.vercel.app',
   },
   auth: {
-    verificationTokenExpiryMs: Number(process.env.VERIFICATION_TOKEN_EXPIRY_MS) || 24 * 60 * 60 * 1000,
+    verificationTokenExpiryMs: Number(process.env.VERIFICATION_TOKEN_EXPIRY_MS) || 10 * 60 * 1000,
     resetTokenExpiryMs: Number(process.env.RESET_TOKEN_EXPIRY_MS) || 60 * 60 * 1000,
     resendCooldownMs: Number(process.env.RESEND_COOLDOWN_MS) || 60 * 1000,
     pendingExpiryMs: Number(process.env.PENDING_EXPIRY_MS) || 10 * 60 * 1000,
