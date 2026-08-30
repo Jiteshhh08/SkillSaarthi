@@ -44,7 +44,7 @@ export function ProfileCompleteRoute({ children }) {
   const { user, profile, loading, profileLoading, emailVerified, verificationLoading } = useAuth()
   const { isAdmin, loading: adminLoading } = useAdmin()
 
-  if (loading || (EMAIL_VERIFICATION_ENABLED && verificationLoading) || adminLoading || profileLoading) {
+  if (loading || adminLoading || profileLoading) {
     return <AnimatedLoader message="Loading your career hub…" />
   }
 
@@ -52,8 +52,8 @@ export function ProfileCompleteRoute({ children }) {
     return <Navigate to="/login" replace />
   }
 
-  // Email verification gate (admins bypass, legacy users with null pass through) — disabled when flag false
-  if (EMAIL_VERIFICATION_ENABLED && !isAdmin && emailVerified === false) {
+  // Email verification gate - show loader only if truly unverified, don't block on verificationLoading flicker
+  if (EMAIL_VERIFICATION_ENABLED && !isAdmin && emailVerified === false && !verificationLoading) {
     return <Navigate to="/verify-pending" replace />
   }
 
@@ -68,7 +68,7 @@ export function VerifiedRoute({ children }) {
   const { user, loading, emailVerified, verificationLoading } = useAuth()
   const { isAdmin, loading: adminLoading } = useAdmin()
 
-  if (loading || (EMAIL_VERIFICATION_ENABLED && verificationLoading) || adminLoading) {
+  if (loading || adminLoading) {
     return <AnimatedLoader />
   }
 
@@ -76,7 +76,7 @@ export function VerifiedRoute({ children }) {
     return <Navigate to="/login" replace />
   }
 
-  if (EMAIL_VERIFICATION_ENABLED && !isAdmin && emailVerified === false) {
+  if (EMAIL_VERIFICATION_ENABLED && !isAdmin && emailVerified === false && !verificationLoading) {
     return <Navigate to="/verify-pending" replace />
   }
 

@@ -113,7 +113,8 @@ export default function GitHubAnalysis() {
       const data = await analyzeGitHub(value, { applySkills })
       setResult(data)
       setActiveStep(STEPS.length - 1)
-      if (refreshProfile) await refreshProfile(user.$id)
+      // Fire-and-forget profile refresh - don't block UI or trigger RouteGuards re-check flash
+      if (refreshProfile) refreshProfile(user.$id).catch(() => {})
     } catch (err) {
       setError(
         err?.response?.data?.message ||
