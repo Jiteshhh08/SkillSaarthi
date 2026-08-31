@@ -196,9 +196,9 @@ AI_SERVICE_URL=http://localhost:8000                   # Python AI URL — serve
                                                        # Local: http://localhost:8000 · Prod: https://YOUR-AI-RENDER-URL.onrender.com
 GITHUB_TOKEN=                                          # Optional PAT — higher limit + GraphQL contributionsCollection + private count (server/src/services/github.service.js,153)
 ADMIN_EMAILS=                                          # Comma-separated — server/src/middleware/auth.middleware.js requireAdmin (empty = admin API disabled, admins bypass onboarding)
-FRONTEND_URL=http://localhost:5173                     # For verify/reset links — server/src/services/email.service.js,167
-RESEND_API_KEY=                                        # Resend HTTPS key (preferred on Render) — email.service.js (fetch https://api.resend.com/emails)
-RESEND_FROM=onboarding@resend.dev                      # Free tier: ONLY onboarding@resend.dev or verified domain; auto-corrects gmail→onboarding@resend.dev at email.service.js; reply_to skillsaarthi.support@gmail.com 
+FRONTEND_URL=http://localhost:5173                     # For verify/reset links — server/src/services/email.service.js:169
+SENDGRID_API_KEY=                                      # SendGrid HTTPS key (preferred on Render, not blocked like SMTP) — email.service.js (fetch https://api.sendgrid.com/v3/mail/send)
+SENDGRID_SENDER=skillsaarthi <skillsaarthi.support@gmail.com> # Must be verified Single Sender at https://app.sendgrid.com/settings/sender_auth/senders (no domain needed)
 EMAIL_HOST=smtp.gmail.com                              # SMTP fallback (local dev, Gmail App Password) — nodemailer at email.service.js
 EMAIL_PORT=465                                         # 465 secure true / 587 secure false
 EMAIL_SECURE=true                                      # true for 465
@@ -217,7 +217,7 @@ LLM_API_KEY=                                           # Legacy alias for AI_KEY
 # PENDING_ENCRYPTION_KEY=  # 32-byte hex
 ```
 
-**Email OFF for now:** `server/src/services/email.service.js` `isEmailConfigured()` needs `RESEND_API_KEY` or `(HOST+USER+PASS)`. When false, signup returns `_dev_otp` in JSON (mock at `:97`); banner `src/components/common/VerificationBanner.jsx` and guards `src/components/common/RouteGuards.jsx` are gated by `EMAIL_VERIFICATION_ENABLED=false` (never shown/block). Resend HTTPS ready (`fetch https://api.resend.com/emails` at `:75`) — Render free tier blocks `smtp.gmail.com:465` (ENETUNREACH), so use Resend.
+**Email ON:** `server/src/services/email.service.js` `isEmailConfigured()` needs `SENDGRID_API_KEY` or `(HOST+USER+PASS)`. When false, signup returns `_dev_otp` mock; when true (SendGrid), OTP sent via `fetch https://api.sendgrid.com/v3/mail/send` at `:84`. `EMAIL_VERIFICATION_ENABLED=true` in `Signup.jsx:7`, `VerificationBanner.jsx:6`, `RouteGuards.jsx:7` + `FORGOT_PASSWORD_ENABLED=true` in `Login.jsx:8` — banner + guards + forgot-password are live. Render free tier blocks `smtp.gmail.com:465`, so SendGrid HTTPS is required.
 
 ## Python AI Service — `ai-service/.env` (FastAPI, server-only)
 
@@ -570,17 +570,17 @@ Every feature must strengthen the central product loop. Do not build isolated fe
 ## Render env (backend)
 
 - Set in **Render → `skillsaarthi-node` → Environment** → Save → **Manual Deploy → Deploy latest commit**. Saving alone does not restart.
-- **Required:** `APPWRITE_ENDPOINT/PROJECT_ID/API_KEY/DATABASE_ID/RESUME_BUCKET_ID`, `FRONTEND_URL=https://YOUR-VERCEL-URL.vercel.app` (NOT localhost — used at `server/src/services/email.service.js,167`), `GITHUB_TOKEN` (optional, raises GitHub limit, enables GraphQL `contributionsCollection` at `server/src/services/github.service.js` + private count at `:138`), `AI_SERVICE_URL`, `ADMIN_EMAILS`, `RESEND_API_KEY` + `RESEND_FROM` (preferred over SMTP).
-- **Email:** Render free tier blocks `smtp.gmail.com:465` (ENETUNREACH). Use **Resend HTTPS** (`RESEND_API_KEY` + `RESEND_FROM=onboarding@resend.dev` free tier; auto-corrects `@gmail.com` → `onboarding@resend.dev` at `email.service.js`, `reply_to skillsaarthi.support@gmail.com` at `:81`, `fetch https://api.resend.com/emails` at `:75`). Check **Render → Logs** for `[email:resend] Sent` vs `ENETUNREACH`.
+- **Required:** `APPWRITE_ENDPOINT/PROJECT_ID/API_KEY/DATABASE_ID/RESUME_BUCKET_ID`, `FRONTEND_URL=https://YOUR-VERCEL-URL.vercel.app` (NOT localhost — used at `server/src/services/email.service.js:169`), `GITHUB_TOKEN` (optional, raises GitHub limit, enables GraphQL `contributionsCollection` at `server/src/services/github.service.js:153`), `AI_SERVICE_URL`, `ADMIN_EMAILS`, `SENDGRID_API_KEY` + `SENDGRID_SENDER` (preferred over SMTP, verified at https://app.sendgrid.com/settings/sender_auth/senders).
+- **Email:** Render free tier blocks `smtp.gmail.com:465` (ENETUNREACH). Use **SendGrid HTTPS** (`SENDGRID_API_KEY` + `SENDGRID_SENDER=skillsaarthi <...@gmail.com>` - verified Single Sender, no domain needed) at `email.service.js:77-114` (`fetch https://api.sendgrid.com/v3/mail/send`). Check **Render → Logs** for `[email:sendgrid] Sent` vs `Send failed` vs `ENETUNREACH`.
 - **Rate-limit & proxy:** `server/src/app.js` `trust proxy 1` + `app.js` limiter `30/min` on `/api/github|resume|admin`. Health checks `GET /` + `GET /health` at `app.js` are not rate-limited — point cron-job.org at `/health` (`server/src/app.js`, `ai-service/app/main.py`).
-- **Dev OTP when email OFF:** `email.service.js` `isEmailConfigured()` false → signup response contains `_dev_otp` field (mock at `:97`). Find it in DevTools → Network → signup JSON; verification banner (`src/components/common/VerificationBanner.jsx`) and guards (`src/components/common/RouteGuards.jsx`) are gated `EMAIL_VERIFICATION_ENABLED=false` so unverified users are not blocked.
+- **Email verification ON:** `isEmailConfigured()` true -> OTP via SendGrid, `EMAIL_VERIFICATION_ENABLED=true` at `Signup.jsx:7`, `VerificationBanner.jsx:6`, `RouteGuards.jsx:7` (non-blocking loader fix at `:47,56` to prevent GitHub flash), `FORGOT_PASSWORD_ENABLED=true` at `Login.jsx:8`.
 
 ## Steps to redeploy & verify
 
 1. **Vercel:** Settings → Environment Variables → set `VITE_*` + `VITE_API_BASE_URL=https://YOUR-RENDER-URL.onrender.com` → Deployments → Redeploy → hard-refresh.
-2. **Render:** Environment → set `APPWRITE_*`, `FRONTEND_URL=https://YOUR-VERCEL-URL.vercel.app`, `RESEND_API_KEY` + `RESEND_FROM=onboarding@resend.dev` (or verified domain), `GITHUB_TOKEN` etc. → Manual Deploy → check Logs for `[email:resend] Sent`.
+2. **Render:** Environment → set `APPWRITE_*`, `FRONTEND_URL=https://YOUR-VERCEL-URL.vercel.app`, `SENDGRID_API_KEY` + `SENDGRID_SENDER=skillsaarthi <skillsaarthi.support@gmail.com>` (verified Single Sender, no domain needed), `GITHUB_TOKEN` etc. → Manual Deploy → check Logs for `[email:sendgrid] Sent`.
 3. **Health:** open `https://YOUR-BACKEND.onrender.com/health` and `https://YOUR-AI.onrender.com/health` — expect `{"status":"ok",...}`.
-4. **Auth check:** sign up → if email OFF, Network → signup response `_dev_otp` → `/verify-otp` banner; if ON, check inbox (Resend free tier only delivers to your own account email unless domain verified).
+4. **Auth check:** sign up with new Gmail -> SendGrid sends `Your verification code is <otp>` with auto-verify link `/verify-otp?email=&otp=` at `email.service.js:169` -> `VerifyOtp.jsx:46` auto-verifies on open -> `verified:true` (`/api/auth/verification-status`). If email OFF, Network shows `_dev_otp`.
 
 ## Today’s changes (26 Sept 2026) — rule reminder
 
