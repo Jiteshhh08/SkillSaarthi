@@ -332,6 +332,7 @@ export default function TopBar() {
         { to: '/roadmaps', label: 'Roadmap' },
         { to: '/resume', label: 'Resume' },
         { to: '/github', label: 'GitHub' },
+        { to: '/assistant', label: 'AI Assistant' },
       ],
     },
     {

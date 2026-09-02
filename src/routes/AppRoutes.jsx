@@ -21,6 +21,7 @@ const CommunityPostDetail = lazy(() => import('../pages/private/CommunityPostDet
 const CommunitySaved = lazy(() => import('../pages/private/CommunitySaved'))
 const CommunityUserProfile = lazy(() => import('../pages/private/CommunityUserProfile'))
 const ProfileSettings = lazy(() => import('../pages/private/ProfileSettings'))
+const Assistant = lazy(() => import('../pages/private/Assistant'))
 const Onboarding = lazy(() => import('../pages/onboarding/Onboarding'))
 const Login = lazy(() => import('../pages/auth/Login'))
 const Signup = lazy(() => import('../pages/auth/Signup'))
@@ -264,6 +265,15 @@ export default function AppRoutes() {
         element={
           <ProfileCompleteRoute>
             <CommunityUserProfile />
+          </ProfileCompleteRoute>
+        }
+      />
+
+      <Route
+        path="/assistant"
+        element={
+          <ProfileCompleteRoute>
+            <Assistant />
           </ProfileCompleteRoute>
         }
       />
