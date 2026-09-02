@@ -30,6 +30,7 @@ from .ai.client import (
     EXTRACTION_PROMPT_VERSION,
     MATCH_PROMPT_VERSION,
     OPTIMIZATION_PROMPT_VERSION,
+    chat as ai_chat,
 )
 from .resume.ingest import detect_kind, extract_raw_text
 from .resume.pipeline import (
@@ -217,6 +218,34 @@ def resume_generate(request: ResumeGenerateRequest):
             result["error"] = compiled["error"]
             result["log"] = compiled.get("log")
     return ResumeGenerateResponse(**result)
+
+
+class AssistantChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=4000)
+    profile: dict | None = None
+    history: list | None = None
+
+
+class AssistantChatResponse(BaseModel):
+    reply: str
+    model: str
+
+
+@app.post("/ai/assistant/chat", response_model=AssistantChatResponse)
+def assistant_chat(request: AssistantChatRequest):
+    from .assistant.prompts import build_assistant_messages
+    from .ai.client import AI_MODEL
+
+    if not request.message or not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message is required.")
+    messages = build_assistant_messages(request.profile or {}, request.history or [], request.message.strip())
+    try:
+        reply = ai_chat(messages, temperature=0.6, max_tokens=1200)
+    except Exception as exc:  # handled by ai_gateway_error_handler if AIGatewayError
+        if isinstance(exc, (AIConfigurationError, AIGatewayError, AIJSONError, AIResponseError, AIUnavailableError)):
+            raise
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return AssistantChatResponse(reply=reply, model=AI_MODEL)
 
 
 if __name__ == "__main__":
