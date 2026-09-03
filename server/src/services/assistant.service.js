@@ -7,7 +7,7 @@ export async function chatWithAssistant(userId, { message, history }) {
     education_level: null, skills: [], interests: [], goals: [], assessment_score: null, experience_years: 0,
   }))
   const controller = new AbortController()
-  const t = setTimeout(() => controller.abort(), 45000)
+  const t = setTimeout(() => controller.abort(), 120000)
   try {
     const res = await fetch(`${config.aiServiceUrl}/ai/assistant/chat`, {
       method: 'POST',
