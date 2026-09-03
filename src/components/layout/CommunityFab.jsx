@@ -13,7 +13,7 @@ export default function CommunityFab() {
     <Link
       to="/community"
       aria-label="Open the Skill Saarthi community"
-      className="group fixed bottom-8 right-8 z-50 flex h-14 items-center overflow-hidden rounded-xl bg-brand text-white shadow-popover ring-4 ring-brand/20 transition-all duration-300 hover:rounded-2xl hover:bg-brand-hover hover:shadow-modal hover:ring-brand/35 active:bg-brand-active"
+      className="group fixed bottom-4 right-4 z-30 flex h-14 items-center overflow-hidden rounded-xl bg-brand text-white shadow-popover ring-4 ring-brand/20 transition-all duration-300 hover:rounded-2xl hover:bg-brand-hover hover:shadow-modal hover:ring-brand/35 active:bg-brand-active sm:bottom-8 sm:right-8"
     >
       <span className="grid h-14 w-14 shrink-0 place-items-center">
         <Icon name="users" size={26} />
