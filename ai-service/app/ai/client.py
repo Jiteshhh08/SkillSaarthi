@@ -163,19 +163,21 @@ def chat(
     thinking disabled; complex semantic analysis may enable it.
     """
     retries = AI_MAX_RETRIES if retries is None else retries
-    extra = {
-        "chat_template_kwargs": {
-            "enable_thinking": enable_thinking,
-            "reasoning_effort": reasoning_effort,
-        }
-    }
+    # Groq / generic OpenAI gateways don't support chat_template_kwargs (TCET-only)
+    is_groq = "groq.com" in AI_BASE_URL
     kwargs = {
         "model": AI_MODEL,
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_tokens,
-        "extra_body": extra,
     }
+    if not is_groq:
+        kwargs["extra_body"] = {
+            "chat_template_kwargs": {
+                "enable_thinking": enable_thinking,
+                "reasoning_effort": reasoning_effort,
+            }
+        }
 
     def call():
         try:
