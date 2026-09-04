@@ -223,14 +223,14 @@ LLM_API_KEY=                                           # Legacy alias for AI_KEY
 
 ```env
 PORT=8000
-AI_BASE_URL=https://ai.tcetcercd.in/v1                 # Gateway (OpenAI-compatible) — ai-service/app/ai/client.py
-AI_MODEL=Qwen3.6-35B-A3B                                # Model — pipeline.py via ai/client.py
-AI_KEY=                                              # Gateway key (preferred)
+AI_BASE_URL=https://api.groq.com/openai/v1               # Groq OpenAI-compatible — ai-service/app/ai/client.py (TCET Qwen also compatible)
+AI_MODEL=openai/gpt-oss-20b                             # Groq model — gpt-oss-20b / qwen/qwen3.6-27b (needs json_mode, see /v1/models)
+AI_KEY=gsk_...                                        # Groq API key (preferred) — console.groq.com/keys
 LLM_API_KEY=                                           # Legacy alias — alias for AI_KEY
-# Optional: AI_TIMEOUT_SECONDS=120, AI_MAX_RETRIES=2, LATEX_COMPILE_TIMEOUT=300
+# Optional: AI_TIMEOUT_SECONDS=180, AI_MAX_RETRIES=2, LATEX_COMPILE_TIMEOUT=300
 ```
 
-Resume-only: `ai-service/app/main.py` (`GET /health` + 5 `POST /ai/resume/{extract,analyze,match,optimize,generate}` at `main.py`). Scoring etc. are Node-native (`server/src/services/scoring.js`, `careerCatalog.js`, `github.service.js`, `profile.builder.js`).
+Resume + Assistant: `ai-service/app/main.py` (`GET /health` + 5 `POST /ai/resume/{extract,analyze,match,optimize,generate}` + `POST /ai/assistant/chat` at `main.py:230` -> `assistant/prompts.py` with profile context). Scoring etc. are Node-native (`server/src/services/scoring.js`, `careerCatalog.js`, `github.service.js`, `profile.builder.js`). Assistant UI at `src/pages/private/Assistant.jsx` renders markdown preview (no extra dep).
 
 ## Scripts — `scripts/.env.setup` (setup/seed/importer)
 
@@ -582,8 +582,10 @@ Every feature must strengthen the central product loop. Do not build isolated fe
 3. **Health:** open `https://YOUR-BACKEND.onrender.com/health` and `https://YOUR-AI.onrender.com/health` — expect `{"status":"ok",...}`.
 4. **Auth check:** sign up with new Gmail -> SendGrid sends `Your verification code is <otp>` with auto-verify link `/verify-otp?email=&otp=` at `email.service.js:169` -> `VerifyOtp.jsx:46` auto-verifies on open -> `verified:true` (`/api/auth/verification-status`). If email OFF, Network shows `_dev_otp`.
 
-## Today’s changes (26 Sept 2026) — rule reminder
+## Today’s changes (04 Sept 2026) — rule reminder
 
-- GitHub is **Node-only** (`server/src/services/github.service.js` + `src/components/github/ContributionGrid.jsx`); no Python `POST /ai/github/analyze`.
-- TopBar 3 hubs at `src/components/layout/TopBar.jsx`, Admin in `ProfileMenu` at `:132-142`, hamburger fixed for iPhone (<460px: `gap-2 px-3`, logo `h-10 w-28 -ml-1`, `lg:hidden` not `min-[1070px]:hidden`) at `:342-343,347,400`, Homes merged (`src/pages/public/Home.jsx` + re-export `private/Home.jsx`), `CommunityFab` kept in `src/App.jsx`.
-- Onboarding `6→4` at `src/pages/onboarding/Onboarding.jsx` with tabs/sub-step, no silent proficiency-2; scoring moved to Node (`server/src/services/scoring.js` + `careerCatalog.js` + `profile.builder.js`); `ai-service/app/main.py` trimmed to `GET /health` + 5 resume endpoints; `app.set('trust proxy',1)` + 30/min limiter at `server/src/app.js`.
+- GitHub is **Node-only** (`server/src/services/github.service.js` + `src/components/github/ContributionGrid.jsx`) + flash fix at `GitHubAnalysis.jsx:114` (fire-and-forget `refreshProfile`) + `RouteGuards.jsx:47,56` (no `verificationLoading` flicker) + `analysis_result` 8000 slice `github.service.js:407`.
+- Email **ON** via **SendGrid HTTPS** `server/src/services/email.service.js:77` (`SENDGRID_API_KEY` + `SENDGRID_SENDER` Single Sender, `EMAIL_VERIFICATION_ENABLED=true` at `Signup.jsx:7` etc.).
+- AI **Groq** `openai/gpt-oss-20b` `ai-service/app/ai/client.py:166` (no `extra_body` for Groq) + `POST /ai/assistant/chat` `main.py:230` + `server/src/services/assistant.service.js` `180s` timeout + `src/pages/private/Assistant.jsx` markdown preview -> TopBar `Build -> AI Assistant`.
+- TopBar 3 hubs at `src/components/layout/TopBar.jsx`, Admin in `ProfileMenu` at `:132-142`, hamburger fixed for iPhone (<460px) at `:342-343,347,400`, Homes merged (`src/pages/public/Home.jsx` + re-export `private/Home.jsx`), `CommunityFab` kept in `src/App.jsx`.
+- Onboarding `6→4` at `src/pages/onboarding/Onboarding.jsx` with tabs/sub-step, no silent proficiency-2; scoring moved to Node (`server/src/services/scoring.js` + `careerCatalog.js` + `profile.builder.js`); `ai-service` now 5 resume + 1 assistant endpoints; `app.set('trust proxy',1)` + 30/min limiter at `server/src/app.js`.
