@@ -8,7 +8,7 @@ export async function analyzeGitHub(username, options = {}) {
   return data.data
 }
 
-export async function getGitHubAnalysis(id) {
-  const { data } = await api.get(`/api/github/analysis/${id}`)
+export async function getMyGitHubAnalysis() {
+  const { data } = await api.get('/api/github/analysis')
   return data.data
 }
