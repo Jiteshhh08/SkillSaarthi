@@ -1,5 +1,4 @@
-# Hugging Face Space (Docker SDK) — runs as UID 1000.
-# Reference: https://huggingface.co/docs/hub/spaces-sdks-docker
+# Docker image for the AI service (deployed on SnapDeploy; runs as UID 1000).
 
 FROM python:3.12-slim
 

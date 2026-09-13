@@ -863,7 +863,7 @@ A strict data ownership model must be followed.
 
 # 36. Environment Configuration (summary)
 
-> No secrets in Git — all `.env` gitignored, production values in Vercel/Render. Frontend `VITE_*` are build-time (`vite.config.js`); backend `server/.env` via `environment.js` (never `VITE_`); AI `ai-service/.env` via `ai/client.py`; scripts via `scripts/.env.setup` (setup/seed/importer). Free plan reuses `resumes` bucket for avatars; paid plan uses `avatars`. Email OFF by default (`isEmailConfigured()` false → `_dev_otp` mock); enable via Resend HTTPS (Render blocks SMTP). `VITE_API_BASE_URL` change requires Vercel redeploy + hard-refresh.
+> No secrets in Git — all `.env` gitignored, production values in the Vercel/Render/SnapDeploy dashboards. Frontend `VITE_*` are build-time (`vite.config.js`); backend `server/.env` via `environment.js` (never `VITE_`); AI `ai-service/.env` via `ai/client.py`; scripts via `scripts/.env.setup` (setup/seed/importer). Free plan reuses `resumes` bucket for avatars; paid plan uses `avatars`. Email OFF by default (`isEmailConfigured()` false → `_dev_otp` mock); enable via SendGrid HTTPS (Render blocks SMTP). `VITE_API_BASE_URL` change requires Vercel redeploy + hard-refresh.
 >
 > **Single source:** canonical env tables → [`docs/rules.md` §5](rules.md) (Environment Variables). Deployment wiring → §47 (Production Hosting). Design → [`docs/design.md`](design.md).
 
@@ -1255,7 +1255,7 @@ This separation keeps the system understandable, maintainable, and scalable whil
 | --- | --- | --- | --- |
 | Frontend (React + Vite) | Vercel | `https://skillsaarthi.vercel.app` | — |
 | Backend (Node.js + Express) | Render (web service) | `https://skillsaarthi-node.onrender.com` | `/api/health` |
-| AI service (Python + FastAPI) | Render (web service) | `https://skillsaarthi-f14x.onrender.com` | `/health` |
+| AI service (Python + FastAPI) | SnapDeploy (Docker) | `https://skillsaarthi-ai-ebeba.containers.snapdeploy.app` | `/health` |
 | Infrastructure & data | Appwrite Cloud | `https://cloud.appwrite.io` | — |
 
 ## 47.2 Production Topology
@@ -1273,8 +1273,8 @@ Appwrite Cloud                      https://skillsaarthi-node.onrender.com
 (cloud.appwrite.io)                 (Render — Node.js backend)
                                                  │
                                                  ▼
-                                          https://skillsaarthi-f14x.onrender.com
-                                          (Render — Python FastAPI AI service)
+                                          https://skillsaarthi-ai-ebeba.containers.snapdeploy.app
+                                          (SnapDeploy — Python FastAPI AI service, Docker)
 ```
 
 ## 47.3 Responsibility by Platform
@@ -1282,7 +1282,8 @@ Appwrite Cloud                      https://skillsaarthi-node.onrender.com
 | Platform | Hosts | Notes |
 | --- | --- | --- |
 | Vercel | Frontend static build (`dist/`) | Vite preset; React Router SPA fallback handled automatically |
-| Render | Backend (Node) + AI service (Python) | Two separate web services from one repo |
+| Render | Backend (Node) | Web service from the repo (root directory `server`) |
+| SnapDeploy | AI service (Python, Docker) | Dockerfile in `ai-service/`, port 7860, auto-sleep + cron keep-warm |
 | Appwrite Cloud | Auth, Databases, Storage, Messaging, Realtime | Kept on the cloud — not self-hosted for the MVP |
 
 ## 47.4 Production Environment Configuration
@@ -1314,7 +1315,7 @@ APPWRITE_PROJECT_ID=<project_id>                       # Must match VITE_APPWRIT
 APPWRITE_DATABASE_ID=<database_id>                     # Must match VITE_APPWRITE_DATABASE_ID
 APPWRITE_RESUME_BUCKET_ID=resumes                      # Must match VITE_APPWRITE_RESUME_BUCKET_ID
 APPWRITE_API_KEY=<api_key>                             # Needs users.read (admin + author identity)
-AI_SERVICE_URL=https://YOUR-AI.onrender.com          # e.g. https://skillsaarthi-f14x.onrender.com
+AI_SERVICE_URL=https://YOUR-AI.snapdeploy.app        # e.g. https://skillsaarthi-ai-ebeba.containers.snapdeploy.app (no trailing slash)
 GITHUB_TOKEN=<optional PAT>                             # Higher GitHub limit + GraphQL contributionsCollection + private count
 LLM_API_KEY=<optional>
 ADMIN_EMAILS=skillsaarthi.support@gmail.com                      # Comma-separated; empty = admin API disabled
@@ -1333,36 +1334,43 @@ EMAIL_FROM=skillsaarthi <skillsaarthi.support@gmail.com>
 
 **Email OFF vs ON:** Repo currently runs **ON** via SendGrid — `isEmailConfigured()` at `email.service.js` checks `SENDGRID_API_KEY || (host+user+pass)`. When false, signup returns `_dev_otp` in JSON (mock at `:97`) and the verification banner (`src/components/common/VerificationBanner.jsx`) + guards (`src/components/common/RouteGuards.jsx`) are gated by `EMAIL_VERIFICATION_ENABLED` (now `true` with SendGrid). To enable, set `SENDGRID_API_KEY` + `SENDGRID_SENDER=skillsaarthi <skillsaarthi.support@gmail.com>` (verify Single Sender at https://app.sendgrid.com/settings/sender_auth/senders, free 100/day). SendGrid HTTPS at `email.service.js` (`fetch https://api.sendgrid.com/v3/mail/send`) works on Render; SMTP does not (`ENETUNREACH` on free tier).
 
-### AI service (Render env vars)
+### AI service (SnapDeploy env vars)
+
+Deployed as a Docker container from the same repo: **SnapDeploy → Deploy from GitHub → Root Directory `ai-service` → Dockerfile Path `Dockerfile` → Port `7860`**.
 
 ```env
-PYTHON_VERSION=3.12.10                                  # REQUIRED — see below
-AI_BASE_URL=https://ai.tcetcercd.in/v1                 # TCET gateway — ai-service/app/ai/client.py
+AI_BASE_URL=https://ai.tcetcercd.in/v1                 # TCET Qwen gateway — ai-service/app/ai/client.py
 AI_MODEL=Qwen3.6-35B-A3B
 AI_KEY=<gateway key>
 LLM_API_KEY=<legacy alias>
 ```
 
-`PORT` is injected by Render.
+`PORT` is injected by SnapDeploy; the container listens on `${PORT:-7860}`.
 
-> **Python 3.12 requirement.** The AI service pins `pandas==2.2.3`, `numpy==2.2.1`,
-> `scikit-learn==1.6.0`, and `pydantic==2.10.4`, which ship prebuilt wheels only through
-> Python 3.12. Render's default runtime (3.14) forces source builds that fail on `pydantic-core`
-> (needs Rust/maturin against a read-only cargo cache). Set the `PYTHON_VERSION` env var to
-> `3.12.10` (fully qualified) to use prebuilt wheels.
+> **No Python version pin needed.** The image is `python:3.12-slim` (`ai-service/Dockerfile`), so the pinned
+> `pandas==2.2.3`, `numpy==2.2.1`, `scikit-learn==1.6.0`, `pydantic==2.10.4` wheels install cleanly.
+> (The old Render `PYTHON_VERSION=3.12.10` requirement is obsolete.)
+
+> **Swap LLM providers via env only.** The client is OpenAI-compatible. If the TCET gateway is down
+> (`https://ai.tcetcercd.in` returns HTTP 530), point `AI_BASE_URL`/`AI_MODEL`/`AI_KEY` at any
+> OpenAI-compatible provider (e.g. Groq `https://api.groq.com/openai/v1`, model `openai/gpt-oss-20b`).
+> Edit env vars in SnapDeploy → rolling restart, no code change or redeploy.
 
 > **Resume PDF generation.** The LaTeX compiler is **optional** and detected at runtime
 > (`app/resume/latex/compile.py`). Without one, `/ai/resume/generate` still returns the `.tex`
 > source with `compiled: false` and the UI shows "PDF compiler not found" instead of the download
 > button — the flow degrades gracefully. Locally on Windows: `winget install MiKTeX.MiKTeX`.
-> On Render's Linux container the compiler must be installed at deploy time:
->
-> 1. **Tectonic** (recommended) — install the single binary in the build command, then add
->    `tectonic` to `COMPILERS` in `app/resume/latex/compile.py`.
-> 2. **TeX Live via apt** — prepend the build command with
->    `apt-get update && apt-get install -y texlive-latex-extra texlive-fonts-recommended`
->    (~1.5GB, may exceed free-tier disk); no code change needed (`pdflatex`/`xelatex` appear on
->    PATH).
+> The Docker image ships without TeX; to enable PDFs, add to `ai-service/Dockerfile`:
+> `RUN apt-get update && apt-get install -y --no-install-recommends texlive-latex-base texlive-latex-recommended texlive-fonts-recommended texlive-latex-extra && rm -rf /var/lib/apt/lists/*`
+> (~1.5GB; `pdflatex`/`xelatex` then appear on PATH, no code change).
+
+### SnapDeploy notes — free tier, sleep & keep-warm
+
+- Free tier: 4 containers, 512 MB RAM, 0.25 vCPU, 10 deploys/day (5 per 12h), no card.
+- Containers auto-sleep after 15 min idle and wake in ~60 s. Keep the AI service warm with a
+  cron-job.org job hitting `/health` every 5 minutes (timeout 90 s) so the backend's 15 s AI
+  timeout never races a cold wake.
+- Env changes are applied with a zero-downtime rolling restart (~2–3 min); `PORT` is managed and locked.
 
 ### 47.4b Render notes — rate-limit, trust proxy, redeploy, logs & dev OTP
 
@@ -1370,18 +1378,19 @@ LLM_API_KEY=<legacy alias>
 - **Rate-limited paths:** `app.js` `app.use('/api/github', sensitiveLimiter)` etc. protect GitHub scraping, resume LLM, and admin writes; health checks `GET /` + `GET /health` at `app.js` are **not** rate-limited.
 - **After any Render env change:** `Render → Manual Deploy → Deploy latest commit` (saving alone does not restart). Check **Logs** for `[email:sendgrid] Sent to ...` (success at `email.service.js`) vs `ENETUNREACH smtp.gmail.com:465` or `SMTP verify timeout` (SMTP path blocked — use SendGrid).
 - **After any Vercel env change:** `Vercel → Deployments → Redeploy` (Vite bakes `VITE_*` at build). Hard-refresh the browser.
-- **Health checks:** `https://YOUR-BACKEND.onrender.com/health` (`server/src/app.js`) and `https://YOUR-AI.onrender.com/health` (`ai-service/app/main.py`) must return `{"status":"ok",...}`. Point cron-job.org (every 5 min) at `/health` (not `/`) to keep free tier awake.
+- **Health checks:** `https://YOUR-BACKEND.onrender.com/health` (`server/src/app.js`) and `https://YOUR-AI.snapdeploy.app/health` (`ai-service/app/main.py`) must return `{"status":"ok",...}`. Point cron-job.org (every 5 min) at `/health` (not `/`) to keep both free tiers awake.
 - **Dev OTP when email OFF:** DevTools → Network → `POST /api/auth/signup` response contains `_dev_otp` (e.g. `" _dev_otp":"482913"`). Paste it into `/verify-otp` — the `VerifyOtp` banner auto-verifies. When email is ON (SendGrid), the same OTP is emailed instead (dev field absent).
 
-## 47.5 Render Service Settings
+## 47.5 Render / SnapDeploy Service Settings
 
-| Setting | Backend (`skillsaarthi-node`) | AI service (`skillsaarthi-ai`) |
+| Setting | Backend (`skillsaarthi-node`, Render) | AI service (`skillsaarthi-ai-ebeba`, SnapDeploy) |
 | --- | --- | --- |
-| Environment | Node | Python |
+| Environment | Node | Docker (`ai-service/Dockerfile`) |
 | Root directory | `server` | `ai-service` |
-| Build command | `npm install` | `pip install -r requirements.txt` |
-| Start command | `npm start` | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
-| Python version | — | `3.12.10` (`PYTHON_VERSION`) |
+| Dockerfile path | — | `Dockerfile` (relative to root directory) |
+| Build command | `npm install` | Dockerfile build (auto) |
+| Start command | `npm start` | Docker CMD: `uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-7860}` |
+| Port | `$PORT` (injected; 5000 local) | `7860` (SnapDeploy-injected `PORT` preferred) |
 
 ## 47.6 Vercel Settings
 
@@ -1391,7 +1400,7 @@ LLM_API_KEY=<legacy alias>
 
 ## 47.7 Deployment Order
 
-1. Deploy the **AI service** first; copy `https://skillsaarthi-f14x.onrender.com`.
+1. Deploy the **AI service** first (SnapDeploy → root `ai-service`, Dockerfile `Dockerfile`, port 7860); copy `https://skillsaarthi-ai-ebeba.containers.snapdeploy.app`.
 2. Deploy the **backend** with `AI_SERVICE_URL` pointing at the AI service URL.
 3. Deploy the **frontend** with `VITE_API_BASE_URL` pointing at the backend URL.
 4. Add `https://skillsaarthi.vercel.app` to **Appwrite → Settings → Platforms** (Web App) so
@@ -1400,7 +1409,7 @@ LLM_API_KEY=<legacy alias>
 
 ## 47.8 Production Notes
 
-* Render free tier services sleep after ~15 minutes of inactivity. Two cron-job.org cron jobs (every 5 minutes) ping the backend and AI service to keep them awake (`skillsaarthi-node.onrender.com` and `skillsaarthi-f14x.onrender.com`); warm them up manually before a demo as a backup.
+* Render free tier grants **750 instance-hours/month** per workspace — keeping two services awake (two cron jobs) blew the budget and suspended all free services. Only the Node backend stays on Render now (~744 h/month max); the AI service runs on SnapDeploy. Keep both warm with cron-job.org (every 5 minutes): `skillsaarthi-node.onrender.com/health` and `skillsaarthi-ai-ebeba.containers.snapdeploy.app/health` (SnapDeploy sleeps after 15 min idle, ~60 s wake).
 * The Node backend serves only `/api/*`; `/` intentionally returns 404 (the frontend handles all routing).
 * Secrets (Appwrite API key, GitHub token, LLM key) live only in the hosting dashboards; `.env` files are gitignored and never committed.
 * All user data persists in Appwrite Cloud, so the stateless Node/Python services can be redeployed freely without data loss.

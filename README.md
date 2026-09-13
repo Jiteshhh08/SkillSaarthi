@@ -494,15 +494,15 @@ skillsaarthi/
 
 # 🔐 Environment Variables (summary)
 
-> Copy `.env.sample` → `.env` (gitignored). Frontend `VITE_*` are build-time (Vite inlines `import.meta.env`, needs redeploy); backend `server/.env` is server-only via `server/src/config/environment.js`; AI `ai-service/.env` is Python gateway; scripts use `scripts/.env.setup` for setup/seed/importer. Appwrite free plan reuses `resumes` bucket for avatars; paid plan uses `avatars`. Render blocks SMTP, so prefer Resend HTTPS; trust-proxy + rate-limit need `GITHUB_TOKEN`/`ADMIN_EMAILS` etc.
+> Copy `.env.sample` → `.env` (gitignored). Frontend `VITE_*` are build-time (Vite inlines `import.meta.env`, needs redeploy); backend `server/.env` is server-only via `server/src/config/environment.js`; AI `ai-service/.env` is Python gateway; scripts use `scripts/.env.setup` for setup/seed/importer. Appwrite free plan reuses `resumes` bucket for avatars; paid plan uses `avatars`. Render blocks SMTP, so prefer SendGrid HTTPS; trust-proxy + rate-limit need `GITHUB_TOKEN`/`ADMIN_EMAILS` etc.
 >
-> **Single source:** all env tables + prod wiring → [`docs/rules.md` §5](docs/rules.md) (Environment Variables) and [`docs/main_architecture.md` §36](docs/main_architecture.md) (summary) + §47 (Production Hosting). Never commit secrets; production vars live in Vercel/Render dashboards.
+> **Single source:** all env tables + prod wiring → [`docs/rules.md` §5](docs/rules.md) (Environment Variables) and [`docs/main_architecture.md` §36](docs/main_architecture.md) (summary) + §47 (Production Hosting). Never commit secrets; production vars live in the Vercel/Render/SnapDeploy dashboards.
 
 ---
 
 # 🌐 Deployment / Production Hosting (summary)
 
-> Four services: Frontend (Vercel static, `https://skillsaarthi.vercel.app`), Backend Node (Render `https://skillsaarthi-node.onrender.com` `/api/health`), AI Python (Render `https://skillsaarthi-f14x.onrender.com` `/health` — Groq `openai/gpt-oss-20b` via `AI_BASE_URL`/`AI_KEY`), Data (Appwrite Cloud). Set `VITE_API_BASE_URL` to Render backend (must redeploy), backend `APPWRITE_*` + `AI_SERVICE_URL` + `GITHUB_TOKEN`/`ADMIN_EMAILS`/`FRONTEND_URL`/`SENDGRID_API_KEY` + `SENDGRID_SENDER` (SendGrid HTTPS `email.service.js:77`) + AI `AI_BASE_URL`/`AI_MODEL`/`AI_KEY` on AI service (PYTHON_VERSION=3.12.10), add Vercel URL to Appwrite Platforms, run `setup:appwrite` + `seed:catalog`, keep free tier awake via cron-job.org every 5min on `/health`.
+> Four services: Frontend (Vercel static, `https://skillsaarthi.vercel.app`), Backend Node (Render `https://skillsaarthi-node.onrender.com` `/api/health`), AI Python (SnapDeploy Docker `https://skillsaarthi-ai-ebeba.containers.snapdeploy.app` `/health` — Qwen `Qwen3.6-35B-A3B` via `AI_BASE_URL`/`AI_KEY`, provider swappable by env), Data (Appwrite Cloud). Set `VITE_API_BASE_URL` to the Render backend (must redeploy), backend `APPWRITE_*` + `AI_SERVICE_URL` (no trailing slash) + `GITHUB_TOKEN`/`ADMIN_EMAILS`/`FRONTEND_URL`/`SENDGRID_API_KEY` + `SENDGRID_SENDER` (SendGrid HTTPS `email.service.js:77`) + AI `AI_BASE_URL`/`AI_MODEL`/`AI_KEY` on the SnapDeploy container, add the Vercel URL to Appwrite Platforms, run `setup:appwrite` + `seed:catalog`, keep both services awake via cron-job.org every 5min on `/health`.
 >
 > **Single source:** full topology, env mappings, build/start commands, order, and verification → [`docs/main_architecture.md` §47](docs/main_architecture.md) (Production Hosting & Deployment) and [`docs/rules.md` §15](docs/rules.md) (Production Hosting). Design → [`docs/design.md`](docs/design.md).
 
