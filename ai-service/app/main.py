@@ -128,6 +128,12 @@ class ResumeGenerateResponse(BaseModel):
     pdf_base64: str | None = None
 
 
+@app.get("/")
+def root():
+    """Liveness for platforms that health-check the root path."""
+    return {"status": "ok", "service": "ai-service", "version": app.version}
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "ai-service", "version": app.version}

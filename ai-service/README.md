@@ -24,8 +24,9 @@ Endpoints:
 
 Configuration is provided through Space secrets (never committed):
 
-- `AI_BASE_URL` — OpenAI-compatible gateway
-- `AI_MODEL` — model name
+- `AI_BASE_URL` — OpenAI-compatible gateway (e.g. `https://ai.tcetcercd.in/v1`)
+- `AI_MODEL` — model name (e.g. `Qwen3.6-35B-A3B`)
 - `AI_KEY` — gateway key
 
-`PORT` is fixed to `7860` in the Dockerfile to match the Space `app_port`.
+The container listens on `7860` by default to match the Space `app_port`, and
+honors a `PORT` env var if one is injected (Cloud Run, Container Apps, etc.).
