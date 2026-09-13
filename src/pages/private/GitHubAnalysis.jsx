@@ -330,6 +330,43 @@ export default function GitHubAnalysis() {
                 </p>
               </section>
 
+              {analysis?.profile && (
+                <section className="card mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <img
+                    src={analysis.profile.avatar_url}
+                    alt={`${analysis.profile.login} GitHub avatar`}
+                    width={80}
+                    height={80}
+                    loading="lazy"
+                    className="h-20 w-20 shrink-0 rounded-full border border-line bg-warm object-cover"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-black tracking-tight text-ink">
+                      {analysis.profile.name || analysis.profile.login}
+                    </h3>
+                    <p className="text-sm font-bold text-ink-muted">@{analysis.profile.login}</p>
+                    {analysis.profile.bio && (
+                      <p className="mt-2 max-w-2xl text-sm text-ink-muted">{analysis.profile.bio}</p>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-ink-soft">
+                      <span>{analysis.profile.followers ?? 0} followers</span>
+                      <span>{analysis.profile.following ?? 0} following</span>
+                      {analysis.profile.location && <span>{analysis.profile.location}</span>}
+                    </div>
+                  </div>
+                  {analysis.profile.html_url && (
+                    <a
+                      href={analysis.profile.html_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-secondary shrink-0 self-start sm:self-center"
+                    >
+                      View profile
+                    </a>
+                  )}
+                </section>
+              )}
+
               <section className="card mt-6">
               <div className="flex items-center justify-between border-b border-line pb-3">
                 <h3 className="text-sm font-black uppercase tracking-wide text-ink">GitHub Activity</h3>
@@ -390,22 +427,6 @@ export default function GitHubAnalysis() {
               </section>
             )}
 
-            {/* Profile footer */}
-            {analysis?.profile?.html_url && (
-              <div className="mt-8 border-t border-line pt-6">
-                <a
-                  href={analysis.profile.html_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 border-b border-ink pb-1 text-xs font-bold uppercase tracking-[0.08em] text-ink hover:text-brand-deep"
-                >
-                  View GitHub Profile
-                </a>
-                {analysis.profile.bio && (
-                  <p className="mt-3 max-w-2xl text-sm text-ink-muted">{analysis.profile.bio}</p>
-                )}
-              </div>
-            )}
           </>
         )}
       </main>
