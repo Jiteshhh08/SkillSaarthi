@@ -7,6 +7,10 @@ const GITHUB_GRAPHQL = 'https://api.github.com/graphql'
 const USER_AGENT = 'skillsaarthi'
 const REPOS_PER_PAGE = 100
 
+// A user account is bound to exactly one GitHub username. The first analysis
+// links it; afterward only refresh is allowed, plus a single username change.
+const MAX_USERNAME_CHANGES = 1
+
 // GitHub languages → skillsaarthi catalog skill names (for optional applySkills).
 const LANGUAGE_TO_SKILL = {
   JavaScript: 'JavaScript',
@@ -402,9 +406,61 @@ function buildSkillSignals(repos) {
     .slice(0, 14)
 }
 
-async function saveGitHubAnalysis(userId, username, analysis) {
-  const { documents } = await databases.listDocuments(config.appwrite.databaseId, COLLECTIONS.githubAnalyses, [Query.equal('user_id', userId), Query.limit(1)])
-  const payload = { user_id: userId, github_username: username, analysis_result: JSON.stringify(analysis) }
+async function listUserAnalyses(userId) {
+  const { documents } = await databases.listDocuments(config.appwrite.databaseId, COLLECTIONS.githubAnalyses, [
+    Query.equal('user_id', userId),
+    Query.limit(5),
+  ])
+  return documents.sort(
+    (a, b) => new Date(b.$updatedAt || 0).getTime() - new Date(a.$updatedAt || 0).getTime(),
+  )
+}
+
+function parseAnalysisResult(doc) {
+  if (!doc?.analysis_result) return null
+  try {
+    return JSON.parse(doc.analysis_result)
+  } catch {
+    return null
+  }
+}
+
+export async function getGitHubBinding(userId) {
+  let profile = null
+  try {
+    profile = await databases.getDocument(config.appwrite.databaseId, COLLECTIONS.profiles, userId)
+  } catch {
+    profile = null
+  }
+
+  let latest = null
+  try {
+    latest = (await listUserAnalyses(userId))[0] || null
+  } catch {
+    latest = null
+  }
+
+  const username = latest?.github_username || profile?.github_username || null
+  const usernameChangesUsed = Math.max(0, Number(latest?.username_change_count) || 0)
+
+  return {
+    linked: Boolean(username),
+    username: username || null,
+    analysis_id: latest?.$id || null,
+    analysis: parseAnalysisResult(latest),
+    username_changes_used: usernameChangesUsed,
+    username_change_available: usernameChangesUsed < MAX_USERNAME_CHANGES,
+  }
+}
+
+async function saveGitHubAnalysis(userId, username, analysis, usernameChangesUsed) {
+  const documents = await listUserAnalyses(userId)
+  const payload = {
+    user_id: userId,
+    github_username: username,
+    analysis_result: JSON.stringify(analysis),
+    username_change_count: usernameChangesUsed,
+  }
   if (documents.length > 0) {
     await databases.updateDocument(config.appwrite.databaseId, COLLECTIONS.githubAnalyses, documents[0].$id, payload)
     return documents[0].$id
@@ -432,7 +488,41 @@ async function saveGithubUsername(userId, username) {
 
 export const GITHUB_USERNAME_PATTERN = /^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$/
 
-export async function analyzeGitHub(userId, username, { applySkills = false } = {}) {
+const analysisLocks = new Map()
+
+function withUserLock(userId, task) {
+  const previous = analysisLocks.get(userId) || Promise.resolve()
+  const run = previous.then(task, task)
+  const tracked = run.catch(() => {})
+  analysisLocks.set(userId, tracked)
+  tracked.then(() => {
+    if (analysisLocks.get(userId) === tracked) analysisLocks.delete(userId)
+  })
+  return run
+}
+
+export async function analyzeGitHub(userId, username, options = {}) {
+  return withUserLock(userId, () => runGitHubAnalysis(userId, username, options))
+}
+
+async function runGitHubAnalysis(userId, username, { applySkills = false } = {}) {
+  const binding = await getGitHubBinding(userId)
+  const sameUsername = binding.username
+    ? normalizeName(binding.username) === normalizeName(username)
+    : false
+
+  let usernameChangesUsed = binding.username_changes_used
+  if (binding.username && !sameUsername) {
+    if (usernameChangesUsed >= MAX_USERNAME_CHANGES) {
+      throw new ApiError(
+        409,
+        `GitHub analysis is already linked to @${binding.username} — only one username change is allowed.`,
+        'GITHUB_USERNAME_LOCKED',
+      )
+    }
+    usernameChangesUsed += 1
+  }
+
   const [profile, repos] = await Promise.all([fetchGitHubProfile(username), fetchGitHubRepos(username)])
 
   // Try GraphQL contributions; fallback to pushed_at synthesis
@@ -524,7 +614,7 @@ export async function analyzeGitHub(userId, username, { applySkills = false } = 
 
   let analysisId = 'local'
   try {
-    analysisId = await saveGitHubAnalysis(userId, username, analysis)
+    analysisId = await saveGitHubAnalysis(userId, username, analysis, usernameChangesUsed)
   } catch (e) {
     console.error('[github] saveGitHubAnalysis failed:', e?.message || e)
     // best-effort: still return analysis without persistence
@@ -551,5 +641,7 @@ export async function analyzeGitHub(userId, username, { applySkills = false } = 
     analysis,
     analysis_id: analysisId,
     skills_added: added,
+    username_changes_used: usernameChangesUsed,
+    username_change_available: usernameChangesUsed < MAX_USERNAME_CHANGES,
   }
 }
