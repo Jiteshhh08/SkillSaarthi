@@ -276,7 +276,7 @@ Appwrite Databases is the primary data store. It is a NoSQL document database or
 | `internships` | Internship catalog | `title`, `company`, `location`, `description`, `url`, `skills` (JSON array), `eligibility`, `status` (pending/active/rejected), `source`, `source_key`, `expires_at`, `fetched_at` |
 | `internship_recommendations` | Internship matches | `user_id`, `internship_id`, `match_score` |
 | `resume_analyses` | Resume analysis metadata | `user_id`, `appwrite_file_id`, `file_name`, `analysis_result` |
-| `github_analyses` | GitHub analysis metadata | `user_id`, `github_username`, `analysis_result` |
+| `github_analyses` | GitHub analysis metadata (one account per user, one username change) | `user_id`, `github_username`, `analysis_result`, `username_change_count` |
 | `notifications` | In-app notifications | `user_id`, `title`, `message`, `is_read` |
 | `community_profiles` | Community bio + meta per user | `user_id`, `bio`, `location`, `role`, `interests` |
 | `community_posts` | Community posts | `user_id`, `title`, `content`, `category`, `tags` (CSV), `status` (draft/published), `likes_count`, `comments_count` |
@@ -726,6 +726,8 @@ Implemented end-to-end as `POST /api/what-if/simulate` (Node only — `server/sr
 
 > Node-only: GitHub REST (`users/:user`, `repos`) + GraphQL `contributionsCollection` (needs `GITHUB_TOKEN`, else `fallbackDaysFromRepos` from `pushed_at`). Local heuristics yield 13 metrics consumed by `ContributionGrid` (warm bg, 5 intensity levels, tooltip `22 Sept — N contributions`). Private repos via `repositories(privacy:PRIVATE)` only; `languageShare` includes forks (share by `repo.size`). Persisted in `github_analyses`; rate-limited 30/min.
 >
+> **Single-account binding:** the first analysis links the user to one GitHub username; the same username refreshes, and a different one is allowed only once (`username_change_count < 1`), then rejected with `GITHUB_USERNAME_LOCKED` (409). `GET /api/github/analysis` returns the saved analysis + binding state; per-user in-process lock serializes concurrent analyses so the one change cannot be double-spent. Re-run `npm run setup:appwrite` to add `username_change_count`.
+>
 > **Single source:** API → §32 GitHub (POST /api/github/analyze); UI → [`docs/design.md`](design.md); workflow → [`docs/rules.md` §7](rules.md).
 
 ---
@@ -766,7 +768,7 @@ Implemented end-to-end as `POST /api/what-if/simulate` (Node only — `server/sr
 > | Recommendations | `/api/recommendations` | `POST /generate`, `GET /`, `GET /:id`, `GET /careers/:id/skill-gaps` | Via `scoring.js`, no Python |
 > | Roadmaps | `/api/roadmaps` | `POST /`, `GET /`, `GET /:id`, `PUT /:id`, `DELETE /:id`, `POST /:id/tasks`, `PUT /:id/tasks` (batch), `PUT /:id/tasks/:tid`, `DELETE /:id/tasks/:tid` | `roadmaps` + `roadmap_tasks` |
 > | Resume | `/api/resume` | `POST /analyze`, `POST /extract`, `POST /match`, `POST /optimize`, `POST /generate`, `GET /analysis/:id` | Python resume-only, 30/min, fallback |
-> | GitHub | `/api/github` | `POST /analyze {username}`, `GET /analysis/:id` | Node-native `github.service.js`, 30/min |
+> | GitHub | `/api/github` | `POST /analyze {username}`, `GET /analysis`, `GET /analysis/:id` | Node-native `github.service.js`, 30/min, one bound username per user + one change (409 `GITHUB_USERNAME_LOCKED`) |
 > | What-If | `/api/what-if` | `POST /simulate` | `profile.builder.js` copy, no write |
 > | Courses | `/api/courses` | `GET /`, `GET /recommended` | By skill gap |
 > | Internships | `/api/internships` | `GET /`, `GET /recommended`, `/api/admin/internships` (CRUD) | `active`+non-expired public, `pending` gate |
