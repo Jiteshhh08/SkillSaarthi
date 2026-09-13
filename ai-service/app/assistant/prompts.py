@@ -16,21 +16,31 @@ Rules:
 """
 
 
+def _as_message(item):
+    """Coerce a history entry into ``(role, content)``; tolerate malformed items."""
+    if isinstance(item, dict):
+        role = item.get("role") if item.get("role") in ("user", "assistant") else "user"
+        content = item.get("content", "")
+    else:
+        role, content = "user", item
+    return role, str(content or "")
+
+
 def build_assistant_messages(profile, history, user_message):
     profile_block = f"USER PROFILE (JSON):\n{json.dumps(profile or {}, ensure_ascii=False, indent=2)}\n"
     history_block = ""
+    trimmed = []
     if history:
         # last 8 turns to keep context small
-        trimmed = history[-8:]
+        trimmed = [_as_message(h) for h in history[-8:]]
         history_block = "CONVERSATION HISTORY:\n" + "\n".join(
-            f"{h.get('role','user')}: {h.get('content','')}" for h in trimmed
+            f"{role}: {content}" for role, content in trimmed
         ) + "\n"
 
     system = ASSISTANT_SYSTEM + "\n" + profile_block
     messages = [{"role": "system", "content": system}]
     # replay history
-    for h in trimmed if history else []:
-        role = h.get("role") if h.get("role") in ("user", "assistant") else "user"
-        messages.append({"role": role, "content": h.get("content","")})
+    for role, content in trimmed:
+        messages.append({"role": role, "content": content})
     messages.append({"role": "user", "content": user_message})
     return messages
