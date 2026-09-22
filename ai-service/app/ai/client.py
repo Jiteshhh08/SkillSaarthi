@@ -92,8 +92,9 @@ def _client():
 def _raise_for_status(error):
     """Translate SDK exceptions into our controlled error taxonomy.
 
-    Gateway docs: 401 invalid key, 400 malformed request, 502 model server
-    unavailable, timeouts when the model is busy.
+    Gateway docs: 401 invalid key, 403 forbidden (key lacks access, quota
+    exhausted, or model not permitted), 404 unknown model, 400 malformed
+    request, 502 model server unavailable, timeouts when the model is busy.
     """
     if isinstance(error, AuthenticationError):
         raise AIResponseError(
@@ -107,6 +108,20 @@ def _raise_for_status(error):
                 "The AI gateway rejected the request as malformed.",
                 code="AI_BAD_REQUEST",
                 status=400,
+            )
+        if error.status_code == 403:
+            raise AIResponseError(
+                "The AI gateway refused the request (forbidden). The API key "
+                "may lack access to this model or its quota may be exhausted. "
+                "Check AI_KEY and model permissions.",
+                code="AI_FORBIDDEN",
+                status=403,
+            )
+        if error.status_code == 404:
+            raise AIResponseError(
+                "The AI gateway could not find the requested model. Check AI_MODEL.",
+                code="AI_MODEL_NOT_FOUND",
+                status=404,
             )
         if error.status_code == 429:
             raise AIUnavailableError(
