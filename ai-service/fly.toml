@@ -1,0 +1,26 @@
+# Fly.io config for the SkillSaarthi AI service (FastAPI, Docker).
+# Deploy: fly launch (reuse this file) or fly deploy. Set secrets with:
+#   fly secrets set AI_BASE_URL=... AI_MODEL=... AI_KEY=...
+# Then point the Node backend at the app URL:
+#   AI_SERVICE_URL=https://<app-name>.fly.dev (no trailing slash)
+
+app = "skillsaarthi-ai"
+primary_region = "bom"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 7860
+  force_https = true
+  # Keep one machine always on (no cold-start race with the backend's AI
+  # timeouts). To save resources, switch auto_stop_machines to "suspend".
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512

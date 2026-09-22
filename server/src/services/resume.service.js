@@ -1,7 +1,6 @@
 import { COLLECTIONS, ID, Permission, Query, Role, databases, storage } from '../config/appwrite.js'
 import { config } from '../config/environment.js'
 import { ApiError } from '../utils/ApiError.js'
-import { aiHeaders } from '../utils/aiHeaders.js'
 import { applyDetectedSkills } from './github.service.js'
 
 const AI_TIMEOUT_MS = 30000
@@ -371,7 +370,7 @@ async function requestPipeline(payload, path, { timeout = AI_TIMEOUT_MS } = {}) 
   try {
     const response = await fetch(`${config.aiServiceUrl}${path}`, {
       method: 'POST',
-      headers: aiHeaders,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
       signal: controller.signal,
     })
