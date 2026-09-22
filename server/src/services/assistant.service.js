@@ -1,6 +1,7 @@
 import { config } from '../config/environment.js'
 import { buildUserProfile } from './profile.builder.js'
 import { ApiError } from '../utils/ApiError.js'
+import { aiHeaders } from '../utils/aiHeaders.js'
 
 export async function chatWithAssistant(userId, { message, history }) {
   const profile = await buildUserProfile(userId).catch(() => ({
@@ -11,7 +12,7 @@ export async function chatWithAssistant(userId, { message, history }) {
   try {
     const res = await fetch(`${config.aiServiceUrl}/ai/assistant/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: aiHeaders,
       body: JSON.stringify({ message, profile, history: history || [] }),
       signal: controller.signal,
     })

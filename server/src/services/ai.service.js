@@ -1,5 +1,6 @@
 import { config } from '../config/environment.js'
 import { ApiError } from '../utils/ApiError.js'
+import { aiHeaders, aiGetHeaders } from '../utils/aiHeaders.js'
 
 const AI_TIMEOUT_MS = 15000
 
@@ -9,7 +10,7 @@ async function post(path, payload) {
   try {
     const response = await fetch(`${config.aiServiceUrl}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: aiHeaders,
       body: JSON.stringify(payload),
       signal: controller.signal,
     })
@@ -34,7 +35,7 @@ async function get(path) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS)
   try {
-    const response = await fetch(`${config.aiServiceUrl}${path}`, { signal: controller.signal })
+    const response = await fetch(`${config.aiServiceUrl}${path}`, { headers: aiGetHeaders, signal: controller.signal })
     if (!response.ok) {
       throw new ApiError(response.status, 'AI service error', 'AI_SERVICE_ERROR')
     }
