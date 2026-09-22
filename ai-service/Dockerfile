@@ -1,4 +1,4 @@
-# Docker image for the AI service (deployed on Fly.io via fly.toml; runs as UID 1000).
+# Docker image for the AI service (deployed on Render as a Docker web service; runs as UID 1000).
 
 FROM python:3.12-slim
 

@@ -162,7 +162,7 @@ The frontend lives at the repo root. `server/` and `ai-service/` are separate ap
 
 # 5. Environment Variables
 
-Copy `.env.sample` to `.env` and fill values. Never commit real secrets — `.env` files are gitignored; production values live only in the Vercel/Render dashboards (+ `fly secrets` for the AI service).
+Copy `.env.sample` to `.env` and fill values. Never commit real secrets — `.env` files are gitignored; production values live only in the Vercel/Render dashboards (backend on Render account 1, AI service on Render account 2).
 
 ## Frontend — repo root `.env` (Vite, build-time, client-safe)
 
@@ -193,7 +193,7 @@ APPWRITE_API_KEY=                                      # Needs databases.* + sto
 APPWRITE_DATABASE_ID=                                  # Must match VITE_APPWRITE_DATABASE_ID
 APPWRITE_RESUME_BUCKET_ID=resumes                      # Must match VITE_APPWRITE_RESUME_BUCKET_ID
 AI_SERVICE_URL=http://localhost:8000                   # Python AI URL — server/src/services/ai.service.js proxy
-                                                       # Local: http://localhost:8000 · Prod: https://YOUR-AI.fly.dev (no trailing slash)
+                                                       # Local: http://localhost:8000 · Prod: https://YOUR-AI.onrender.com (no trailing slash)
 GITHUB_TOKEN=                                          # Optional PAT — higher limit + GraphQL contributionsCollection + private count (server/src/services/github.service.js,153)
 ADMIN_EMAILS=                                          # Comma-separated — server/src/middleware/auth.middleware.js requireAdmin (empty = admin API disabled, admins bypass onboarding)
 FRONTEND_URL=http://localhost:5173                     # For verify/reset links — server/src/services/email.service.js:169
@@ -546,26 +546,28 @@ Every feature must strengthen the central product loop. Do not build isolated fe
 | --- | --- | --- |
 | Frontend | Vercel | `https://skillsaarthi.vercel.app` |
 | Backend | Render | `https://skillsaarthi-node.onrender.com` |
-| AI service | Fly.io | `https://skillsaarthi-ai.fly.dev` |
+| AI service | Render (account 2) | `https://skillsaarthi-ai.onrender.com` |
 | Appwrite | Appwrite Cloud | `https://cloud.appwrite.io` |
 
 ## Hosting rules
 
-- The AI service runs as a **Docker container** (`ai-service/Dockerfile`, `python:3.12-slim`) on Fly.io
-  (config in `ai-service/fly.toml`, internal port `7860`, `min_machines_running = 1`). No `PYTHON_VERSION` env is needed —
+- The AI service runs as a **Docker container** (`ai-service/Dockerfile`, `python:3.12-slim`) on a **second
+  Render account** (Docker web service, root directory `ai-service`, port `7860`). One service per account so each
+  gets its own 750 instance-hours/month budget. No `PYTHON_VERSION` env is needed —
   the pinned AI deps (`pandas 2.2.3`, `numpy 2.2.1`, `scikit-learn 1.6.0`, `pydantic 2.10.4`) ship wheels for 3.12.
-- Backend start command: `npm start` (root directory `server`, Render).
-- The container listens on `${PORT:-7860}`; Fly.io injects `PORT` — never hardcode ports in env.
-- The AI service is reached by the backend through `AI_SERVICE_URL=https://skillsaarthi-ai.fly.dev`
+- Backend start command: `npm start` (root directory `server`, Render account 1).
+- The container listens on `${PORT:-7860}`; Render injects `PORT` — never hardcode ports in env.
+- The AI service is reached by the backend through `AI_SERVICE_URL=https://skillsaarthi-ai.onrender.com`
   (no trailing slash — `server/src/config/environment.js` strips any).
 - The frontend calls the backend through `VITE_API_BASE_URL=https://skillsaarthi-node.onrender.com`.
 - The frontend origin must be added under **Appwrite → Settings → Platforms** (Web App),
   otherwise email/password auth breaks in production.
-- Never commit `.env` or real secrets; set them only in the Vercel/Render dashboards (+ `fly secrets` for the AI service).
+- Never commit `.env` or real secrets; set them only in the Vercel/Render dashboards (backend on account 1, AI service on account 2).
 - All user data persists in Appwrite Cloud — the stateless Node/Python services can be redeployed freely.
-- Render free tier grants **750 instance-hours/month** — keeping two services awake exceeded it and suspended
-  all free services. Only the backend runs on Render now (keep it warm with a cron-job.org job every 5 minutes
-  on the backend `/health`); the AI service runs on Fly.io with `min_machines_running = 1`, so it never sleeps.
+- Render free tier grants **750 instance-hours/month per account** — keeping two services awake on one account
+  exceeded it and suspended all free services. Fix: one service per account (backend on account 1, AI service on
+  account 2), each ~744 h/month max. Keep each warm with its own cron-job.org job (every 5 minutes) on its `/health`
+  (Render sleeps free services after 15 min idle, ~60 s wake).
 
 ## Vercel env (frontend build-time)
 
@@ -580,18 +582,18 @@ Every feature must strengthen the central product loop. Do not build isolated fe
 - **Rate-limit & proxy:** `server/src/app.js` `trust proxy 1` + `app.js` limiter `30/min` on `/api/github|resume|admin`. Health checks `GET /` + `GET /health` at `app.js` are not rate-limited — point cron-job.org at `/health` (`server/src/app.js`, `ai-service/app/main.py`).
 - **Email verification ON:** `isEmailConfigured()` true -> OTP via SendGrid, `EMAIL_VERIFICATION_ENABLED=true` at `Signup.jsx:7`, `VerificationBanner.jsx:6`, `RouteGuards.jsx:7` (non-blocking loader fix at `:47,56` to prevent GitHub flash), `FORGOT_PASSWORD_ENABLED=true` at `Login.jsx:8`.
 
-## Fly.io env (AI service)
+## Render env (AI service, account 2)
 
-- Set via `fly secrets set AI_BASE_URL=... AI_MODEL=... AI_KEY=...` (config in `ai-service/fly.toml`) — saving restarts the machine with the new secrets. `PORT` is injected by Fly.io.
+- Set in **Render (account 2) → `skillsaarthi-ai` → Environment** → Save → **Manual Deploy → Deploy latest commit**. Saving alone does not restart. `PORT` is injected by Render — do not override.
 - **Required:** `AI_BASE_URL`, `AI_MODEL`, `AI_KEY` (see the `ai-service/.env` table above).
-- Deploy source: this repo, `fly deploy` from `ai-service/` (Dockerfile build, internal port `7860`).
-- `min_machines_running = 1` keeps one shared-cpu-1x/512 MB machine always on; to save resources, switch `auto_stop_machines` to `"suspend"` in `fly.toml`.
+- Deploy source: this repo — Docker web service, Root Directory `ai-service`, Dockerfile Path `Dockerfile`.
+- Free tier sleeps after 15 min idle (~60 s wake) — keep warm with a cron-job.org job on `/health` every 5 minutes (timeout 90 s). This account hosts only the AI service, so the 750 h/month budget covers it.
 
 ## Steps to redeploy & verify
 
 1. **Vercel:** Settings → Environment Variables → set `VITE_*` + `VITE_API_BASE_URL=https://YOUR-RENDER-URL.onrender.com` → Deployments → Redeploy → hard-refresh.
 2. **Render:** Environment → set `APPWRITE_*`, `FRONTEND_URL=https://YOUR-VERCEL-URL.vercel.app`, `SENDGRID_API_KEY` + `SENDGRID_SENDER=skillsaarthi <skillsaarthi.support@gmail.com>` (verified Single Sender, no domain needed), `GITHUB_TOKEN` etc. → Manual Deploy → check Logs for `[email:sendgrid] Sent`.
-3. **Health:** open `https://YOUR-BACKEND.onrender.com/health` and `https://YOUR-AI.fly.dev/health` — expect `{"status":"ok",...}`.
+3. **Health:** open `https://YOUR-BACKEND.onrender.com/health` and `https://YOUR-AI.onrender.com/health` — expect `{"status":"ok",...}`.
 4. **Auth check:** sign up with new Gmail -> SendGrid sends `Your verification code is <otp>` with auto-verify link `/verify-otp?email=&otp=` at `email.service.js:169` -> `VerifyOtp.jsx:46` auto-verifies on open -> `verified:true` (`/api/auth/verification-status`). If email OFF, Network shows `_dev_otp`.
 
 ## Today’s changes (04 Sept 2026) — rule reminder

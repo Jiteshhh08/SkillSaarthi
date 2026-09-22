@@ -14,18 +14,20 @@ Endpoints:
 - `POST /ai/resume/generate`
 - `POST /ai/assistant/chat`
 
-## Deployment (Fly.io, Docker)
+## Deployment (Render Docker, second account)
 
-Deployed as a Docker container from the monorepo via `fly.toml`:
+Deployed as a Docker web service from the monorepo (its own Render account,
+so it gets a separate 750 instance-hours/month budget):
 
-- App: `skillsaarthi-ai` (region `bom`), Dockerfile `Dockerfile`
-- Internal port: `7860` (Fly injects `PORT`; the container listens on `${PORT:-7860}`)
-- Secrets (never committed): `fly secrets set AI_BASE_URL=... AI_MODEL=... AI_KEY=...`
-- `min_machines_running = 1` keeps one machine always on — no cold-start race
-  with the backend's AI timeouts.
+- Root Directory: `ai-service`, Dockerfile Path: `Dockerfile`
+- Render injects `PORT`; the container listens on `${PORT:-7860}`
+- Environment Variables (never committed): `AI_BASE_URL`, `AI_MODEL`, `AI_KEY`
 
 The container listens on `${PORT:-7860}`, so any platform that injects `PORT`
-(Render, Cloud Run, Fly.io) works without changes.
+(Render, Cloud Run) works without changes.
+
+The Render free tier sleeps web services after 15 min idle (~60 s wake); keep it
+warm with a cron-job.org job hitting `/health` every 5 minutes.
 
 ## LLM provider
 
