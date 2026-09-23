@@ -734,7 +734,7 @@ Implemented end-to-end as `POST /api/what-if/simulate` (Node only — `server/sr
 
 # 29. AI Career Assistant (summary)
 
-> Uses skillsaarthi context (`profiles`, skills, interests, target career, gaps, roadmap, progress) to answer why a career was recommended, what to learn next, how to modify roadmap for time limits, etc. Architecture: `User Question → React → Node Context Builder → Python LLM → Response → Node → React`. Must not invent structured info when app data exists.
+> Uses skillsaarthi context (`profiles`, skills, interests, target career, gaps, roadmap, progress) to answer why a career was recommended, what to learn next, how to modify roadmap for time limits, etc. Architecture: `User Question → React → Node Context Builder (profile cached 60s) → Python LLM → Response → Node → React`. Must not invent structured info when app data exists. Speed: Python reuses one `OpenAI` client, compact one-line profile JSON + history truncated to 8×1500 chars, `temperature 0.6` + `max_tokens 800`; streaming via `POST /ai/assistant/chat/stream` (SSE deltas) proxied by `POST /api/assistant/chat/stream`, frontend renders token-by-token with non-stream fallback.
 >
 > **Single source:** context + failure handling → §42; design → [`docs/design.md`](design.md).
 
@@ -774,7 +774,7 @@ Implemented end-to-end as `POST /api/what-if/simulate` (Node only — `server/sr
 > | Internships | `/api/internships` | `GET /`, `GET /recommended`, `/api/admin/internships` (CRUD) | `active`+non-expired public, `pending` gate |
 > | Community | `/api/community` | `GET /posts?category&sort&search&offset&limit` → `{posts,total,offset,limit}` (DB `limit/offset/orderDesc`, `offsetRef` + `PAGE_SIZE 20` + `350ms` debounce + `abortRef`, search `200` in-memory), `GET/POST /posts`, `GET/PUT/DELETE /posts/:id` (`writeLimiter 30/min` user-scoped), `POST /:id/like|bookmark` (`interaction 60/min`), `GET/POST /:id/comments?limit&offset` → `{comments,total}` (`50` paginated, not `listAll`), `PUT/DELETE /comments/:id` (`writeLimiter`), `GET /saved`, `GET/PUT /profile`, `GET /users/:id` (`readLimiter 120/min`, LRU `500` + `inflight` dedup, chunked deletes `5`, realtime `subscribe` on `community_posts`) | `requireAuth` + user-scoped `rateLimit`, ownership, draft 404 |
 > | Admin | `/api/admin` | `GET /me`, `GET/POST /internships`, `PATCH/DELETE /internships/:id`, `POST /notifications` | `requireAdmin` (`ADMIN_EMAILS`) |
-> | Assistant | `/api/assistant` | `POST /chat` | Context builder → LLM |
+> | Assistant | `/api/assistant` | `POST /chat`, `POST /chat/stream` (SSE proxy to Python `/ai/assistant/chat/stream`) | Context builder (60s profile cache) → LLM, 120s timeout |
 > | Notifications | `notifications` collection | `notify()`/`notifyAllUsers()` server, `getNotifications` client | `appwriteClient.subscribe` + 45s polling |
 
 > **Single source:** full method tables + internship workflow → [rules.md §7](rules.md) (API Conventions); collections + permissions → §17; rate-limit/trust-proxy → §47; design → [design.md](design.md).

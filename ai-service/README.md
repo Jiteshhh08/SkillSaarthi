@@ -12,7 +12,8 @@ Endpoints:
 - `POST /ai/resume/match`
 - `POST /ai/resume/optimize`
 - `POST /ai/resume/generate`
-- `POST /ai/assistant/chat`
+- `POST /ai/assistant/chat` (non-stream, `temperature 0.6`, `max_tokens 800`)
+- `POST /ai/assistant/chat/stream` (SSE `data: {"delta": "..."}` + `data: [DONE]`, same prompt/limits)
 
 ## Deployment (Render Docker, second account)
 
