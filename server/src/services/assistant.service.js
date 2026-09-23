@@ -2,10 +2,22 @@ import { config } from '../config/environment.js'
 import { buildUserProfile } from './profile.builder.js'
 import { ApiError } from '../utils/ApiError.js'
 
-export async function chatWithAssistant(userId, { message, history }) {
-  const profile = await buildUserProfile(userId).catch(() => ({
+const profileCache = new Map() // userId -> { profile, exp }
+const PROFILE_TTL_MS = 60 * 1000
+
+export async function getCachedProfile(userId) {
+  const now = Date.now()
+  const hit = profileCache.get(userId)
+  if (hit && hit.exp > now) return hit.profile
+  const fresh = await buildUserProfile(userId).catch(() => ({
     education_level: null, skills: [], interests: [], goals: [], assessment_score: null, experience_years: 0,
   }))
+  profileCache.set(userId, { profile: fresh, exp: now + PROFILE_TTL_MS })
+  return fresh
+}
+
+export async function chatWithAssistant(userId, { message, history }) {
+  const profile = await getCachedProfile(userId)
   const controller = new AbortController()
   const t = setTimeout(() => controller.abort(), 120000)
   try {
