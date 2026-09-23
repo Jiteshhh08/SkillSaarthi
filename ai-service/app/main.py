@@ -14,10 +14,11 @@ The service does not handle authentication.
 """
 
 import base64
+import json
 import os
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from .ai.client import (
@@ -246,12 +247,34 @@ def assistant_chat(request: AssistantChatRequest):
         raise HTTPException(status_code=400, detail="Message is required.")
     messages = build_assistant_messages(request.profile or {}, request.history or [], request.message.strip())
     try:
-        reply = ai_chat(messages, temperature=0.6, max_tokens=1200)
+        # 800 tokens ≈ 600 words — enough for roadmap/bullets, ~33% less generation time than 1200.
+        reply = ai_chat(messages, temperature=0.6, max_tokens=800)
     except Exception as exc:  # handled by ai_gateway_error_handler if AIGatewayError
         if isinstance(exc, (AIConfigurationError, AIGatewayError, AIJSONError, AIResponseError, AIUnavailableError)):
             raise
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     return AssistantChatResponse(reply=reply, model=AI_MODEL)
+
+
+@app.post("/ai/assistant/chat/stream")
+def assistant_chat_stream(request: AssistantChatRequest):
+    """SSE stream: `data: {\"delta\": \"...\"}` per token + `data: [DONE]` at end."""
+    from .assistant.prompts import build_assistant_messages
+    from .ai.client import chat_stream as ai_chat_stream
+
+    if not request.message or not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message is required.")
+    messages = build_assistant_messages(request.profile or {}, request.history or [], request.message.strip())
+
+    def event_generator():
+        try:
+            for delta in ai_chat_stream(messages, temperature=0.6, max_tokens=800):
+                yield f"data: {json.dumps({'delta': delta})}\n\n"
+        except (AIConfigurationError, AIGatewayError, AIJSONError, AIResponseError, AIUnavailableError) as exc:
+            yield f"data: {json.dumps({'error': str(exc), 'code': getattr(exc, 'code', 'AI_GATEWAY_ERROR')})}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 if __name__ == "__main__":

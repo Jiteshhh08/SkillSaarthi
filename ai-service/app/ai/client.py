@@ -75,18 +75,25 @@ class AIJSONError(AIGatewayError):
     code = "AI_INVALID_JSON"
 
 
+_client_singleton = None
+
+
 def _client():
+    """Reuse a single OpenAI client — avoids new TCP/TLS + connection pool per request."""
+    global _client_singleton
     if not AI_KEY:
         raise AIConfigurationError(
             "The AI gateway is not configured. Set AI_KEY (or LLM_API_KEY) "
             "in ai-service/.env."
         )
-    return OpenAI(
-        base_url=AI_BASE_URL,
-        api_key=AI_KEY,
-        timeout=AI_TIMEOUT_SECONDS,
-        max_retries=0,
-    )
+    if _client_singleton is None:
+        _client_singleton = OpenAI(
+            base_url=AI_BASE_URL,
+            api_key=AI_KEY,
+            timeout=AI_TIMEOUT_SECONDS,
+            max_retries=0,
+        )
+    return _client_singleton
 
 
 def _raise_for_status(error):
@@ -203,6 +210,43 @@ def chat(
         return response.choices[0].message.content or ""
 
     return _retry(retries, call)
+
+
+def chat_stream(
+    messages,
+    *,
+    temperature=0.6,
+    max_tokens=800,
+    enable_thinking=False,
+    reasoning_effort="low",
+):
+    """Yield reply deltas as they arrive (SSE source). No retry — stream once, fail fast."""
+    is_tcet = "tcetcercd.in" in AI_BASE_URL
+    kwargs = {
+        "model": AI_MODEL,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": True,
+    }
+    if is_tcet:
+        kwargs["extra_body"] = {
+            "chat_template_kwargs": {
+                "enable_thinking": enable_thinking,
+                "reasoning_effort": reasoning_effort,
+            }
+        }
+    try:
+        stream = _client().chat.completions.create(**kwargs)
+    except Exception as error:  # noqa: BLE001 — normalize SDK errors
+        _raise_for_status(error)
+    for chunk in stream:
+        try:
+            delta = chunk.choices[0].delta.content if chunk.choices else None
+        except Exception:
+            delta = None
+        if delta:
+            yield delta
 
 
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
