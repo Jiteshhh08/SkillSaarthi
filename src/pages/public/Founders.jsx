@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../../hooks/useAuth'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
 import Icon, { GithubIcon } from '../../components/common/Icon'
@@ -232,6 +233,7 @@ function FounderRow({ founder, index }) {
 }
 
 export default function Founders() {
+  const { user, loading } = useAuth()
   useEffect(() => {
     const previousTitle = document.title
     document.title = 'Meet the Founders | SkillSaarthi'
@@ -412,10 +414,18 @@ export default function Founders() {
                 into one clear, guided path.
               </p>
               <div className="mt-10 flex flex-wrap justify-center gap-4">
-                <Link to="/signup" className="btn-primary">
-                  Start your journey
-                </Link>
-                <Link to="/" className="btn-secondary">
+                {loading ? (
+                  <span className="h-11 w-40 animate-pulse rounded-full bg-black/[0.06]" />
+                ) : user ? (
+                  <Link to="/dashboard" className="btn-primary">
+                    Go to dashboard
+                  </Link>
+                ) : (
+                  <Link to="/signup" className="btn-primary">
+                    Start your journey
+                  </Link>
+                )}
+                <Link to={user ? '/home' : '/'} className="btn-secondary">
                   Back to home
                 </Link>
               </div>
