@@ -28,6 +28,7 @@ const Signup = lazy(() => import('../pages/auth/Signup'))
 const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'))
 const ResetPassword = lazy(() => import('../pages/auth/ResetPassword'))
 const Home = lazy(() => import('../pages/public/Home'))
+const Founders = lazy(() => import('../pages/public/Founders'))
 const PrivateHome = lazy(() => import('../pages/private/Home'))
 const VerifyEmail = lazy(() => import('../pages/auth/VerifyEmail'))
 const VerifyOtp = lazy(() => import('../pages/auth/VerifyOtp'))
@@ -73,6 +74,8 @@ export default function AppRoutes() {
       <Route path="/reset-password" element={<ResetPassword />} />
 
       <Route path="/verify-email" element={<VerifyEmail />} />
+
+      <Route path="/founders" element={<Founders />} />
 
       <Route path="/verify-otp" element={<VerifyOtp />} />
 
