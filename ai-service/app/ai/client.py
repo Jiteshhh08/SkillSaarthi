@@ -75,25 +75,33 @@ class AIJSONError(AIGatewayError):
     code = "AI_INVALID_JSON"
 
 
+_client_singleton = None
+
+
 def _client():
+    """Reuse a single OpenAI client — avoids new TCP/TLS + connection pool per request."""
+    global _client_singleton
     if not AI_KEY:
         raise AIConfigurationError(
             "The AI gateway is not configured. Set AI_KEY (or LLM_API_KEY) "
             "in ai-service/.env."
         )
-    return OpenAI(
-        base_url=AI_BASE_URL,
-        api_key=AI_KEY,
-        timeout=AI_TIMEOUT_SECONDS,
-        max_retries=0,
-    )
+    if _client_singleton is None:
+        _client_singleton = OpenAI(
+            base_url=AI_BASE_URL,
+            api_key=AI_KEY,
+            timeout=AI_TIMEOUT_SECONDS,
+            max_retries=0,
+        )
+    return _client_singleton
 
 
 def _raise_for_status(error):
     """Translate SDK exceptions into our controlled error taxonomy.
 
-    Gateway docs: 401 invalid key, 400 malformed request, 502 model server
-    unavailable, timeouts when the model is busy.
+    Gateway docs: 401 invalid key, 403 forbidden (key lacks access, quota
+    exhausted, or model not permitted), 404 unknown model, 400 malformed
+    request, 502 model server unavailable, timeouts when the model is busy.
     """
     if isinstance(error, AuthenticationError):
         raise AIResponseError(
@@ -107,6 +115,20 @@ def _raise_for_status(error):
                 "The AI gateway rejected the request as malformed.",
                 code="AI_BAD_REQUEST",
                 status=400,
+            )
+        if error.status_code == 403:
+            raise AIResponseError(
+                "The AI gateway refused the request (forbidden). The API key "
+                "may lack access to this model or its quota may be exhausted. "
+                "Check AI_KEY and model permissions.",
+                code="AI_FORBIDDEN",
+                status=403,
+            )
+        if error.status_code == 404:
+            raise AIResponseError(
+                "The AI gateway could not find the requested model. Check AI_MODEL.",
+                code="AI_MODEL_NOT_FOUND",
+                status=404,
             )
         if error.status_code == 429:
             raise AIUnavailableError(
@@ -163,15 +185,16 @@ def chat(
     thinking disabled; complex semantic analysis may enable it.
     """
     retries = AI_MAX_RETRIES if retries is None else retries
-    # Groq / generic OpenAI gateways don't support chat_template_kwargs (TCET-only)
-    is_groq = "groq.com" in AI_BASE_URL
+    # ``chat_template_kwargs`` is TCET-gateway-specific; generic OpenAI-compatible
+    # providers (Groq, OpenRouter, Cerebras, ...) reject unknown body fields.
+    is_tcet = "tcetcercd.in" in AI_BASE_URL
     kwargs = {
         "model": AI_MODEL,
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
-    if not is_groq:
+    if is_tcet:
         kwargs["extra_body"] = {
             "chat_template_kwargs": {
                 "enable_thinking": enable_thinking,
@@ -187,6 +210,43 @@ def chat(
         return response.choices[0].message.content or ""
 
     return _retry(retries, call)
+
+
+def chat_stream(
+    messages,
+    *,
+    temperature=0.6,
+    max_tokens=800,
+    enable_thinking=False,
+    reasoning_effort="low",
+):
+    """Yield reply deltas as they arrive (SSE source). No retry — stream once, fail fast."""
+    is_tcet = "tcetcercd.in" in AI_BASE_URL
+    kwargs = {
+        "model": AI_MODEL,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": True,
+    }
+    if is_tcet:
+        kwargs["extra_body"] = {
+            "chat_template_kwargs": {
+                "enable_thinking": enable_thinking,
+                "reasoning_effort": reasoning_effort,
+            }
+        }
+    try:
+        stream = _client().chat.completions.create(**kwargs)
+    except Exception as error:  # noqa: BLE001 — normalize SDK errors
+        _raise_for_status(error)
+    for chunk in stream:
+        try:
+            delta = chunk.choices[0].delta.content if chunk.choices else None
+        except Exception:
+            delta = None
+        if delta:
+            yield delta
 
 
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)

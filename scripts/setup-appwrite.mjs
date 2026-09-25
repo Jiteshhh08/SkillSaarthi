@@ -330,6 +330,7 @@ const COLLECTIONS = [
       { key: 'user_id', type: 'string', size: 100, required: true },
       { key: 'github_username', type: 'string', size: 100 },
       { key: 'analysis_result', type: 'string', size: 8000 },
+      { key: 'username_change_count', type: 'integer', default: 0 },
       createdAt,
     ],
     indexes: [{ key: 'user_idx', type: 'key', attributes: ['user_id'] }],

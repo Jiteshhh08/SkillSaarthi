@@ -16,21 +16,40 @@ Rules:
 """
 
 
+def _as_message(item):
+    """Coerce a history entry into ``(role, content)``; tolerate malformed items."""
+    if isinstance(item, dict):
+        role = item.get("role") if item.get("role") in ("user", "assistant") else "user"
+        content = item.get("content", "")
+    else:
+        role, content = "user", item
+    return role, str(content or "")
+
+
+MAX_HISTORY_TURNS = 8
+MAX_HISTORY_CHARS_PER_TURN = 1500
+
+
+def _compact_profile(profile):
+    """Compact one-line JSON — same data, ~15-20% fewer prompt tokens vs indent=2."""
+    try:
+        return json.dumps(profile or {}, ensure_ascii=False, separators=(",", ":"))
+    except Exception:
+        return "{}"
+
+
 def build_assistant_messages(profile, history, user_message):
-    profile_block = f"USER PROFILE (JSON):\n{json.dumps(profile or {}, ensure_ascii=False, indent=2)}\n"
-    history_block = ""
+    profile_block = f"USER PROFILE (JSON):\n{_compact_profile(profile)}\n"
+    trimmed = []
     if history:
-        # last 8 turns to keep context small
-        trimmed = history[-8:]
-        history_block = "CONVERSATION HISTORY:\n" + "\n".join(
-            f"{h.get('role','user')}: {h.get('content','')}" for h in trimmed
-        ) + "\n"
+        # last 8 turns to keep context small; truncate long turns to bound latency
+        raw = [_as_message(h) for h in history[-MAX_HISTORY_TURNS:]]
+        trimmed = [(role, content[:MAX_HISTORY_CHARS_PER_TURN]) for role, content in raw]
 
     system = ASSISTANT_SYSTEM + "\n" + profile_block
     messages = [{"role": "system", "content": system}]
     # replay history
-    for h in trimmed if history else []:
-        role = h.get("role") if h.get("role") in ("user", "assistant") else "user"
-        messages.append({"role": role, "content": h.get("content","")})
+    for role, content in trimmed:
+        messages.append({"role": role, "content": content})
     messages.append({"role": "user", "content": user_message})
     return messages

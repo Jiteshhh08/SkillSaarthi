@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.middleware.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { ApiError } from '../utils/ApiError.js'
-import { analyzeGitHub, GITHUB_USERNAME_PATTERN } from '../services/github.service.js'
+import { analyzeGitHub, getGitHubBinding, GITHUB_USERNAME_PATTERN } from '../services/github.service.js'
 import { COLLECTIONS, databases } from '../config/appwrite.js'
 import { config } from '../config/environment.js'
 
@@ -26,6 +26,14 @@ router.post(
 
     const result = await analyzeGitHub(req.user.$id, username, { applySkills })
     res.json({ success: true, data: result })
+  }),
+)
+
+router.get(
+  '/analysis',
+  asyncHandler(async (req, res) => {
+    const data = await getGitHubBinding(req.user.$id)
+    res.json({ success: true, data })
   }),
 )
 

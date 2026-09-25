@@ -166,7 +166,7 @@ The onboarding process adapts according to the selected category.
 
 ## 3. Build Your Career Profile (4-step wizard)
 
-The user provides information via `src/pages/private/Onboarding.jsx` — 4 steps: **Education → Academics → Skills & Interests (tabs) → Goals & Assessment (sub-step)** (previously 6; silent auto-add at proficiency 2 removed):
+The user provides information via `src/pages/onboarding/Onboarding.jsx` — 4 steps: **Education → Academics → Skills & Interests (tabs) → Goals & Assessment (sub-step)** (previously 6; silent auto-add at proficiency 2 removed):
 
 * Education / Academic performance / Subjects & strengths
 * Skills (proficiency 1–5) & Interests (tabs)
@@ -313,13 +313,13 @@ For graduates and professionals exploring employment opportunities or career tra
 
 # 🛠️ Technology Stack (summary)
 
-> Full stack at a glance: **React + Tailwind + Appwrite (Auth/DB/Storage/Realtime) + Node/Express (scoring/catalog/GitHub/profile) + Python FastAPI (resume-only)**. Frontend caches JWT until 60s before expiry and lazy-loads routes (662k→409k). Backend rate-limits 30/min on `/api/github|resume|admin` and proxies resume to Python; all other scoring is Node-native. Appwrite is the primary data store (NoSQL). Design tokens and layout rules are the single source in [`docs/design.md`](docs/design.md).
+> Full stack at a glance: **React + Tailwind + Appwrite (Auth/DB/Storage/Realtime) + Node/Express (scoring/catalog/GitHub/profile) + Python FastAPI (resume + assistant)**. Frontend caches JWT until 60s before expiry and lazy-loads routes (662k→409k). Backend rate-limits 30/min on `/api/github|resume|admin` and proxies resume to Python; all other scoring is Node-native. Appwrite is the primary data store (NoSQL). Design tokens and layout rules are the single source in [`docs/design.md`](docs/design.md).
 >
 > **Single source:** architecture diagram + responsibility matrix → [`docs/main_architecture.md` §2–§3](docs/main_architecture.md) (2 High-Level Architecture, 3 Responsibility Matrix). See there for the canonical diagram, layer responsibilities, and placement of `scoring.js` / `careerCatalog.js` / `profile.builder.js` / `github.service.js`.
 
 # 🏗️ System Architecture (summary)
 
-> User → React (TopBar 3 hubs: Discover/Build/Opportunities) → Appwrite (Auth/DB/Storage/Realtime) and Node/Express (business logic + scoring/GitHub) → Python AI (resume-only, 5 endpoints + `/health`). Topology, trust-proxy, rate-limit, and deployment order are detailed in the single source.
+> User → React (TopBar 3 hubs: Discover/Build/Opportunities) → Appwrite (Auth/DB/Storage/Realtime) and Node/Express (business logic + scoring/GitHub) → Python AI (6 POST endpoints: resume + assistant, plus `/health`). Topology, trust-proxy, rate-limit, and deployment order are detailed in the single source.
 >
 > **Single source:** [`docs/main_architecture.md` §2–§3](docs/main_architecture.md) for diagram, §47 for topology/deployment, and [`docs/design.md`](docs/design.md) for tokens. The in-repo diagram below is intentionally omitted — see the canonical diagram in main_architecture §2.
 
@@ -336,18 +336,18 @@ skillsaarthi/
 │
 ├── src/                      # React frontend (repo root)
 │   ├── assets/
-│   ├── components/
-│   │   ├── layout/           # TopBar, NotificationBell, CommunityFab
+│   ├── components/           # common, community, github, home, layout, resume
+│   │   ├── layout/           # TopBar, NotificationBell, CommunityFab, Footer
 │   │   ├── github/           # ContributionGrid (13 metrics)
-│   │   ├── career/           # GapDrawer (inline gaps)
-│   │   └── ...               # common, auth, profile, roadmap, resume, courses, internships, assistant
+│   │   └── ...               # home (landing sections), community, resume, common
 │   ├── pages/
 │   │   ├── public/           # Home (merged public+private)
 │   │   ├── auth/
-│   │   └── private/          # Dashboard, Recommendations, Onboarding, etc.
-│   ├── services/             # appwrite, api (JWT cache), auth, profile, skills, interests, assessment, careers, recommendations, roadmaps, streak, notifications, github, comparison, whatif
-│   ├── hooks/  context/  routes/  # AppRoutes (lazy + Suspense)
-│   └── App.jsx               # CommunityFab kept
+│   │   ├── onboarding/       # Onboarding.jsx + steps/ (4-step wizard)
+│   │   └── private/          # Dashboard, Recommendations, Assistant, etc.
+│   ├── services/             # appwrite, api (JWT cache), auth, profile, skills, interests, assessment, careers, recommendations, roadmaps, resume, github, internships, community, notifications, streak, comparison, whatif, assistant, admin
+│   ├── hooks/  context/  routes/  utils/  # AppRoutes (lazy + Suspense), validation
+│   └── App.jsx               # AuthProvider + AppRoutes + CommunityFab
 │
 ├── server/                   # Node.js + Express backend
 │   ├── src/
@@ -355,18 +355,19 @@ skillsaarthi/
 │   │   └── app.js            # rate limiters
 │   └── package.json
 │
-├── ai-service/               # Python resume-only LLM service
+├── ai-service/               # Python LLM service (resume + assistant)
 │   ├── app/
 │   │   ├── ai/               # LLM gateway client
+│   │   ├── assistant/        # assistant prompts
 │   │   ├── resume/           # ingest, pipeline, prompts, schema, scoring, latex
-│   │   └── main.py           # GET /health + POST /ai/resume/*
-│   ├── tests/                # resume pipeline tests
+│   │   └── main.py           # GET /health + POST /ai/resume/* + /ai/assistant/chat
+│   ├── tests/                # pytest: API/health, AI client, resume, LaTeX
 │   └── requirements.txt
 │
 ├── docs/  PRD.md  main_architecture.md  rules.md  design.md
 │
 ├── .env  .env.sample  .gitignore  vite.config.js  package.json
-├── .vscode/tasks.json · dev.ps1/dev.sh · dev-install.* · dev-cleanup.*
+├── .vscode/tasks.json · dev-install.* · dev-cleanup.*
 └── scripts/  setup-appwrite.mjs  seed-catalog.mjs  import-internships.mjs
 ```
 
@@ -389,13 +390,13 @@ skillsaarthi/
 > cd ai-service && .\venv\Scripts\python.exe -m pip install -r requirements.txt && .\venv\Scripts\python.exe -m uvicorn app.main:app --reload  # AI at http://localhost:8000/health
 > ```
 >
-> Keep three terminals (Vite 5173, Express 5000, FastAPI 8000) or use VS Code tasks (`.vscode/tasks.json`) / `dev.ps1`/`dev.sh` (separate windows) / `dev-cleanup.*` to kill stale ports. See below for “Start Everything at Once” and verify `GET /health` on each service.
+> Keep three terminals (Vite 5173, Express 5000, FastAPI 8000) or use VS Code tasks (`.vscode/tasks.json`). `dev-install.*` is a one-time dependency installer (frontend, backend, AI venv) and `dev-cleanup.*` kills stale dev servers. See below for “Start Everything at Once” and verify `GET /health` on each service.
 >
 > **Single sources:** env tables → [`docs/rules.md` §5](docs/rules.md); architecture + local topology → [`docs/main_architecture.md` §37–§38](docs/main_architecture.md); production hosting → [`docs/main_architecture.md` §47](docs/main_architecture.md); design → [`docs/design.md`](docs/design.md).
 
 # 6. Start Everything at Once (summary)
 
-> **VS Code:** `Terminal → Run Task…` → `dev: restart everything (clean, then run)` (Ctrl/Cmd+Shift+B) or `dev: run all three` — opens Frontend/Backend/AI Service panels (5173/5000/8000). **Any editor:** `\dev.ps1` (Windows, allow `Set-ExecutionPolicy -Scope Process RemoteSigned`) or `./dev.sh` (macOS/Linux) — one window per service. Keep all three open (auto-reload); confirm AI via `http://localhost:8000/health` → `{"status":"ok"}`. If `Port 5173 is in use` → run `dev: restart everything` or `cleanup: stop running dev servers`.
+> **VS Code:** `Terminal → Run Task…` → `dev: restart everything (clean, then run)` (Ctrl/Cmd+Shift+B), `dev: run all three`, or `dev: setup then run all three` — opens Frontend/Backend/AI Service panels (5173/5000/8000). **Any editor:** run `dev-install.*` once (Windows: `.\dev-install.ps1`, macOS/Linux: `./dev-install.sh`), then start the three services in separate terminals; `dev-cleanup.*` stops them and frees ports 5173/5000/8000. Keep all three open (auto-reload); confirm AI via `http://localhost:8000/health` → `{"status":"ok"}`. If `Port 5173 is in use` → run `dev: restart everything` or `cleanup: stop running dev servers`.
 >
 > **Single source:** [`docs/main_architecture.md` §37–§38](docs/main_architecture.md) (local dev).
 
@@ -423,13 +424,13 @@ skillsaarthi/
 
 ---
 
-# 🤖 Phase 4 — AI (resume-only, lightweight — updated)
+# 🤖 Phase 4 — AI (resume + assistant, lightweight — updated)
 
-> **Built:** Python resume-only FastAPI (port 8000, `GET /health` + 5 `POST /ai/resume/{extract,analyze,match,optimize,generate}` at `pypdf`/LLM/LaTeX), Node scoring/catalog/GitHub (`scoring.js`, `careerCatalog.js`, `github.service.js` + `profile.builder.js`), resume pipeline `ai-service/app/resume/` (ingest/pipeline/prompts/schema/scoring/latex), tests `ai-service/tests/` (resume pipeline/schema/scoring/ingest/latex + AI client).
+> **Built:** Python FastAPI (port 8000, `GET /health` + 5 `POST /ai/resume/{extract,analyze,match,optimize,generate}` at `pypdf`/LLM/LaTeX + `POST /ai/assistant/chat` with profile context), Node scoring/catalog/GitHub (`scoring.js`, `careerCatalog.js`, `github.service.js` + `profile.builder.js`), resume pipeline `ai-service/app/resume/` (ingest/pipeline/prompts/schema/scoring/latex), assistant prompts `ai-service/app/assistant/prompts.py`, tests `ai-service/tests/` (API/health, AI client, resume pipeline/schema/scoring/ingest, LaTeX).
 >
-> **Fallback:** only `POST /api/resume/analyze` has `source:"fallback"` heuristic when Python down; `recommendations`/`skill-gaps`/`compare`/`what-if`/`github` are Node-direct (always succeed, no `fallback` tag). Run `python -m pytest` in `ai-service/` (health + resume only).
+> **Fallback:** only `POST /api/resume/analyze` has `source:"fallback"` heuristic when Python down; `recommendations`/`skill-gaps`/`compare`/`what-if`/`github` are Node-direct (always succeed, no `fallback` tag); assistant returns `503` when Python is down. Run `python -m pytest` in `ai-service/` (health + resume pipeline; assistant has no fallback).
 >
-> **Single source:** service scope → [`docs/main_architecture.md` §19–§21](docs/main_architecture.md) (resume-only) and §42 (AI Failure Handling).
+> **Single source:** service scope → [`docs/main_architecture.md` §19–§21](docs/main_architecture.md) (AI Service) and §29 (AI Career Assistant), §42 (AI Failure Handling).
 
 ---
 
@@ -437,7 +438,7 @@ skillsaarthi/
 
 > Resume (PDF/DOC/DOCX) → Appwrite `resumes` bucket → Node fetches bytes → Python `POST /ai/resume/analyze` (pypdf + `densify_text` letter-spacing normalizer) → structured skills/confidence, experience, projects, education, strengths/next-steps, career matches → persisted in `resume_analyses` (latest per user) → optionally applied to `user_skills` → rendered at `/resume` (drag-and-drop, add-skills checkbox). If AI is down, Node returns heuristic `source:"fallback"` (200). Setup re-runs `npm run setup:appwrite` (idempotent).
 >
-> **Single source:** flow and collection spec → [`docs/main_architecture.md` §27](docs/main_architecture.md) (Resume Analysis) and §19–§21 (AI Service, resume-only). Prompts/schema/LaTeX are in `ai-service/app/resume/`.
+> **Single source:** flow and collection spec → [`docs/main_architecture.md` §27](docs/main_architecture.md) (Resume Analysis) and §19–§21 (AI Service). Prompts/schema/LaTeX are in `ai-service/app/resume/`.
 
 ---
 
@@ -467,7 +468,7 @@ skillsaarthi/
 
 # 🐙 GitHub Analysis (Node-native) & Internships (summary)
 
-> **GitHub (Node-only, 13 metrics):** Public profile + repos via GitHub REST + GraphQL `contributionsCollection` (needs `GITHUB_TOKEN`, else `fallbackDaysFromRepos` from `pushed_at`). Metrics: contributions grid (5 intensity levels), streaks, totals, avg, most active day/month, languages (`languageShare` by `repo.size`, includes forks), public/private repos (private via `repositories(privacy:PRIVATE)` only), followers/PRs/issues/reviews. Persisted to `github_analyses`; rendered in `ContributionGrid` (warm `bg-warm` outer, `bg-white` inner, tooltip `22 Sept — N contributions`). Rate-limited 30/min. No Python.
+> **GitHub (Node-only, 13 metrics):** Public profile + repos via GitHub REST + GraphQL `contributionsCollection` (needs `GITHUB_TOKEN`, else `fallbackDaysFromRepos` from `pushed_at`). Metrics: contributions grid (5 intensity levels), streaks, totals, avg, most active day/month, languages (`languageShare` by `repo.size`, includes forks), public/private repos (private via `repositories(privacy:PRIVATE)` only), followers/PRs/issues/reviews. Persisted to `github_analyses`; rendered in `ContributionGrid` (warm `bg-warm` outer, `bg-white` inner, tooltip `22 Sept — N contributions`). **Account binding:** each user account is bound to one GitHub username — the first analysis links it, `/github` auto-loads the saved analysis via `GET /api/github/analysis`, and only one username change is allowed (`username_change_count`), after which the username is locked. Re-run `npm run setup:appwrite` to add the attribute. Rate-limited 30/min. No Python.
 >
 > **Internships (scoring + lifecycle):** Weighted match `Skill×0.55 + Role/Goals/Interests×0.20 + Education×0.15 + Location×0.10` in `internship.service.js`, top-10 in `internship_recommendations`. Catalog `internships` has `skills` (JSON) + `eligibility`, plus lifecycle `status`/`source`/`source_key`/`expires_at`/`fetched_at`. Freshness via hybrid gate: importer (`npm run import:internships`, `file` or `remotive`, dedup `source_key`, TTL 30d) creates `pending`, admin approves at `/admin/internships` → `active`, public list auto-expires. Seeded rows `active`, manual `pending`. `ADMIN_EMAILS` enables admin.
 >
@@ -485,7 +486,7 @@ skillsaarthi/
 
 # 🆕 Today’s Changes — 26 Sept 2026 (summary)
 
-> 26 Sept fixes: GitHub Node-only (`github.service.js` + `ContributionGrid` 13 metrics, warm bg contrast, `Sept` tooltip, private-count fix, `languageShare` includes forks), TopBar 3 hubs (Discover/Build/Opportunities, Admin in ProfileMenu, hamburger iPhone <460px fix), Homes merged (single `Home`), lazy routes (662k→409k), JWT cache (60s), rate-limit `express-rate-limit` 30/min (`trust proxy 1`), NotificationBell Realtime + 45s polling, Dashboard `400ms` delay + `1500ms` single retry + same-size `StatCard` skeletons + `streakLoading` + `Home` `bg-black/[0.06]` skeletons, Community `offsetRef` pagination fix + LRU author cache `500` + paginated comments `50` + chunked deletes `5` + user-scoped rate limits `30/60/120` + realtime `subscribe`, `ai-service` trimmed to resume-only (`GET /health` + 5 `POST /ai/resume/*`), scoring moved to Node (`scoring.js` + `careerCatalog.js` + `profile.builder.js`), email OFF (mock `_dev_otp`, Resend HTTPS ready).
+> 26 Sept fixes: GitHub Node-only (`github.service.js` + `ContributionGrid` 13 metrics, warm bg contrast, `Sept` tooltip, private-count fix, `languageShare` includes forks), TopBar 3 hubs (Discover/Build/Opportunities, Admin in ProfileMenu, hamburger iPhone <460px fix), Homes merged (single `Home`), lazy routes (662k→409k), JWT cache (60s), rate-limit `express-rate-limit` 30/min (`trust proxy 1`), NotificationBell Realtime + 45s polling, Dashboard `400ms` delay + `1500ms` single retry + same-size `StatCard` skeletons + `streakLoading` + `Home` `bg-black/[0.06]` skeletons, Community `offsetRef` pagination fix + LRU author cache `500` + paginated comments `50` + chunked deletes `5` + user-scoped rate limits `30/60/120` + realtime `subscribe`, `ai-service` trimmed to resume-only (`GET /health` + 5 `POST /ai/resume/*`; `/ai/assistant/chat` added later), scoring moved to Node (`scoring.js` + `careerCatalog.js` + `profile.builder.js`), email OFF (mock `_dev_otp`, Resend HTTPS ready).
 >
 > **Single source (changelog):** [`PROJECT_AUDIT.md`](PROJECT_AUDIT.md) (feature inventory, workflow problems, priorities). Architecture diffs → [`docs/main_architecture.md`](docs/main_architecture.md) §1/§5/§19/§47, rules → [`docs/rules.md` §12–§15](docs/rules.md).
 
@@ -493,15 +494,15 @@ skillsaarthi/
 
 # 🔐 Environment Variables (summary)
 
-> Copy `.env.sample` → `.env` (gitignored). Frontend `VITE_*` are build-time (Vite inlines `import.meta.env`, needs redeploy); backend `server/.env` is server-only via `server/src/config/environment.js`; AI `ai-service/.env` is Python gateway; scripts use `scripts/.env.setup` for setup/seed/importer. Appwrite free plan reuses `resumes` bucket for avatars; paid plan uses `avatars`. Render blocks SMTP, so prefer Resend HTTPS; trust-proxy + rate-limit need `GITHUB_TOKEN`/`ADMIN_EMAILS` etc.
+> Copy `.env.sample` → `.env` (gitignored). Frontend `VITE_*` are build-time (Vite inlines `import.meta.env`, needs redeploy); backend `server/.env` is server-only via `server/src/config/environment.js`; AI `ai-service/.env` is Python gateway; scripts use `scripts/.env.setup` for setup/seed/importer. Appwrite free plan reuses `resumes` bucket for avatars; paid plan uses `avatars`. Render blocks SMTP, so prefer SendGrid HTTPS; trust-proxy + rate-limit need `GITHUB_TOKEN`/`ADMIN_EMAILS` etc.
 >
-> **Single source:** all env tables + prod wiring → [`docs/rules.md` §5](docs/rules.md) (Environment Variables) and [`docs/main_architecture.md` §36](docs/main_architecture.md) (summary) + §47 (Production Hosting). Never commit secrets; production vars live in Vercel/Render dashboards.
+> **Single source:** all env tables + prod wiring → [`docs/rules.md` §5](docs/rules.md) (Environment Variables) and [`docs/main_architecture.md` §36](docs/main_architecture.md) (summary) + §47 (Production Hosting). Never commit secrets; production vars live in the Vercel/Render dashboards (backend on Render account 1, AI service on Render account 2).
 
 ---
 
 # 🌐 Deployment / Production Hosting (summary)
 
-> Four services: Frontend (Vercel static, `https://skillsaarthi.vercel.app`), Backend Node (Render `https://skillsaarthi-node.onrender.com` `/api/health`), AI Python (Render `https://skillsaarthi-f14x.onrender.com` `/health` — Groq `openai/gpt-oss-20b` via `AI_BASE_URL`/`AI_KEY`), Data (Appwrite Cloud). Set `VITE_API_BASE_URL` to Render backend (must redeploy), backend `APPWRITE_*` + `AI_SERVICE_URL` + `GITHUB_TOKEN`/`ADMIN_EMAILS`/`FRONTEND_URL`/`SENDGRID_API_KEY` + `SENDGRID_SENDER` (SendGrid HTTPS `email.service.js:77`) + AI `AI_BASE_URL`/`AI_MODEL`/`AI_KEY` on AI service (PYTHON_VERSION=3.12.10), add Vercel URL to Appwrite Platforms, run `setup:appwrite` + `seed:catalog`, keep free tier awake via cron-job.org every 5min on `/health`.
+> Four services: Frontend (Vercel static, `https://skillsaarthi.vercel.app`), Backend Node (Render account 1 `https://skillsaarthi-node.onrender.com` `/api/health`), AI Python (Render account 2, Docker `https://skillsaarthi-ai.onrender.com` `/health` — Qwen `Qwen3.6-35B-A3B` via `AI_BASE_URL`/`AI_KEY`, provider swappable by env), Data (Appwrite Cloud). One service per Render account so each gets its own 750 instance-hours/month budget. Set `VITE_API_BASE_URL` to the backend (must redeploy), backend `APPWRITE_*` + `AI_SERVICE_URL` (no trailing slash) + `GITHUB_TOKEN`/`ADMIN_EMAILS`/`FRONTEND_URL`/`SENDGRID_API_KEY` + `SENDGRID_SENDER` (SendGrid HTTPS `email.service.js:77`) + AI `AI_BASE_URL`/`AI_MODEL`/`AI_KEY` on the account-2 Render service, add the Vercel URL to Appwrite Platforms, run `setup:appwrite` + `seed:catalog`, keep each service awake via cron-job.org every 5min on its `/health`.
 >
 > **Single source:** full topology, env mappings, build/start commands, order, and verification → [`docs/main_architecture.md` §47](docs/main_architecture.md) (Production Hosting & Deployment) and [`docs/rules.md` §15](docs/rules.md) (Production Hosting). Design → [`docs/design.md`](docs/design.md).
 
@@ -550,11 +551,11 @@ skillsaarthi/
 
 ---
 
-## Phase 4 — AI (resume-only, updated)
+## Phase 4 — AI (resume + assistant, updated)
 
-* [x] Python AI service (FastAPI) — resume-only 6 endpoints (`/health` + `/ai/resume/*`)
+* [x] Python AI service (FastAPI) — 7 endpoints (`/health` + 5 `/ai/resume/*` + `/ai/assistant/chat`)
 * [x] Scoring / catalog / GitHub moved to Node (`scoring.js`, `careerCatalog.js`, `github.service.js`, `profile.builder.js`)
-* [x] Resume test suite only (`test_health` + `test_resume`; `test_scoring` removed)
+* [x] Pytest suite (`ai-service/tests/`: API/health, AI client, resume pipeline/schema/scoring/ingest, LaTeX)
 * [x] Rate limiting 30/min (`express-rate-limit` on `/api/github|resume|admin`), JWT cache (60s), lazy routes (662k→409k)
 
 ---
@@ -577,15 +578,15 @@ skillsaarthi/
 * [x] Career comparison — Node-native (`scoring.js` + `careerCatalog.js`)
 * [x] Recommendations — auto-generate 6 on onboarding + GapDrawer in-page
 * [x] Notifications — Realtime (`appwriteClient.subscribe` + 45s polling fallback)
-* [ ] AI career assistant
+* [x] AI career assistant — `/assistant` page → Node `POST /api/assistant/chat` → Python `/ai/assistant/chat` (profile context + last 8 history turns)
 
 ---
 
 ## Phase 7 — External Integrations
 
 * [x] Internship recommendations
-* [ ] Courses
-* [ ] Personalized notifications
+* [ ] Courses (collection + seed only; no API/UI yet)
+* [x] Personalized notifications
 
 ---
 

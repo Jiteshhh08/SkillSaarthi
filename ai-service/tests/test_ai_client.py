@@ -114,6 +114,22 @@ def test_invalid_key_maps_to_permanent_error():
     assert exc.value.status == 401
 
 
+def test_forbidden_maps_to_403_with_code():
+    error = APIStatusError("denied", response=fake_response(403), body={})
+    with pytest.raises(AIResponseError) as exc:
+        client._raise_for_status(error)
+    assert exc.value.code == "AI_FORBIDDEN"
+    assert exc.value.status == 403
+
+
+def test_unknown_model_maps_to_404_with_code():
+    error = APIStatusError("nope", response=fake_response(404), body={})
+    with pytest.raises(AIResponseError) as exc:
+        client._raise_for_status(error)
+    assert exc.value.code == "AI_MODEL_NOT_FOUND"
+    assert exc.value.status == 404
+
+
 def test_unknown_status_maps_to_permanent_error():
     error = APIStatusError("nope", response=fake_response(500), body={})
     with pytest.raises(AIResponseError):

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { analyzeGitHub } from '../../services/github'
+import { analyzeGitHub, getMyGitHubAnalysis } from '../../services/github'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
 import ContributionGrid from '../../components/github/ContributionGrid'
@@ -73,12 +73,56 @@ function AnalysisPipeline({ active }) {
 export default function GitHubAnalysis() {
   const { user, profile, refreshProfile } = useAuth()
   const [username, setUsername] = useState(profile?.github_username || '')
+  const [boundUsername, setBoundUsername] = useState(profile?.github_username || '')
+  const [linked, setLinked] = useState(false)
+  const [changeAvailable, setChangeAvailable] = useState(true)
+  const [editing, setEditing] = useState(!profile?.github_username)
+  const [bindingLoading, setBindingLoading] = useState(true)
   const [applySkills, setApplySkills] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
   const [activeStep, setActiveStep] = useState(0)
   const resultsTopRef = useRef(null)
+  const didAnalyzeRef = useRef(false)
+  const profileUsernameRef = useRef(profile?.github_username || '')
+
+  useEffect(() => {
+    profileUsernameRef.current = profile?.github_username || ''
+  }, [profile?.github_username])
+
+  useEffect(() => {
+    let active = true
+    async function loadBinding() {
+      if (!user?.$id) return
+      try {
+        const data = await getMyGitHubAnalysis()
+        if (!active) return
+        const isLinked = Boolean(data?.linked)
+        setLinked(isLinked)
+        setChangeAvailable(data?.username_change_available !== false)
+        setBoundUsername(data?.username || '')
+        setUsername(data?.username || '')
+        setEditing(!isLinked)
+        if (data?.analysis) {
+          setResult({ analysis: data.analysis, analysis_id: data.analysis_id, skills_added: 0 })
+        }
+      } catch {
+        if (!active) return
+        const fallback = profileUsernameRef.current
+        setLinked(Boolean(fallback))
+        setBoundUsername(fallback)
+        setUsername(fallback)
+        setEditing(!fallback)
+      } finally {
+        if (active) setBindingLoading(false)
+      }
+    }
+    loadBinding()
+    return () => {
+      active = false
+    }
+  }, [user?.$id])
 
   useEffect(() => {
     if (!loading) return
@@ -90,7 +134,7 @@ export default function GitHubAnalysis() {
   }, [loading])
 
   useEffect(() => {
-    if (result && resultsTopRef.current) {
+    if (result && didAnalyzeRef.current && resultsTopRef.current) {
       const t = setTimeout(() => {
         resultsTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 200)
@@ -111,11 +155,21 @@ export default function GitHubAnalysis() {
     setActiveStep(0)
     try {
       const data = await analyzeGitHub(value, { applySkills })
+      didAnalyzeRef.current = true
       setResult(data)
       setActiveStep(STEPS.length - 1)
+      setLinked(true)
+      setBoundUsername(data.username || value)
+      setUsername(data.username || value)
+      setChangeAvailable(data.username_change_available !== false)
+      setEditing(false)
       // Fire-and-forget profile refresh - don't block UI or trigger RouteGuards re-check flash
       if (refreshProfile) refreshProfile(user.$id).catch(() => {})
     } catch (err) {
+      if (err?.response?.status === 409) {
+        setEditing(false)
+        setUsername(boundUsername)
+      }
       setError(
         err?.response?.data?.message ||
           'Could not analyze that GitHub profile. Check the username and try again.',
@@ -137,38 +191,89 @@ export default function GitHubAnalysis() {
         <p className="text-sm font-bold uppercase tracking-[0.08em]">Career tools</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight">GitHub analysis</h1>
         <p className="mt-2 max-w-2xl text-lg text-ink-muted">
-          Connect a public GitHub profile and see your development rhythm — contributions, streaks, languages, and repository activity.
+          Link your GitHub account to see your development rhythm — contributions, streaks, languages, and repository activity. Each account is bound to a single GitHub username.
         </p>
 
-        <form onSubmit={handleAnalyze} className="card mt-8">
-          <label className="block text-sm font-bold text-ink" htmlFor="github-username">
-            GitHub username
-          </label>
-          <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-            <input
-              id="github-username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. octocat"
-              autoComplete="off"
-              className="input-base sm:max-w-sm"
-            />
-            <button type="submit" disabled={loading} className="btn-primary disabled:opacity-50 inline-flex items-center gap-2">
-              {loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden="true" />}
-              {loading ? 'Analyzing…' : 'Analyze profile'}
-            </button>
+        {bindingLoading ? (
+          <div className="card mt-8 animate-pulse">
+            <div className="h-4 w-32 rounded bg-surface-strong" />
+            <div className="mt-4 h-10 w-full max-w-sm rounded bg-warm" />
           </div>
-          <label className="mt-4 flex items-center gap-2 text-sm text-ink-muted">
-            <input
-              type="checkbox"
-              checked={applySkills}
-              onChange={(e) => setApplySkills(e.target.checked)}
-              className="h-4 w-4 rounded border-line accent-brand"
-            />
-            Add detected languages to my profile (feeds recommendations and internships)
-          </label>
-        </form>
+        ) : (
+          <form onSubmit={handleAnalyze} className="card mt-8">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label className="block text-sm font-bold text-ink" htmlFor="github-username">
+                GitHub username
+              </label>
+              {linked && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-2.5 py-1 text-xs font-bold text-ink-muted">
+                  <span className={`h-2 w-2 rounded-full ${changeAvailable ? 'bg-brand' : 'bg-ink-soft'}`} />
+                  {changeAvailable ? 'Linked · one change left' : 'Username locked'}
+                </span>
+              )}
+            </div>
+            <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+              <input
+                id="github-username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="e.g. octocat"
+                autoComplete="off"
+                disabled={linked && !editing}
+                className="input-base sm:max-w-sm disabled:bg-warm disabled:text-ink-muted"
+              />
+              <button type="submit" disabled={loading} className="btn-primary disabled:opacity-50 inline-flex items-center gap-2">
+                {loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden="true" />}
+                {loading ? 'Analyzing…' : linked ? (editing ? 'Save new username' : 'Refresh analysis') : 'Link & analyze'}
+              </button>
+              {linked && !editing && changeAvailable && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditing(true)
+                    setError('')
+                  }}
+                  className="btn-secondary"
+                >
+                  Change username
+                </button>
+              )}
+              {linked && editing && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditing(false)
+                    setUsername(boundUsername)
+                    setError('')
+                  }}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+            {linked && editing && (
+              <p className="mt-2 text-xs font-bold text-warning">
+                You can change the linked GitHub username only once — after saving, it will be locked.
+              </p>
+            )}
+            {linked && !changeAvailable && !editing && (
+              <p className="mt-2 text-xs font-bold text-ink-soft">
+                This account is locked to @{boundUsername}.
+              </p>
+            )}
+            <label className="mt-4 flex items-center gap-2 text-sm text-ink-muted">
+              <input
+                type="checkbox"
+                checked={applySkills}
+                onChange={(e) => setApplySkills(e.target.checked)}
+                className="h-4 w-4 rounded border-line accent-brand"
+              />
+              Add detected languages to my profile (feeds recommendations and internships)
+            </label>
+          </form>
+        )}
 
         {loading && (
           <div className="mt-6 space-y-4">
@@ -224,6 +329,43 @@ export default function GitHubAnalysis() {
                   A live view of contribution patterns, streaks, language focus, and development rhythm across GitHub.
                 </p>
               </section>
+
+              {analysis?.profile && (
+                <section className="card mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <img
+                    src={analysis.profile.avatar_url}
+                    alt={`${analysis.profile.login} GitHub avatar`}
+                    width={80}
+                    height={80}
+                    loading="lazy"
+                    className="h-20 w-20 shrink-0 rounded-full border border-line bg-warm object-cover"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-black tracking-tight text-ink">
+                      {analysis.profile.name || analysis.profile.login}
+                    </h3>
+                    <p className="text-sm font-bold text-ink-muted">@{analysis.profile.login}</p>
+                    {analysis.profile.bio && (
+                      <p className="mt-2 max-w-2xl text-sm text-ink-muted">{analysis.profile.bio}</p>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-ink-soft">
+                      <span>{analysis.profile.followers ?? 0} followers</span>
+                      <span>{analysis.profile.following ?? 0} following</span>
+                      {analysis.profile.location && <span>{analysis.profile.location}</span>}
+                    </div>
+                  </div>
+                  {analysis.profile.html_url && (
+                    <a
+                      href={analysis.profile.html_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-secondary shrink-0 self-start sm:self-center"
+                    >
+                      View profile
+                    </a>
+                  )}
+                </section>
+              )}
 
               <section className="card mt-6">
               <div className="flex items-center justify-between border-b border-line pb-3">
@@ -285,22 +427,6 @@ export default function GitHubAnalysis() {
               </section>
             )}
 
-            {/* Profile footer */}
-            {analysis?.profile?.html_url && (
-              <div className="mt-8 border-t border-line pt-6">
-                <a
-                  href={analysis.profile.html_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 border-b border-ink pb-1 text-xs font-bold uppercase tracking-[0.08em] text-ink hover:text-brand-deep"
-                >
-                  View GitHub Profile
-                </a>
-                {analysis.profile.bio && (
-                  <p className="mt-3 max-w-2xl text-sm text-ink-muted">{analysis.profile.bio}</p>
-                )}
-              </div>
-            )}
           </>
         )}
       </main>

@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
-import { chatAssistant } from '../../services/assistant'
+import { chatAssistant, chatAssistantStream } from '../../services/assistant'
 import TopBar from '../../components/layout/TopBar'
 
 function Markdown({ content }) {
@@ -81,11 +81,40 @@ export default function Assistant() {
     const history = messages.slice(-8)
     setMessages(m => [...m, { role: 'user', content: msg }])
     setLoading(true)
+    // streaming: append placeholder then fill token-by-token; fallback to non-stream on error
+    setMessages(m => [...m, { role: 'assistant', content: '' }])
     try {
-      const res = await chatAssistant(msg, history)
-      setMessages(m => [...m, { role: 'assistant', content: res.reply }])
-    } catch (err) {
-      setMessages(m => [...m, { role: 'assistant', content: err?.response?.data?.message || 'Assistant unavailable. Try again shortly.' }])
+      const res = await chatAssistantStream(msg, history, (_delta, full) => {
+        setMessages(m => {
+          const next = [...m]
+          next[next.length - 1] = { role: 'assistant', content: full }
+          return next
+        })
+      })
+      if (!res.reply) {
+        // empty stream (e.g. immediate [DONE]) — fetch full reply once
+        const full = await chatAssistant(msg, history)
+        setMessages(m => {
+          const next = [...m]
+          next[next.length - 1] = { role: 'assistant', content: full.reply }
+          return next
+        })
+      }
+    } catch {
+      try {
+        const res = await chatAssistant(msg, history)
+        setMessages(m => {
+          const next = [...m]
+          next[next.length - 1] = { role: 'assistant', content: res.reply }
+          return next
+        })
+      } catch (err) {
+        setMessages(m => {
+          const next = [...m]
+          next[next.length - 1] = { role: 'assistant', content: err?.response?.data?.message || err?.message || 'Assistant unavailable. Try again shortly.' }
+          return next
+        })
+      }
     } finally { setLoading(false) }
   }
 

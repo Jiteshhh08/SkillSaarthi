@@ -120,6 +120,7 @@ export default function ResumeAnalysis() {
   const [jobMatch, setJobMatch] = useState(null)
   const [optimizedJson, setOptimizedJson] = useState(null)
   const [generated, setGenerated] = useState(null)
+  const [copied, setCopied] = useState(false)
 
   const currentStep = !analysisId ? 0 : !analysis ? 1 : !jobMatch ? 2 : !optimizedJson ? 3 : 4
 
@@ -240,6 +241,23 @@ export default function ResumeAnalysis() {
 
   const handleDownloadLatex = async () => {
     await run('Downloading…', () => downloadLatex(analysisId, `resume-${fileName || analysisId}.tex`))
+  }
+
+  const handleCopyLatex = async () => {
+    const text = generated?.latex || ''
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      const fallback = document.createElement('textarea')
+      fallback.value = text
+      document.body.appendChild(fallback)
+      fallback.select()
+      document.execCommand('copy')
+      fallback.remove()
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   const handleDownloadPdf = async () => {
@@ -680,9 +698,20 @@ export default function ResumeAnalysis() {
               )}
 
               <div className="mt-6">
-                <p className="text-sm font-black uppercase tracking-wide text-ink-muted">
-                  LaTeX source (review, then compile locally if you prefer)
-                </p>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-black uppercase tracking-wide text-ink-muted">
+                    LaTeX source (review, then compile locally if you prefer)
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleCopyLatex}
+                    disabled={!!busy}
+                    className="btn-secondary shrink-0 px-3 py-2 text-sm disabled:opacity-50"
+                  >
+                    <Icon name={copied ? 'check' : 'copy'} size={16} className="mr-1" />
+                    {copied ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
                 <pre className="mt-2 max-h-96 overflow-auto rounded-md border border-line bg-surface-soft p-4 text-xs leading-relaxed text-ink">
                   {generated.latex}
                 </pre>

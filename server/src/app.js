@@ -24,7 +24,7 @@ app.use(express.json())
 
 const sensitiveLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 30,
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, code: 'RATE_LIMITED', message: 'Too many requests, try again shortly.' },

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import compactLogo from '../../assets/skillsaarthi_logo2.webp'
 
 export default function SkillSaarthiLoader({ onDone }) {
   const [phase, setPhase] = useState(0)
@@ -11,16 +10,13 @@ export default function SkillSaarthiLoader({ onDone }) {
       const t = setTimeout(() => onDone?.(), 380)
       return () => clearTimeout(t)
     }
-    // S 350, kill 600, Saarthi 700, flourish 500, hold 300, compact 600, hold 250, exit 400
+    // S 350, kill 600, Saarthi 700, hold 350, exit 400
     const timers = [
       setTimeout(() => setPhase(1), 360),
       setTimeout(() => setPhase(2), 980),
       setTimeout(() => setPhase(3), 1700),
-      setTimeout(() => setPhase(4), 2200),
-      setTimeout(() => setPhase(5), 2500),
-      setTimeout(() => setPhase(6), 3100),
-      setTimeout(() => setPhase(7), 3350),
-      setTimeout(() => onDone?.(), 3750),
+      setTimeout(() => setPhase(4), 2050),
+      setTimeout(() => onDone?.(), 2450),
     ]
     return () => timers.forEach(clearTimeout)
   }, [onDone])
@@ -34,14 +30,15 @@ export default function SkillSaarthiLoader({ onDone }) {
   if (reducedRef.current) {
     return (
       <div className="fixed inset-0 z-[9999] grid place-items-center bg-[#fafafa]">
-        <img src={compactLogo} alt="SkillSaarthi" className="h-20 w-20 md:h-24 md:w-24 object-contain" />
+        <p className="text-[36px] md:text-[44px] leading-none" style={{ fontFamily: 'Lato, sans-serif', fontWeight: 900 }}>
+          <span className="text-[#0a2e2e]">Skill</span>
+          <span className="text-[#14bf96]" style={{ fontFamily: '"Noto Sans Devanagari", Lato, sans-serif' }}>सारथी</span>
+        </p>
       </div>
     )
   }
 
-  const showCompact = phase >= 5 && phase < 7
-  const showWordmark = phase < 5
-  const exiting = phase === 7
+  const exiting = phase === 4
 
   return (
     <div
@@ -50,7 +47,7 @@ export default function SkillSaarthiLoader({ onDone }) {
     >
       {/* Wordmark — Skill + सारथी perfectly aligned as in reference image */}
       <div
-        className={`flex items-baseline justify-center gap-0 text-[36px] md:text-[44px] leading-none transition-all duration-600 ease-[cubic-bezier(0.22,1,0.36,1)] ${showWordmark ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.88]'}`}
+        className="flex items-baseline justify-center gap-0 text-[36px] md:text-[44px] leading-none opacity-100 scale-100"
         style={{ letterSpacing: '0.02em' }}
       >
         {/* Skill — dark blue #0a2e2e, EN */}
@@ -91,14 +88,6 @@ export default function SkillSaarthiLoader({ onDone }) {
           </span>
           {phase === 2 && <span className="inline-block h-[0.9em] w-[2px] bg-[#14bf96] animate-[blink_0.7s_step-end_infinite] ml-1 align-baseline" />}
         </span>
-      </div>
-
-      {/* Compact @2nd logo — zooms out to reveal Home */}
-      <div
-        className={`absolute grid place-items-center transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${showCompact ? 'opacity-100 scale-100 duration-600' : exiting ? 'opacity-100 scale-[22] duration-700' : 'opacity-0 scale-75 duration-600'}`}
-        style={{ transformOrigin: 'center' }}
-      >
-        <img src={compactLogo} alt="SkillSaarthi compact" className="h-30 w-30 md:h-28 md:w-28 object-contain drop-shadow-sm" />
       </div>
 
       <style>{`

@@ -691,7 +691,7 @@ The chatbot should answer questions such as:
 
 > What skills are required for DevOps?
 
-The assistant should use the user's structured profile and roadmap context where appropriate.
+The assistant should use the user's structured profile and roadmap context where appropriate. It streams replies token-by-token (`POST /api/assistant/chat/stream` SSE, non-stream `POST /chat` fallback), uses the 60s-cached profile + last 8 history turns, and caps replies at ~800 tokens for speed.
 
 ---
 
