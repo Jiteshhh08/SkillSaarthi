@@ -79,6 +79,7 @@ export default function Footer() {
           <p className="text-sm font-bold text-white">About</p>
           <ul className="mt-3 space-y-2 text-sm text-slate-400">
             <li><Link to="/" className="hover:text-white">Our mission</Link></li>
+            <li><Link to="/founders" className="hover:text-white">Meet the Founders</Link></li>
             <li>
               <button
                 type="button"
