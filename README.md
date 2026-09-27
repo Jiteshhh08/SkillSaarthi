@@ -313,7 +313,7 @@ For graduates and professionals exploring employment opportunities or career tra
 
 # 🛠️ Technology Stack (summary)
 
-> Full stack at a glance: **React + Tailwind + Appwrite (Auth/DB/Storage/Realtime) + Node/Express (scoring/catalog/GitHub/profile) + Python FastAPI (resume + assistant)**. Frontend caches JWT until 60s before expiry and lazy-loads routes (662k→409k). Backend rate-limits 30/min on `/api/github|resume|admin` and proxies resume to Python; all other scoring is Node-native. Appwrite is the primary data store (NoSQL). Design tokens and layout rules are the single source in [`docs/design.md`](docs/design.md).
+> Full stack at a glance: **React + Tailwind + Appwrite (Auth/DB/Storage/Realtime) + Node/Express (scoring/catalog/GitHub/profile) + Python FastAPI (resume + assistant)**. Frontend caches JWT until 60s before expiry (cleared on login/logout, single fresh-JWT retry on 401) and logs out after 15 min idle, and lazy-loads routes (662k→409k). Backend rate-limits 30/min per prefix on `/api/github|resume|admin` plus user-scoped 30/min after auth, and proxies resume to Python; all other scoring is Node-native. Appwrite is the primary data store (NoSQL). Design tokens and layout rules are the single source in [`docs/design.md`](docs/design.md).
 >
 > **Single source:** architecture diagram + responsibility matrix → [`docs/main_architecture.md` §2–§3](docs/main_architecture.md) (2 High-Level Architecture, 3 Responsibility Matrix). See there for the canonical diagram, layer responsibilities, and placement of `scoring.js` / `careerCatalog.js` / `profile.builder.js` / `github.service.js`.
 
@@ -489,6 +489,8 @@ skillsaarthi/
 > 26 Sept fixes: GitHub Node-only (`github.service.js` + `ContributionGrid` 13 metrics, warm bg contrast, `Sept` tooltip, private-count fix, `languageShare` includes forks), TopBar 3 hubs (Discover/Build/Opportunities, Admin in ProfileMenu, hamburger iPhone <460px fix), Homes merged (single `Home`), lazy routes (662k→409k), JWT cache (60s), rate-limit `express-rate-limit` 30/min (`trust proxy 1`), NotificationBell Realtime + 45s polling, Dashboard `400ms` delay + `1500ms` single retry + same-size `StatCard` skeletons + `streakLoading` + `Home` `bg-black/[0.06]` skeletons, Community `offsetRef` pagination fix + LRU author cache `500` + paginated comments `50` + chunked deletes `5` + user-scoped rate limits `30/60/120` + realtime `subscribe`, `ai-service` trimmed to resume-only (`GET /health` + 5 `POST /ai/resume/*`; `/ai/assistant/chat` added later), scoring moved to Node (`scoring.js` + `careerCatalog.js` + `profile.builder.js`), email OFF (mock `_dev_otp`, Resend HTTPS ready).
 >
 > **Single source (changelog):** [`PROJECT_AUDIT.md`](PROJECT_AUDIT.md) (feature inventory, workflow problems, priorities). Architecture diffs → [`docs/main_architecture.md`](docs/main_architecture.md) §1/§5/§19/§47, rules → [`docs/rules.md` §12–§15](docs/rules.md).
+>
+> 27 Sept fixes: JWT expiry (`isExpired` treats bad dates as expired; cache cleared on login/logout, 401 retry with fresh JWT), resume 429 (one rate-limit instance per prefix at 30/min + user-scoped 30/min after auth), idle logout after 15 min (`activity.js` + `AuthContext` 30s check, no warning modal yet).
 
 ---
 

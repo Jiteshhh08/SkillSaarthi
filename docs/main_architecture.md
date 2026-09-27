@@ -756,7 +756,7 @@ Implemented end-to-end as `POST /api/what-if/simulate` (Node only — `server/sr
 
 # 32. API Architecture (summary)
 
-> Auth: Appwrite Auth (client), Node business-logic only, JWT `Bearer <jwt>` on all except health; rate-limit 30/min on `/api/github|resume|admin` (`trust proxy 1`). Scoring/catalog/GitHub/what-if Node-native (`scoring.js` etc.); only resume proxies to Python (`POST /ai/resume/*`) with heuristic fallback `source:"fallback"`. All controllers thin, services thick; Appwrite calls parallelized.
+> Auth: Appwrite Auth (client), Node business-logic only, JWT `Bearer <jwt>` on all except health (short-lived access token ~15 min; Appwrite session underneath is the refresh — no `refresh_token` artifact); idle >15 min stops JWT minting and ends the session (`activity.js` + `AuthContext` 30s check, no warning modal yet); rate-limit 30/min per prefix on `/api/github|resume|admin` (`trust proxy 1`) + user-scoped 30/min after `requireAuth`. Scoring/catalog/GitHub/what-if Node-native (`scoring.js` etc.); only resume proxies to Python (`POST /ai/resume/*`) with heuristic fallback `source:"fallback"`. All controllers thin, services thick; Appwrite calls parallelized.
 
 > **Route groups (JWT-guarded unless noted):**
 

@@ -98,6 +98,9 @@ Python handles AI/ML processing.
 - The frontend calls Appwrite directly for auth, database reads/writes, storage, and realtime.
 - The frontend calls the Node backend only for business logic and AI orchestration.
 - Authentication is handled by Appwrite Auth. **Do not store passwords or hash passwords in application code.**
+- Access tokens are short-lived Appwrite JWTs (`account.createJWT()`, ~15 min); the Appwrite session underneath acts as the refresh token. There is no `refresh_token` artifact — refresh happens client-side by minting a fresh JWT while the session is valid.
+- Frontend JWT handling (`src/services/api.js`): cache reused until 60s before `exp`, cleared on login/signup/logout, single retry with a fresh JWT on 401.
+- Idle logout: no token is minted once the human is idle past 15 min (`src/services/activity.js`, `ss_last_activity` in localStorage, shared across tabs); `AuthContext` ends the session via a 30s check. Staying active keeps requests working indefinitely; going idle logs out (~15 min + ≤30s).
 - The Python service must not handle authentication.
 - Business-critical logic must not live in the frontend.
 
@@ -579,7 +582,7 @@ Every feature must strengthen the central product loop. Do not build isolated fe
 - Set in **Render → `skillsaarthi-node` → Environment** → Save → **Manual Deploy → Deploy latest commit**. Saving alone does not restart.
 - **Required:** `APPWRITE_ENDPOINT/PROJECT_ID/API_KEY/DATABASE_ID/RESUME_BUCKET_ID`, `FRONTEND_URL=https://YOUR-VERCEL-URL.vercel.app` (NOT localhost — used at `server/src/services/email.service.js:169`), `GITHUB_TOKEN` (optional, raises GitHub limit, enables GraphQL `contributionsCollection` at `server/src/services/github.service.js:153`), `AI_SERVICE_URL`, `ADMIN_EMAILS`, `SENDGRID_API_KEY` + `SENDGRID_SENDER` (preferred over SMTP, verified at https://app.sendgrid.com/settings/sender_auth/senders).
 - **Email:** Render free tier blocks `smtp.gmail.com:465` (ENETUNREACH). Use **SendGrid HTTPS** (`SENDGRID_API_KEY` + `SENDGRID_SENDER=skillsaarthi <...@gmail.com>` - verified Single Sender, no domain needed) at `email.service.js:77-114` (`fetch https://api.sendgrid.com/v3/mail/send`). Check **Render → Logs** for `[email:sendgrid] Sent` vs `Send failed` vs `ENETUNREACH`.
-- **Rate-limit & proxy:** `server/src/app.js` `trust proxy 1` + `app.js` limiter `30/min` on `/api/github|resume|admin`. Health checks `GET /` + `GET /health` at `app.js` are not rate-limited — point cron-job.org at `/health` (`server/src/app.js`, `ai-service/app/main.py`).
+- **Rate-limit & proxy:** `server/src/app.js` `trust proxy 1` + one `express-rate-limit` instance per prefix (`30/min` each on `/api/github`, `/api/resume`, `/api/admin` — never share one instance across prefixes, or the buckets merge). Inside `github/resume/admin` routers, a second user-scoped `30/min` limit runs after `requireAuth` (`server/src/middleware/rateLimit.middleware.js`, default key `userId:path`). Health checks `GET /` + `GET /health` at `app.js` are not rate-limited — point cron-job.org at `/health` (`server/src/app.js`, `ai-service/app/main.py`).
 - **Email verification ON:** `isEmailConfigured()` true -> OTP via SendGrid, `EMAIL_VERIFICATION_ENABLED=true` at `Signup.jsx:7`, `VerificationBanner.jsx:6`, `RouteGuards.jsx:7` (non-blocking loader fix at `:47,56` to prevent GitHub flash), `FORGOT_PASSWORD_ENABLED=true` at `Login.jsx:8`.
 
 ## Render env (AI service, account 2)
@@ -603,3 +606,9 @@ Every feature must strengthen the central product loop. Do not build isolated fe
 - AI **Qwen** `Qwen3.6-35B-A3B` via the TCET gateway (env-swappable to any OpenAI-compatible provider) `ai-service/app/ai/client.py` (singleton client, TCET-only `chat_template_kwargs`, `chat()` + `chat_stream()`) + `POST /ai/assistant/chat` + `POST /ai/assistant/chat/stream` SSE `main.py` (`max_tokens 800`) + `server/src/services/assistant.service.js` 60s profile cache + `120s` timeout + `POST /api/assistant/chat/stream` SSE proxy + `src/pages/private/Assistant.jsx` streaming + markdown preview -> TopBar `Build -> AI Assistant`.
 - TopBar 3 hubs at `src/components/layout/TopBar.jsx`, Admin in `ProfileMenu` at `:132-142`, hamburger fixed for iPhone (<460px) at `:342-343,347,400`, Homes merged (`src/pages/public/Home.jsx` + re-export `private/Home.jsx`), `CommunityFab` kept in `src/App.jsx`.
 - Onboarding `6→4` at `src/pages/onboarding/Onboarding.jsx` with tabs/sub-step, no silent proficiency-2; scoring moved to Node (`server/src/services/scoring.js` + `careerCatalog.js` + `profile.builder.js`); `ai-service` now 5 resume + 2 assistant endpoints (`/chat` + `/chat/stream`); `app.set('trust proxy',1)` + 30/min limiter at `server/src/app.js`.
+
+## Today’s changes (27 Sept 2026) — rule reminder
+
+- **JWT expiry fixed:** `isExpired()` treats malformed dates as expired (`server/src/utils/token.js`); frontend clears the JWT cache on login/signup/logout, retries once with a fresh JWT on 401, and pads base64url before decoding `exp` (`src/services/api.js`, `src/services/auth.js`).
+- **Resume 429 fixed:** one rate-limit instance per prefix at `30/min` (`server/src/app.js`) + user-scoped `30/min` after `requireAuth` in `github/resume/admin` routers (existing `rateLimit.middleware.js`, no new helpers) — GitHub traffic can no longer drain the resume budget, and users behind one NAT IP no longer share a bucket.
+- **Idle logout (15 min):** new `src/services/activity.js` (`ss_last_activity`, cross-tab); `api.js` refuses to mint/attach JWTs while idle; `AuthContext` logs out on a 30s check. Active use refreshes silently forever; idle sessions die (~15 min + ≤30s). No warning modal yet — open question alongside broader JWT plans.
