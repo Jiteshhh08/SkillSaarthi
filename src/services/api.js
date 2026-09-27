@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { account } from './appwrite'
+import { isIdleTimeout } from './activity'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000',
@@ -31,6 +32,12 @@ api.interceptors.request.use(async (config) => {
       return config
     }
     const now = Date.now()
+    // Idle gate: a fresh access token is only minted while the human is
+    // active. Past the inactivity limit the session must die, not refresh.
+    if (isIdleTimeout()) {
+      clearJwtCache()
+      return config
+    }
     if (jwtCache.token && jwtCache.exp - 60_000 > now) {
       config.headers.Authorization = `Bearer ${jwtCache.token}`
       return config
@@ -66,6 +73,11 @@ api.interceptors.response.use(
       }
       original._jwtRetried = true
       clearJwtCache()
+      // Same idle gate as the request path: never mint to recover from a
+      // 401 when the human is gone — that 401 is the session dying.
+      if (isIdleTimeout()) {
+        return Promise.reject(error)
+      }
       try {
         await account.get()
         const { jwt } = await account.createJWT()

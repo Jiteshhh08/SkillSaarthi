@@ -8,6 +8,7 @@ import {
 import { getProfile } from '../services/profile'
 import { touchStreak } from '../services/streak'
 import { getVerificationStatus } from '../services/authApi'
+import { destroyActivityTracking, initActivityTracking, isIdleTimeout } from '../services/activity'
 import { AuthContext } from './authContext'
 
 export function AuthProvider({ children }) {
@@ -126,6 +127,25 @@ export function AuthProvider({ children }) {
     setProfile(null)
     setStreak({ current: 0, best: 0 })
   }, [])
+
+  // Activity tracking (once per app lifetime) + idle logout: end the session
+  // when the human has been gone longer than one access-token lifetime.
+  useEffect(() => {
+    initActivityTracking()
+    return () => {
+      destroyActivityTracking()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!user?.$id) return
+    const timer = setInterval(() => {
+      if (isIdleTimeout()) {
+        logout().catch(() => {})
+      }
+    }, 30_000)
+    return () => clearInterval(timer)
+  }, [user?.$id, logout])
 
   // Streak: runs once per user per session, reuses already-fetched profile to save 1 DB read
   useEffect(() => {

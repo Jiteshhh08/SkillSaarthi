@@ -1,5 +1,6 @@
 import { account, appwriteClient, AVATAR_BUCKET_ID, ID, storage } from './appwrite'
 import { clearJwtCache } from './api'
+import { clearActivity, touchActivity } from './activity'
 
 export async function signUp(name, email, password) {
   clearJwtCache()
@@ -9,11 +10,14 @@ export async function signUp(name, email, password) {
 
 export async function login(email, password) {
   clearJwtCache()
-  return account.createEmailPasswordSession(email, password)
+  const session = await account.createEmailPasswordSession(email, password)
+  touchActivity()
+  return session
 }
 
 export async function logout() {
   clearJwtCache()
+  clearActivity()
   try {
     await account.deleteSession('current')
   } catch {
