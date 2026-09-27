@@ -22,17 +22,40 @@ app.set('trust proxy', 1)
 app.use(cors())
 app.use(express.json())
 
-const sensitiveLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, code: 'RATE_LIMITED', message: 'Too many requests, try again shortly.' },
-})
-
-app.use('/api/github', sensitiveLimiter)
-app.use('/api/resume', sensitiveLimiter)
-app.use('/api/admin', sensitiveLimiter)
+// Coarse IP-based abuse protection, 30/min per prefix (matching docs).
+// One instance PER prefix — a single shared instance made /api/github +
+// /api/resume + /api/admin drain one bucket, so a full resume run 429'd.
+// Per-user fairness is enforced inside the routers (after requireAuth).
+app.use(
+  '/api/github',
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, code: 'RATE_LIMITED', message: 'Too many requests, try again shortly.' },
+  }),
+)
+app.use(
+  '/api/resume',
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, code: 'RATE_LIMITED', message: 'Too many requests, try again shortly.' },
+  }),
+)
+app.use(
+  '/api/admin',
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, code: 'RATE_LIMITED', message: 'Too many requests, try again shortly.' },
+  }),
+)
 
 // Lightweight root + health routes for uptime monitoring (cron-job.org).
 app.get('/', (_req, res) => {

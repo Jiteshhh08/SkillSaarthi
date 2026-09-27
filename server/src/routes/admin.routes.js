@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.middleware.js'
 import { requireAdmin } from '../middleware/admin.middleware.js'
+import { rateLimit } from '../middleware/rateLimit.middleware.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { ApiError } from '../utils/ApiError.js'
 import { notify, notifyAllUsers, resolveUserIdByEmail } from '../services/notification.service.js'
@@ -13,7 +14,16 @@ import {
 
 const router = Router()
 
-router.use(requireAuth, requireAdmin)
+// Per-user fairness (runs AFTER requireAuth, so req.user is set).
+router.use(
+  requireAuth,
+  requireAdmin,
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    message: 'Too many admin requests. Please wait a minute and try again.',
+  }),
+)
 
 router.get('/me', (_req, res) => {
   res.json({ success: true, data: { is_admin: true } })

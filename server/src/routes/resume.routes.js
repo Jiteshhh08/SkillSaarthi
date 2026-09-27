@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.middleware.js'
+import { rateLimit } from '../middleware/rateLimit.middleware.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { ApiError } from '../utils/ApiError.js'
 import {
@@ -16,7 +17,17 @@ import {
 
 const router = Router()
 
-router.use(requireAuth)
+// Per-user fairness (runs AFTER requireAuth, so req.user is set).
+// No keyGenerator needed: the shared middleware already keys on
+// `userId:path` (or `ip:path` when logged out).
+router.use(
+  requireAuth,
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    message: 'Too many resume requests. Please wait a minute and try again.',
+  }),
+)
 
 function parseJsonBody(value) {
   if (!value) return undefined

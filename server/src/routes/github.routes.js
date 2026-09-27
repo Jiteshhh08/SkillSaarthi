@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.middleware.js'
+import { rateLimit } from '../middleware/rateLimit.middleware.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { ApiError } from '../utils/ApiError.js'
 import { analyzeGitHub, getGitHubBinding, GITHUB_USERNAME_PATTERN } from '../services/github.service.js'
@@ -8,7 +9,15 @@ import { config } from '../config/environment.js'
 
 const router = Router()
 
-router.use(requireAuth)
+// Per-user fairness (runs AFTER requireAuth, so req.user is set).
+router.use(
+  requireAuth,
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    message: 'Too many GitHub requests. Please wait a minute and try again.',
+  }),
+)
 
 router.post(
   '/analyze',
