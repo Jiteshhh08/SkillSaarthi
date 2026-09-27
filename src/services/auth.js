@@ -1,15 +1,19 @@
 import { account, appwriteClient, AVATAR_BUCKET_ID, ID, storage } from './appwrite'
+import { clearJwtCache } from './api'
 
 export async function signUp(name, email, password) {
+  clearJwtCache()
   await account.create(ID.unique(), email, password, name)
   return login(email, password)
 }
 
 export async function login(email, password) {
+  clearJwtCache()
   return account.createEmailPasswordSession(email, password)
 }
 
 export async function logout() {
+  clearJwtCache()
   try {
     await account.deleteSession('current')
   } catch {

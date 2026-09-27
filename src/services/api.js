@@ -7,9 +7,15 @@ const api = axios.create({
 
 let jwtCache = { token: '', exp: 0 }
 
+export function clearJwtCache() {
+  jwtCache = { token: '', exp: 0 }
+}
+
 function getJwtExp(token) {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    let b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    while (b64.length % 4) b64 += '='
+    const payload = JSON.parse(atob(b64))
     return Number(payload.exp) ? payload.exp * 1000 : 0
   } catch {
     return 0
@@ -48,7 +54,33 @@ api.interceptors.request.use(async (config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => Promise.reject(error),
+  async (error) => {
+    const original = error?.config
+    const status = error?.response?.status
+    // Fallback to fetch on 401: cached JWT may be stale/revoked before wall-clock exp.
+    // Clear cache, mint a fresh JWT once, and retry the original request.
+    if (status === 401 && original && !original._jwtRetried) {
+      const url = String(original.url || '')
+      if (PUBLIC_AUTH_PATHS.some((p) => url.includes(p))) {
+        return Promise.reject(error)
+      }
+      original._jwtRetried = true
+      clearJwtCache()
+      try {
+        await account.get()
+        const { jwt } = await account.createJWT()
+        if (jwt) {
+          jwtCache = { token: jwt, exp: getJwtExp(jwt) || Date.now() + 14 * 60 * 1000 }
+          original.headers = original.headers || {}
+          original.headers.Authorization = `Bearer ${jwt}`
+          return api(original)
+        }
+      } catch {
+        // no active session or mint failed: fall through to reject
+      }
+    }
+    return Promise.reject(error)
+  },
 )
 
 export default api

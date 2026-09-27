@@ -10,7 +10,9 @@ export function hashToken(token) {
 
 export function isExpired(expiresAt) {
   if (!expiresAt) return true
-  return new Date(expiresAt).getTime() < Date.now()
+  const t = new Date(expiresAt).getTime()
+  if (Number.isNaN(t)) return true
+  return t < Date.now()
 }
 
 export function expiryDate(msFromNow) {
