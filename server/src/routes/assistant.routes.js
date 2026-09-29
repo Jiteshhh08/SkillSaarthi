@@ -4,6 +4,7 @@ import { asyncHandler } from '../utils/asyncHandler.js'
 import { ApiError } from '../utils/ApiError.js'
 import { config } from '../config/environment.js'
 import { chatWithAssistant, getCachedProfile } from '../services/assistant.service.js'
+import { aiHeaders } from '../utils/aiHeaders.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -36,7 +37,7 @@ router.post('/chat/stream', asyncHandler(async (req, res) => {
   try {
     const upstream = await fetch(`${config.aiServiceUrl}/ai/assistant/chat/stream`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: aiHeaders,
       body: JSON.stringify({ message, profile, history }),
       signal: controller.signal,
     })
