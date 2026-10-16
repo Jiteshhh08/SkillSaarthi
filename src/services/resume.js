@@ -1,8 +1,16 @@
 import api from './api'
-import { ID, RESUME_BUCKET_ID, storage } from './appwrite'
+import { ID, Permission, RESUME_BUCKET_ID, Role, storage } from './appwrite'
 
-export async function uploadResume(file) {
-  return storage.createFile(RESUME_BUCKET_ID, ID.unique(), file)
+export async function uploadResume(file, userId) {
+  // Resume files are private to their owner.
+  const permissions = userId
+    ? [
+        Permission.read(Role.user(userId)),
+        Permission.update(Role.user(userId)),
+        Permission.delete(Role.user(userId)),
+      ]
+    : undefined
+  return storage.createFile(RESUME_BUCKET_ID, ID.unique(), file, permissions)
 }
 
 export async function extractResume(file, options = {}) {
@@ -10,7 +18,7 @@ export async function extractResume(file, options = {}) {
   let fileName = options.fileName || file?.name || ''
 
   if (file && !fileId) {
-    const uploaded = await uploadResume(file)
+    const uploaded = await uploadResume(file, options.userId)
     fileId = uploaded.$id
   }
 
@@ -89,7 +97,7 @@ export async function analyzeResume(file, options = {}) {
   let fileName = options.fileName || file?.name || ''
 
   if (file && !fileId) {
-    const uploaded = await uploadResume(file)
+    const uploaded = await uploadResume(file, options.userId)
     fileId = uploaded.$id
   }
 

@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "setup:appwrite": "node scripts/setup-appwrite.mjs",
+    "migrate:security": "node scripts/migrate-appwrite-security.mjs",
     "seed:catalog": "node scripts/seed-catalog.mjs",
     "import:internships": "node scripts/import-internships.mjs"
   },

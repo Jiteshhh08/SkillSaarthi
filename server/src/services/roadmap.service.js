@@ -96,7 +96,7 @@ export async function generateRoadmap(userId, { careerId, title }) {
   const taskRows = [...buildSkillTasks(gaps, career.name), ...buildMilestoneTasks(career.name)]
 
   const tasks = await Promise.all(
-    taskRows.map((row, i) => createRoadmapTask(roadmap.$id, { ...row, order_index: i + 1 })),
+    taskRows.map((row, i) => createRoadmapTask(roadmap.$id, { ...row, order_index: i + 1 }, userId)),
   )
 
   return { roadmap, tasks }
@@ -195,7 +195,7 @@ export async function addRoadmapTask(userId, roadmapId, input) {
     estimated_hours: Number(input.estimated_hours) > 0 ? Math.round(Number(input.estimated_hours)) : 1,
     order_index: orderIndex,
     status: 'pending',
-  })
+  }, userId)
 
   const nextTasks = await renumberTasks(roadmapId, [...tasks, created])
   const roadmapUpdate = progressRoadmapUpdate(roadmap, nextTasks)

@@ -188,7 +188,7 @@ export default function ResumeAnalysis() {
       setError('Choose a resume to extract.')
       return
     }
-    const data = await run('Extracting…', () => extractResume(file, { applySkills }))
+    const data = await run('Extracting…', () => extractResume(file, { applySkills, userId: user?.$id }))
     if (!data) return
     setAnalysisId(data.analysis_id)
     setFileName(data.file_name || file.name)

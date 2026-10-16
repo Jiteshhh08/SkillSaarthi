@@ -1,4 +1,4 @@
-import { databases, users, COLLECTIONS, ID, Query } from '../config/appwrite.js'
+import { databases, users, COLLECTIONS, ID, Permission, Query, Role } from '../config/appwrite.js'
 import { config } from '../config/environment.js'
 import { expiryDate, isExpired } from '../utils/token.js'
 import { encryptText, decryptText, generateOtp, hashOtp } from '../utils/crypto.js'
@@ -157,7 +157,11 @@ export async function verifyPendingOtp({ email, otp }) {
       is_email_verified: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    })
+    }, [
+      Permission.read(Role.user(appwriteUser.$id)),
+      Permission.update(Role.user(appwriteUser.$id)),
+      Permission.delete(Role.user(appwriteUser.$id)),
+    ])
   } catch (err) {
     // if profile already exists (race), update it
     try {

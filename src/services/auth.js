@@ -1,4 +1,4 @@
-import { account, appwriteClient, AVATAR_BUCKET_ID, ID, storage } from './appwrite'
+import { account, appwriteClient, AVATAR_BUCKET_ID, ID, Permission, Role, storage } from './appwrite'
 import { clearJwtCache } from './api'
 import { clearActivity, touchActivity } from './activity'
 
@@ -44,11 +44,20 @@ export async function updateName(name) {
   return account.updateName(name)
 }
 
-export async function uploadAvatar(file) {
+export async function uploadAvatar(file, userId) {
   if (!AVATAR_BUCKET_ID) {
     throw new Error('Avatar uploads are not configured (missing VITE_APPWRITE_AVATAR_BUCKET_ID).')
   }
-  const uploaded = await storage.createFile(AVATAR_BUCKET_ID, ID.unique(), file)
+  // Avatars are shown across the community, so any signed-in user may read
+  // them; only the owner can update or delete the file.
+  const permissions = userId
+    ? [
+        Permission.read(Role.users()),
+        Permission.update(Role.user(userId)),
+        Permission.delete(Role.user(userId)),
+      ]
+    : undefined
+  const uploaded = await storage.createFile(AVATAR_BUCKET_ID, ID.unique(), file, permissions)
   return account.updatePrefs({ avatar_file_id: uploaded.$id })
 }
 

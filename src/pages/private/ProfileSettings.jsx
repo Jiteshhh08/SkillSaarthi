@@ -61,7 +61,7 @@ export default function ProfileSettings() {
         await updateName(trimmed)
       }
       if (file) {
-        await uploadAvatar(file)
+        await uploadAvatar(file, user?.$id)
       }
       await refreshUser()
       setFile(null)

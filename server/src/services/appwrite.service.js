@@ -1,4 +1,4 @@
-import { Client, Databases, Query, Users } from 'node-appwrite'
+import { Client, Databases, Permission, Query, Role, Users } from 'node-appwrite'
 import { config } from '../config/environment.js'
 
 const client = new Client()
@@ -27,6 +27,26 @@ export const COLLECTIONS = {
   communityComments: 'community_comments',
   postLikes: 'post_likes',
   postBookmarks: 'post_bookmarks',
+}
+
+// Document-level permissions. With documentSecurity enabled on these
+// collections, every new document must carry its own access rules.
+function ownerPerms(userId) {
+  return [
+    Permission.read(Role.user(userId)),
+    Permission.update(Role.user(userId)),
+    Permission.delete(Role.user(userId)),
+  ]
+}
+
+// Community content is readable by any signed-in user; only the author can
+// modify or delete it.
+function communityPerms(userId) {
+  return [
+    Permission.read(Role.users()),
+    Permission.update(Role.user(userId)),
+    Permission.delete(Role.user(userId)),
+  ]
 }
 
 async function listAll(collectionId, queries = []) {
@@ -161,6 +181,7 @@ export async function saveRecommendations(userId, recommendations) {
         }),
         created_at: new Date().toISOString(),
       },
+      ownerPerms(userId),
     )
     saved.push(created)
   }
@@ -177,7 +198,7 @@ export async function createRoadmap(userId, { career_id, title }) {
     progress_percent: 0,
     created_at: now,
     updated_at: now,
-  })
+  }, ownerPerms(userId))
 }
 
 export async function listRoadmaps(userId) {
@@ -215,11 +236,17 @@ export async function listRoadmapTasks(roadmapId) {
   }
 }
 
-export async function createRoadmapTask(roadmapId, data) {
-  return databases.createDocument(config.appwrite.databaseId, COLLECTIONS.roadmapTasks, 'unique()', {
-    roadmap_id: roadmapId,
-    ...data,
-  })
+export async function createRoadmapTask(roadmapId, data, userId) {
+  return databases.createDocument(
+    config.appwrite.databaseId,
+    COLLECTIONS.roadmapTasks,
+    'unique()',
+    {
+      roadmap_id: roadmapId,
+      ...data,
+    },
+    userId ? ownerPerms(userId) : undefined,
+  )
 }
 
 export async function updateRoadmapTask(taskId, data) {
@@ -259,6 +286,7 @@ export async function upsertCommunityProfile(userId, data) {
     COLLECTIONS.communityProfiles,
     userId,
     { user_id: userId, ...data, created_at: now, updated_at: now },
+    communityPerms(userId),
   )
 }
 
@@ -296,6 +324,7 @@ export async function createCommunityPost(userId, data) {
       created_at: now,
       updated_at: now,
     },
+    communityPerms(userId),
   )
 }
 
@@ -345,6 +374,7 @@ export async function createCommunityComment(userId, postId, content) {
       content,
       created_at: new Date().toISOString(),
     },
+    communityPerms(userId),
   )
 }
 
@@ -378,7 +408,7 @@ export async function createCommunityLike(userId, postId) {
     user_id: userId,
     post_id: postId,
     created_at: new Date().toISOString(),
-  })
+  }, ownerPerms(userId))
 }
 
 export async function deleteCommunityLike(likeId) {
@@ -403,6 +433,7 @@ export async function createCommunityBookmark(userId, postId) {
       post_id: postId,
       created_at: new Date().toISOString(),
     },
+    ownerPerms(userId),
   )
 }
 

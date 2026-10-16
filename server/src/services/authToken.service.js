@@ -1,4 +1,4 @@
-import { databases, users, COLLECTIONS, ID, Query } from '../config/appwrite.js'
+import { databases, users, COLLECTIONS, ID, Permission, Query, Role } from '../config/appwrite.js'
 import { config } from '../config/environment.js'
 import { expiryDate, generateSecureToken, hashToken, isExpired } from '../utils/token.js'
 
@@ -140,7 +140,11 @@ export async function markEmailVerified(userId) {
         is_email_verified: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      })
+      }, [
+        Permission.read(Role.user(userId)),
+        Permission.update(Role.user(userId)),
+        Permission.delete(Role.user(userId)),
+      ])
     } catch {
       // ignore
     }

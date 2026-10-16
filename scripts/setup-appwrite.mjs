@@ -61,16 +61,24 @@ const client = new Client().setEndpoint(ENDPOINT).setProject(PROJECT_ID).setKey(
 const databases = new Databases(client)
 const storage = new Storage(client)
 
-// All authenticated users can create/read/update/delete their own-scoped documents.
-const USER_SCOPE = [
-  Permission.create(Role.users()),
-  Permission.read(Role.users()),
-  Permission.update(Role.users()),
-  Permission.delete(Role.users()),
-]
+// User-scoped collections: the collection only grants authenticated users the
+// ability to CREATE documents. Read/update/delete are enforced per document
+// (documentSecurity: true) so one user can never read another user's data.
+const USER_SCOPE = [Permission.create(Role.users())]
 
-// Global catalogs are read-only for authenticated users.
+// Community content (posts/comments/likes/bookmarks) is readable by every
+// signed-in user, while writes stay scoped to the document owner. Enforced
+// per document via documentSecurity: true.
+const COMMUNITY_SCOPE = [Permission.create(Role.users())]
+
+// Global catalogs are read-only for authenticated users and hold no personal
+// data, so they keep collection-level permissions (documentSecurity: false).
 const CATALOG_READ = [Permission.read(Role.users())]
+
+// Server-only collections (auth tokens, pending registrations). The Node
+// backend accesses them with the API key, which bypasses permissions, so the
+// browser client must have NO access whatsoever.
+const SERVER_ONLY = []
 
 const createdAt = { key: 'created_at', type: 'datetime', required: false }
 const updatedAt = { key: 'updated_at', type: 'datetime', required: false }
@@ -356,7 +364,7 @@ const COLLECTIONS = [
   {
     id: 'community_profiles',
     name: 'Community Profiles',
-    permissions: USER_SCOPE,
+    permissions: COMMUNITY_SCOPE,
     attributes: [
       { key: 'user_id', type: 'string', size: 100, required: true },
       { key: 'bio', type: 'string', size: 2000 },
@@ -371,7 +379,7 @@ const COLLECTIONS = [
   {
     id: 'community_posts',
     name: 'Community Posts',
-    permissions: USER_SCOPE,
+    permissions: COMMUNITY_SCOPE,
     attributes: [
       { key: 'user_id', type: 'string', size: 100, required: true },
       { key: 'title', type: 'string', size: 300, required: true },
@@ -400,7 +408,7 @@ const COLLECTIONS = [
   {
     id: 'community_comments',
     name: 'Community Comments',
-    permissions: USER_SCOPE,
+    permissions: COMMUNITY_SCOPE,
     attributes: [
       { key: 'user_id', type: 'string', size: 100, required: true },
       { key: 'post_id', type: 'string', size: 100, required: true },
@@ -415,7 +423,7 @@ const COLLECTIONS = [
   {
     id: 'post_likes',
     name: 'Post Likes',
-    permissions: USER_SCOPE,
+    permissions: COMMUNITY_SCOPE,
     attributes: [
       { key: 'user_id', type: 'string', size: 100, required: true },
       { key: 'post_id', type: 'string', size: 100, required: true },
@@ -429,7 +437,7 @@ const COLLECTIONS = [
   {
     id: 'post_bookmarks',
     name: 'Post Bookmarks',
-    permissions: USER_SCOPE,
+    permissions: COMMUNITY_SCOPE,
     attributes: [
       { key: 'user_id', type: 'string', size: 100, required: true },
       { key: 'post_id', type: 'string', size: 100, required: true },
@@ -443,7 +451,7 @@ const COLLECTIONS = [
   {
     id: 'email_verification_tokens',
     name: 'Email Verification Tokens',
-    permissions: USER_SCOPE,
+    permissions: SERVER_ONLY,
     attributes: [
       { key: 'user_id', type: 'string', size: 100, required: true },
       { key: 'email', type: 'string', size: 200, required: true },
@@ -460,7 +468,7 @@ const COLLECTIONS = [
   {
     id: 'password_reset_tokens',
     name: 'Password Reset Tokens',
-    permissions: USER_SCOPE,
+    permissions: SERVER_ONLY,
     attributes: [
       { key: 'user_id', type: 'string', size: 100, required: true },
       { key: 'email', type: 'string', size: 200, required: true },
@@ -477,14 +485,9 @@ const COLLECTIONS = [
   {
     id: 'pending_registrations',
     name: 'Pending Registrations',
-    permissions: [
-      Permission.create(Role.users()),
-      Permission.read(Role.users()),
-      Permission.update(Role.users()),
-      Permission.delete(Role.users()),
-      // Allow server (API key) to read/write even without user session;
-      // public client not needed — pending flow is via backend.
-    ],
+    // Server-only: the OTP signup flow is handled entirely by the backend via
+    // the API key. Never expose encrypted passwords or OTP hashes to clients.
+    permissions: SERVER_ONLY,
     attributes: [
       { key: 'email', type: 'string', size: 200, required: true },
       { key: 'name', type: 'string', size: 200, required: true },
@@ -568,8 +571,17 @@ async function ensureCollection(dbId, collection) {
     ;(info.indexes || []).forEach((i) => existingIndexes.add(i.key))
     console.log(`  = collection ${collection.id} already exists`)
   } catch {
-    await databases.createCollection(dbId, collection.id, collection.name, collection.permissions)
-    console.log(`  + collection ${collection.id}`)
+    // Catalogs hold no personal data and keep collection-level permissions.
+    // Every other collection enforces access per document.
+    const documentSecurity = collection.permissions !== CATALOG_READ
+    await databases.createCollection(
+      dbId,
+      collection.id,
+      collection.name,
+      collection.permissions,
+      documentSecurity,
+    )
+    console.log(`  + collection ${collection.id}${documentSecurity ? ' (document security)' : ''}`)
   }
 
   for (const attribute of collection.attributes) {
@@ -706,12 +718,10 @@ async function main() {
   }
 
   console.log('\n3) Storage buckets')
-  const BUCKET_PERMS = [
-    Permission.create(Role.users()),
-    Permission.read(Role.users()),
-    Permission.update(Role.users()),
-    Permission.delete(Role.users()),
-  ]
+  // With file-level security enabled, the bucket only needs to allow
+  // authenticated users to CREATE files. Read access is granted per file at
+  // upload time (resume = owner only, avatar = any signed-in user).
+  const BUCKET_PERMS = [Permission.create(Role.users())]
 
   const RESUME_EXTENSIONS = ['pdf', 'docx', 'doc', 'json']
   // Images are uploaded into the same upload bucket because the free Appwrite
@@ -726,7 +736,7 @@ async function main() {
         console.log(`  = bucket ${id} already exists (${existing.name})`)
         return id
       }
-      await storage.createBucket(id, name, BUCKET_PERMS, false, true, 5 * 1024 * 1024, extensions, 'gzip', false, false, false)
+      await storage.createBucket(id, name, BUCKET_PERMS, true, true, 5 * 1024 * 1024, extensions, 'gzip', false, false, false)
       console.log(`  + bucket ${id} (${name})`)
       return id
     } catch (error) {
