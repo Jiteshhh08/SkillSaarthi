@@ -5,7 +5,12 @@ import { SpeedInsights } from "@vercel/speed-insights/react"
 import './index.css'
 import App from './App.jsx'
 
-createRoot(document.getElementById('root')).render(
+const container = document.getElementById('root')
+// Public pages ship a prerendered snapshot for crawlers; clear it before the
+// client app mounts so React fully owns the tree.
+if (container.hasChildNodes()) container.replaceChildren()
+
+createRoot(container).render(
   <StrictMode>
     <App />
     <Analytics />
