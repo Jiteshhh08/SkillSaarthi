@@ -1,0 +1,35 @@
+# SkillSaarthi — https://skillsaarthi.vercel.app
+# Public pages are open to all crawlers. Account, personalized and admin
+# areas are blocked from crawling since they require authentication.
+
+User-agent: *
+Allow: /
+
+# Authentication & account utility pages
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-email
+Disallow: /verify-otp
+Disallow: /verify-pending
+
+# Private, personalized and admin areas
+Disallow: /home
+Disallow: /onboarding
+Disallow: /assessment
+Disallow: /dashboard
+Disallow: /recommendations
+Disallow: /skill-gaps
+Disallow: /roadmaps
+Disallow: /github
+Disallow: /resume
+Disallow: /career-compare
+Disallow: /what-if
+Disallow: /internships
+Disallow: /community
+Disallow: /assistant
+Disallow: /settings
+Disallow: /admin
+
+Sitemap: https://skillsaarthi.vercel.app/sitemap.xml
