@@ -1,6 +1,9 @@
 {
-  "cleanUrls": true,
   "rewrites": [
+    {
+      "source": "/founders",
+      "destination": "/founders.html"
+    },
     {
       "source": "/(.*)",
       "destination": "/"
