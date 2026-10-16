@@ -4,5 +4,20 @@
       "source": "/(.*)",
       "destination": "/"
     }
+  ],
+  "headers": [
+    {
+      "source": "/((login|signup|forgot-password|reset-password|verify-email|verify-otp|verify-pending|home|onboarding|assessment|dashboard|recommendations|skill-gaps|roadmaps|github|resume|career-compare|what-if|internships|community|assistant|settings|admin)(/.*)?)",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    }
   ]
 }

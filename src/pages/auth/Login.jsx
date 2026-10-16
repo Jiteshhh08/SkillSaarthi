@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { usePageMeta } from '../../hooks/usePageMeta'
 import { getVerificationStatus } from '../../services/authApi'
 import { getAdminStatus } from '../../services/admin'
 import TopBar from '../../components/layout/TopBar'
@@ -18,6 +19,12 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
+  usePageMeta({
+    title: 'Log in | SkillSaarthi',
+    description: 'Log in to SkillSaarthi to view your personalized career matches, skill gaps and learning roadmap.',
+    path: '/login',
+    robots: 'noindex, nofollow',
+  })
 
   useEffect(() => {
     if (searchParams.get('verify') === 'pending') {

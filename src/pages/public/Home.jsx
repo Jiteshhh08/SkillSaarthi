@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useAdmin } from '../../hooks/useAdmin'
+import { usePageMeta } from '../../hooks/usePageMeta'
 import { isProfileComplete } from '../../services/profile'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
@@ -44,6 +45,7 @@ const SUBJECTS = [
 export default function Home() {
   const { user, profile, profileLoading, loading: authLoading } = useAuth()
   const { isAdmin, loading: adminLoading } = useAdmin()
+  usePageMeta({ path: '/' })
 
   // Logged-in view merged into same Home (so / and /home share one component)
   if (user) {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { usePageMeta } from '../../hooks/usePageMeta'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
 import Icon, { GithubIcon } from '../../components/common/Icon'
@@ -234,27 +235,12 @@ function FounderRow({ founder, index }) {
 
 export default function Founders() {
   const { user, loading } = useAuth()
-  useEffect(() => {
-    const previousTitle = document.title
-    document.title = 'Meet the Founders | SkillSaarthi'
-    let meta = document.querySelector('meta[name="description"]')
-    const created = !meta
-    if (created) {
-      meta = document.createElement('meta')
-      meta.setAttribute('name', 'description')
-      document.head.appendChild(meta)
-    }
-    const previousDescription = meta.getAttribute('content')
-    meta.setAttribute(
-      'content',
-      'Meet the people behind SkillSaarthi and learn about the vision behind the platform.'
-    )
-    return () => {
-      document.title = previousTitle
-      if (created) meta.remove()
-      else if (previousDescription != null) meta.setAttribute('content', previousDescription)
-    }
-  }, [])
+  usePageMeta({
+    title: 'Meet the Founders | SkillSaarthi',
+    description:
+      'Meet the people behind SkillSaarthi and learn about the vision behind the platform.',
+    path: '/founders',
+  })
 
   return (
     <div className="min-h-screen bg-canvas text-ink">

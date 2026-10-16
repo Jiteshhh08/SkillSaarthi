@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signupPending } from '../../services/authApi'
 import { useAuth } from '../../hooks/useAuth'
+import { usePageMeta } from '../../hooks/usePageMeta'
 import TopBar from '../../components/layout/TopBar'
 
 const EMAIL_VERIFICATION_ENABLED = true // enabled — SendGrid HTTPS active on Render
@@ -15,6 +16,12 @@ export default function Signup() {
   const [submitting, setSubmitting] = useState(false)
   const { signUp } = useAuth()
   const navigate = useNavigate()
+  usePageMeta({
+    title: 'Create your account | SkillSaarthi',
+    description: 'Create a free SkillSaarthi account to get personalized career recommendations, skill-gap analysis and a learning roadmap.',
+    path: '/signup',
+    robots: 'noindex, nofollow',
+  })
 
   const handleSubmit = async (event) => {
     event.preventDefault()
