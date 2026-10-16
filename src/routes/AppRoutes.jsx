@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import { ProfileCompleteRoute, ProtectedRoute, PublicOnlyRoute } from '../components/common/RouteGuards'
 
 const Dashboard = lazy(() => import('../pages/private/Dashboard'))
@@ -29,6 +29,7 @@ const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'))
 const ResetPassword = lazy(() => import('../pages/auth/ResetPassword'))
 const Home = lazy(() => import('../pages/public/Home'))
 const Founders = lazy(() => import('../pages/public/Founders'))
+const NotFound = lazy(() => import('../pages/public/NotFound'))
 const PrivateHome = lazy(() => import('../pages/private/Home'))
 const VerifyEmail = lazy(() => import('../pages/auth/VerifyEmail'))
 const VerifyOtp = lazy(() => import('../pages/auth/VerifyOtp'))
@@ -290,7 +291,7 @@ export default function AppRoutes() {
         }
       />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
   )

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { signupPending } from '../../services/authApi'
 import { useAuth } from '../../hooks/useAuth'
 import { usePageMeta } from '../../hooks/usePageMeta'
+import { EVENTS, trackEvent } from '../../services/analytics'
 import TopBar from '../../components/layout/TopBar'
 
 const EMAIL_VERIFICATION_ENABLED = true // enabled — SendGrid HTTPS active on Render
@@ -36,6 +37,7 @@ export default function Signup() {
       return
     }
     setSubmitting(true)
+    trackEvent(EVENTS.SIGNUP_SUBMITTED)
     try {
       if (!EMAIL_VERIFICATION_ENABLED) {
         // Direct create — no OTP, auto-login via AuthContext

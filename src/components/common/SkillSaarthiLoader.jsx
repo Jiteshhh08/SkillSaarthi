@@ -7,16 +7,16 @@ export default function SkillSaarthiLoader({ onDone }) {
   useEffect(() => {
     reducedRef.current = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     if (reducedRef.current) {
-      const t = setTimeout(() => onDone?.(), 380)
+      const t = setTimeout(() => onDone?.(), 200)
       return () => clearTimeout(t)
     }
-    // S 350, kill 600, Saarthi 700, hold 350, exit 400
+    // Compact intro: S 150, kill 300, सारथी 300, hold 150, exit 300
     const timers = [
-      setTimeout(() => setPhase(1), 360),
-      setTimeout(() => setPhase(2), 980),
-      setTimeout(() => setPhase(3), 1700),
-      setTimeout(() => setPhase(4), 2050),
-      setTimeout(() => onDone?.(), 2450),
+      setTimeout(() => setPhase(1), 150),
+      setTimeout(() => setPhase(2), 450),
+      setTimeout(() => setPhase(3), 750),
+      setTimeout(() => setPhase(4), 900),
+      setTimeout(() => onDone?.(), 1100),
     ]
     return () => timers.forEach(clearTimeout)
   }, [onDone])
@@ -42,7 +42,7 @@ export default function SkillSaarthiLoader({ onDone }) {
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#fafafa] px-6 transition-opacity ${exiting ? 'opacity-0 pointer-events-none duration-700' : 'opacity-100 duration-400'}`}
+      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#fafafa] px-6 transition-opacity ${exiting ? 'opacity-0 pointer-events-none duration-300' : 'opacity-100 duration-200'}`}
       aria-label="Loading SkillSaarthi"
     >
       {/* Wordmark — Skill + सारथी perfectly aligned as in reference image */}
@@ -57,7 +57,7 @@ export default function SkillSaarthiLoader({ onDone }) {
             style={{
               maxWidth: phase === 0 ? '1ch' : phase >= 1 ? '1ch' : 0,
               display: 'inline-block',
-              animation: phase === 0 ? 'typeS 360ms steps(1, end) forwards' : undefined,
+              animation: phase === 0 ? 'typeS 150ms steps(1, end) forwards' : undefined,
               borderRightColor: phase === 0 ? '#0f766e' : 'transparent',
             }}
           >
@@ -68,7 +68,7 @@ export default function SkillSaarthiLoader({ onDone }) {
             style={{
               maxWidth: phase < 1 ? 0 : '4ch',
               display: 'inline-block',
-              transition: phase === 1 ? 'max-width 600ms steps(4, end)' : undefined,
+              transition: phase === 1 ? 'max-width 300ms steps(4, end)' : undefined,
             }}
           >
             kill
@@ -81,7 +81,7 @@ export default function SkillSaarthiLoader({ onDone }) {
             style={{
               maxWidth: phase < 2 ? 0 : '6ch',
               display: 'inline-block',
-              transition: phase === 2 ? 'max-width 720ms steps(6, end)' : undefined,
+              transition: phase === 2 ? 'max-width 300ms steps(6, end)' : undefined,
             }}
           >
             सारथी
@@ -97,22 +97,4 @@ export default function SkillSaarthiLoader({ onDone }) {
       `}</style>
     </div>
   )
-}
-
-// Session gate — only show on initial load per session
-export function useShouldShowLoader() {
-  const [show, setShow] = useState(false)
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (sessionStorage.getItem('ss_loader_shown')) {
-      setShow(false)
-      return
-    }
-    setShow(true)
-  }, [])
-  const markShown = () => {
-    try { sessionStorage.setItem('ss_loader_shown', '1') } catch {}
-    setShow(false)
-  }
-  return [show, markShown]
 }

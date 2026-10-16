@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useAdmin } from '../../hooks/useAdmin'
 import { usePageMeta } from '../../hooks/usePageMeta'
+import { EVENTS, trackEvent } from '../../services/analytics'
 import { isProfileComplete } from '../../services/profile'
 import TopBar from '../../components/layout/TopBar'
 import Footer from '../../components/layout/Footer'
@@ -119,7 +120,7 @@ export default function Home() {
             missing, and builds a personalized learning roadmap to get you career-ready.
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
-            <Link to="/signup" className="btn-primary">Get started</Link>
+            <Link to="/signup" className="btn-primary" onClick={() => trackEvent(EVENTS.SIGNUP_STARTED)}>Get started</Link>
             <Link to="/login" className="btn-secondary">Explore careers</Link>
           </div>
         </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { usePageMeta } from '../../hooks/usePageMeta'
+import { EVENTS, trackEvent } from '../../services/analytics'
 import { getVerificationStatus } from '../../services/authApi'
 import { getAdminStatus } from '../../services/admin'
 import TopBar from '../../components/layout/TopBar'
@@ -43,6 +44,7 @@ export default function Login() {
     setSubmitting(true)
     try {
       await login(email, password)
+      trackEvent(EVENTS.LOGIN_SUCCESS)
       // Allow login, but gate home — keep session for resend/verify
       let isAdmin = false
       try {

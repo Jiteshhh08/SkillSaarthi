@@ -7,18 +7,24 @@ import CommunityFab from './components/layout/CommunityFab'
 import VerificationBanner from './components/common/VerificationBanner'
 import SkillSaarthiLoader from './components/common/SkillSaarthiLoader.jsx'
 
+const LOADER_SEEN_KEY = 'ss_loader_seen'
+
 function AppShell() {
+  // Show the brand splash only the very first time a visitor opens the app.
   const [showSplash, setShowSplash] = useState(() => {
     if (typeof window === 'undefined') return false
-    return !sessionStorage.getItem('ss_loader_shown')
+    try {
+      return !localStorage.getItem(LOADER_SEEN_KEY)
+    } catch {
+      return false
+    }
   })
 
   useEffect(() => {
     if (!showSplash) return
-    const id = setTimeout(() => {
-      try { sessionStorage.setItem('ss_loader_shown', '1') } catch {}
-    }, 3400)
-    return () => clearTimeout(id)
+    try {
+      localStorage.setItem(LOADER_SEEN_KEY, '1')
+    } catch {}
   }, [showSplash])
 
   if (showSplash) {
