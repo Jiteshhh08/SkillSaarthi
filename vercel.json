@@ -8,7 +8,7 @@
   ],
   "headers": [
     {
-      "source": "/((login|signup|forgot-password|reset-password|verify-email|verify-otp|verify-pending|home|onboarding|assessment|dashboard|recommendations|skill-gaps|roadmaps|github|resume|career-compare|what-if|internships|community|assistant|settings|admin)(/.*)?)",
+      "source": "/((?:login|signup|forgot-password|reset-password|verify-email|verify-otp|verify-pending|home|onboarding|assessment|dashboard|recommendations|skill-gaps|roadmaps|github|resume|career-compare|what-if|internships|community|assistant|settings|admin)(?:/.*)?)",
       "headers": [
         { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
       ]
