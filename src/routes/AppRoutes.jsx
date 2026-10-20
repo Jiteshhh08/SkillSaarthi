@@ -1,43 +1,51 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { ProfileCompleteRoute, ProtectedRoute, PublicOnlyRoute } from '../components/common/RouteGuards'
+import { routeModules } from './routeModules'
 
-const Dashboard = lazy(() => import('../pages/private/Dashboard'))
-const EducationLevel = lazy(() => import('../pages/private/EducationLevel'))
-const Assessment = lazy(() => import('../pages/private/Assessment'))
-const GitHubAnalysis = lazy(() => import('../pages/private/GitHubAnalysis'))
-const ResumeAnalysis = lazy(() => import('../pages/private/ResumeAnalysis'))
-const CareerComparison = lazy(() => import('../pages/private/CareerComparison'))
-const WhatIfSimulator = lazy(() => import('../pages/private/WhatIfSimulator'))
-const Internships = lazy(() => import('../pages/private/Internships'))
-const Recommendations = lazy(() => import('../pages/private/Recommendations'))
-const SkillGaps = lazy(() => import('../pages/private/SkillGaps'))
-const Roadmaps = lazy(() => import('../pages/private/Roadmaps'))
-const RoadmapDetail = lazy(() => import('../pages/private/RoadmapDetail'))
-const AdminInternships = lazy(() => import('../pages/private/AdminInternships'))
-const Community = lazy(() => import('../pages/private/Community'))
-const CommunityDrafts = lazy(() => import('../pages/private/CommunityDrafts'))
-const CommunityPostDetail = lazy(() => import('../pages/private/CommunityPostDetail'))
-const CommunitySaved = lazy(() => import('../pages/private/CommunitySaved'))
-const CommunityUserProfile = lazy(() => import('../pages/private/CommunityUserProfile'))
-const ProfileSettings = lazy(() => import('../pages/private/ProfileSettings'))
-const Assistant = lazy(() => import('../pages/private/Assistant'))
-const Onboarding = lazy(() => import('../pages/onboarding/Onboarding'))
-const Login = lazy(() => import('../pages/auth/Login'))
-const Signup = lazy(() => import('../pages/auth/Signup'))
-const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'))
-const ResetPassword = lazy(() => import('../pages/auth/ResetPassword'))
-const Home = lazy(() => import('../pages/public/Home'))
-const Founders = lazy(() => import('../pages/public/Founders'))
-const NotFound = lazy(() => import('../pages/public/NotFound'))
-const PrivateHome = lazy(() => import('../pages/private/Home'))
-const VerifyEmail = lazy(() => import('../pages/auth/VerifyEmail'))
-const VerifyOtp = lazy(() => import('../pages/auth/VerifyOtp'))
-const VerifyPending = lazy(() => import('../pages/auth/VerifyPending'))
+const Dashboard = lazy(routeModules.Dashboard)
+const EducationLevel = lazy(routeModules.EducationLevel)
+const Assessment = lazy(routeModules.Assessment)
+const GitHubAnalysis = lazy(routeModules.GitHubAnalysis)
+const ResumeAnalysis = lazy(routeModules.ResumeAnalysis)
+const CareerComparison = lazy(routeModules.CareerComparison)
+const WhatIfSimulator = lazy(routeModules.WhatIfSimulator)
+const Internships = lazy(routeModules.Internships)
+const Recommendations = lazy(routeModules.Recommendations)
+const SkillGaps = lazy(routeModules.SkillGaps)
+const Roadmaps = lazy(routeModules.Roadmaps)
+const RoadmapDetail = lazy(routeModules.RoadmapDetail)
+const AdminInternships = lazy(routeModules.AdminInternships)
+const Community = lazy(routeModules.Community)
+const CommunityDrafts = lazy(routeModules.CommunityDrafts)
+const CommunityPostDetail = lazy(routeModules.CommunityPostDetail)
+const CommunitySaved = lazy(routeModules.CommunitySaved)
+const CommunityUserProfile = lazy(routeModules.CommunityUserProfile)
+const ProfileSettings = lazy(routeModules.ProfileSettings)
+const Assistant = lazy(routeModules.Assistant)
+const Onboarding = lazy(routeModules.Onboarding)
+const Login = lazy(routeModules.Login)
+const Signup = lazy(routeModules.Signup)
+const ForgotPassword = lazy(routeModules.ForgotPassword)
+const ResetPassword = lazy(routeModules.ResetPassword)
+const Home = lazy(routeModules.Home)
+const Founders = lazy(routeModules.Founders)
+const NotFound = lazy(routeModules.NotFound)
+const PrivateHome = lazy(routeModules.PrivateHome)
+const VerifyEmail = lazy(routeModules.VerifyEmail)
+const VerifyOtp = lazy(routeModules.VerifyOtp)
+const VerifyPending = lazy(routeModules.VerifyPending)
 
 import AnimatedLoader from '../components/common/AnimatedLoader'
 function PageFallback() {
-  return <AnimatedLoader />
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), 180)
+    return () => clearTimeout(timer)
+  }, [])
+
+  return visible ? <AnimatedLoader /> : null
 }
 
 export default function AppRoutes() {

@@ -6,6 +6,7 @@ import ScrollToTop from './components/common/ScrollToTop'
 import CommunityFab from './components/layout/CommunityFab'
 import VerificationBanner from './components/common/VerificationBanner'
 import SkillSaarthiLoader from './components/common/SkillSaarthiLoader.jsx'
+import { prefetchRouteModules } from './routes/routeModules'
 
 const LOADER_SEEN_KEY = 'ss_loader_seen'
 
@@ -19,6 +20,10 @@ function AppShell() {
       return false
     }
   })
+
+  useEffect(() => {
+    prefetchRouteModules()
+  }, [])
 
   useEffect(() => {
     if (!showSplash) return
