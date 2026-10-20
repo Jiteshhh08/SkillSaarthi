@@ -1,65 +1,43 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { ProfileCompleteRoute, ProtectedRoute, PublicOnlyRoute } from '../components/common/RouteGuards'
-import { routeModules } from './routeModules'
 
-const Dashboard = lazy(routeModules.Dashboard)
-const EducationLevel = lazy(routeModules.EducationLevel)
-const Assessment = lazy(routeModules.Assessment)
-const GitHubAnalysis = lazy(routeModules.GitHubAnalysis)
-const ResumeAnalysis = lazy(routeModules.ResumeAnalysis)
-const CareerComparison = lazy(routeModules.CareerComparison)
-const WhatIfSimulator = lazy(routeModules.WhatIfSimulator)
-const Internships = lazy(routeModules.Internships)
-const Recommendations = lazy(routeModules.Recommendations)
-const SkillGaps = lazy(routeModules.SkillGaps)
-const Roadmaps = lazy(routeModules.Roadmaps)
-const RoadmapDetail = lazy(routeModules.RoadmapDetail)
-const AdminInternships = lazy(routeModules.AdminInternships)
-const Community = lazy(routeModules.Community)
-const CommunityDrafts = lazy(routeModules.CommunityDrafts)
-const CommunityPostDetail = lazy(routeModules.CommunityPostDetail)
-const CommunitySaved = lazy(routeModules.CommunitySaved)
-const CommunityUserProfile = lazy(routeModules.CommunityUserProfile)
-const ProfileSettings = lazy(routeModules.ProfileSettings)
-const Assistant = lazy(routeModules.Assistant)
-const Onboarding = lazy(routeModules.Onboarding)
-const Login = lazy(routeModules.Login)
-const Signup = lazy(routeModules.Signup)
-const ForgotPassword = lazy(routeModules.ForgotPassword)
-const ResetPassword = lazy(routeModules.ResetPassword)
-const Home = lazy(routeModules.Home)
-const Founders = lazy(routeModules.Founders)
-const NotFound = lazy(routeModules.NotFound)
-const PrivateHome = lazy(routeModules.PrivateHome)
-const VerifyEmail = lazy(routeModules.VerifyEmail)
-const VerifyOtp = lazy(routeModules.VerifyOtp)
-const VerifyPending = lazy(routeModules.VerifyPending)
-
-import AnimatedLoader from '../components/common/AnimatedLoader'
-function PageFallback() {
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    const timer = setTimeout(() => setVisible(true), 180)
-    return () => clearTimeout(timer)
-  }, [])
-
-  return visible ? <AnimatedLoader /> : null
-}
+import Dashboard from '../pages/private/Dashboard'
+import EducationLevel from '../pages/private/EducationLevel'
+import Assessment from '../pages/private/Assessment'
+import GitHubAnalysis from '../pages/private/GitHubAnalysis'
+import ResumeAnalysis from '../pages/private/ResumeAnalysis'
+import CareerComparison from '../pages/private/CareerComparison'
+import WhatIfSimulator from '../pages/private/WhatIfSimulator'
+import Internships from '../pages/private/Internships'
+import Recommendations from '../pages/private/Recommendations'
+import SkillGaps from '../pages/private/SkillGaps'
+import Roadmaps from '../pages/private/Roadmaps'
+import RoadmapDetail from '../pages/private/RoadmapDetail'
+import AdminInternships from '../pages/private/AdminInternships'
+import Community from '../pages/private/Community'
+import CommunityDrafts from '../pages/private/CommunityDrafts'
+import CommunityPostDetail from '../pages/private/CommunityPostDetail'
+import CommunitySaved from '../pages/private/CommunitySaved'
+import CommunityUserProfile from '../pages/private/CommunityUserProfile'
+import ProfileSettings from '../pages/private/ProfileSettings'
+import Assistant from '../pages/private/Assistant'
+import Onboarding from '../pages/onboarding/Onboarding'
+import Login from '../pages/auth/Login'
+import Signup from '../pages/auth/Signup'
+import ForgotPassword from '../pages/auth/ForgotPassword'
+import ResetPassword from '../pages/auth/ResetPassword'
+import Home from '../pages/public/Home'
+import Founders from '../pages/public/Founders'
+import NotFound from '../pages/public/NotFound'
+import PrivateHome from '../pages/private/Home'
+import VerifyEmail from '../pages/auth/VerifyEmail'
+import VerifyOtp from '../pages/auth/VerifyOtp'
+import VerifyPending from '../pages/auth/VerifyPending'
 
 export default function AppRoutes() {
   return (
-    <Suspense fallback={<PageFallback />}>
       <Routes>
-      <Route
-        path="/"
-        element={
-          <PublicOnlyRoute>
-            <Home />
-          </PublicOnlyRoute>
-        }
-      />
+      <Route path="/" element={<Home />} />
 
       <Route
         path="/login"
@@ -301,6 +279,5 @@ export default function AppRoutes() {
 
       <Route path="*" element={<NotFound />} />
       </Routes>
-    </Suspense>
   )
 }
